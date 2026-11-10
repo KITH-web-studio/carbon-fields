@@ -2,8 +2,8 @@
 /**
  * Plugin Name: KITH Carbon Fields
  * Plugin URI: https://github.com/KITH-web-studio/carbon-fields
- * Description: Custom fields for WordPress with request-scoped caching for post metadata and theme options.
- * Version: 3.6.11.5
+ * Description: Custom fields for WordPress. A fork of Carbon Fields by htmlBurger, maintained and developed by KITH Web Studio.
+ * Version: 3.6.11.6
  * Requires at least: 5.0
  * Requires PHP: 5.6.20
  * Author: KITH Web Studio
