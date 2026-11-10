@@ -1,5 +1,7 @@
 <?php
 
+// Modified by KITH Web Studio on 2026-11-10 to report post meta save failures to the editor.
+
 namespace Carbon_Fields\Container;
 
 use Carbon_Fields\Helper\Helper;
@@ -103,6 +105,15 @@ class Post_Meta_Container extends Container {
 	}
 
 	/**
+	 * Surface failed saves on WordPress save hooks.
+	 */
+	public function _save() {
+		if ( false === parent::_save( ...func_get_args() ) ) {
+			wp_die( esc_html__( 'Carbon Fields could not save a field. Please try again.', 'carbon-fields' ), '', array( 'response' => 500, 'back_link' => true ) );
+		}
+	}
+
+	/**
 	 * Perform save operation after successful is_valid_save() check.
 	 * The call is propagated to all fields in the container.
 	 *
@@ -116,7 +127,9 @@ class Post_Meta_Container extends Container {
 
 		foreach ( $this->fields as $field ) {
 			$field->set_value_from_input( Helper::input() );
-			$field->save();
+			if ( false === $field->save() ) {
+				return false;
+			}
 		}
 
 		do_action( 'carbon_fields_post_meta_container_saved', $post_id, $this );

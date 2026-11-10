@@ -412,8 +412,9 @@ class Complex_Field extends Field {
 	 * Save all contained groups of fields.
 	 */
 	public function save() {
-		if ( null !== $this->save_post_meta_changes( $this->get_storage_fields() ) ) {
-			return;
+		$saved = $this->save_post_meta_changes( $this->get_storage_fields() );
+		if ( null !== $saved ) {
+			return $saved;
 		}
 
 		// Only delete root field values as nested field values should be deleted in a cascading manner by the datastore

@@ -1,5 +1,7 @@
 <?php
 
+// Modified by KITH Web Studio on 2026-11-10 to expose post meta save failures.
+
 use Carbon_Fields\Helper\Helper;
 use Carbon_Fields\Helper\Color;
 
@@ -35,7 +37,7 @@ if ( ! function_exists( 'carbon_get_post_meta' ) ) {
 
 if ( ! function_exists( 'carbon_set_post_meta' ) ) {
 	function carbon_set_post_meta( $id, $name, $value, $container_id = '' ) {
-		Helper::set_post_meta( $id, $name, $value, $container_id );
+		return Helper::set_post_meta( $id, $name, $value, $container_id );
 	}
 }
 

@@ -1,5 +1,7 @@
 <?php
 
+// Modified by KITH Web Studio on 2026-11-10 to propagate post meta save failures and restore the datastore context.
+
 namespace Carbon_Fields\Helper;
 
 use Carbon_Fields\Datastore\Datastore;
@@ -80,13 +82,13 @@ class Helper {
 			$datastore->set_object_id( $object_id );
 		}
 
-		$result = $action($clone);
-
-		if ( $object_id !== null ) {
-			$datastore->set_object_id( $datastore_object_id );
+		try {
+			return $action( $clone );
+		} finally {
+			if ( $object_id !== null ) {
+				$datastore->set_object_id( $datastore_object_id );
+			}
 		}
-
-		return $result;
 	}
 
 	/**
@@ -123,10 +125,10 @@ class Helper {
 	 * @param  string $container_id
 	 * @param  string $field_name     Field name
 	 * @param  array  $value          Field expects a `value_set`. Complex_Field expects a `value_tree` - refer to DEVELOPMENT.md
-	 * @return void
+	 * @return bool|null Save status when provided by the field.
 	 */
 	public static function set_value( $object_id, $container_type, $container_id, $field_name, $value ) {
-		static::with_field_clone(
+		return static::with_field_clone(
 			$object_id,
 			$container_type,
 			$container_id,
@@ -139,7 +141,7 @@ class Helper {
 				}
 				/** @var \Carbon_Fields\Field\Field $field */
 				$field->set_value( $value );
-				$field->save();
+				return $field->save();
 			}
 		);
 	}
@@ -178,7 +180,7 @@ class Helper {
 	 * @param  string $container_id
 	 */
 	public static function set_post_meta( $id, $name, $value, $container_id = '' ) {
-		static::set_value( $id, 'post_meta', $container_id, $name, $value );
+		return static::set_value( $id, 'post_meta', $container_id, $name, $value );
 	}
 
 	/**

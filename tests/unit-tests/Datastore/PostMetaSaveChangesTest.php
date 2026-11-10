@@ -124,6 +124,84 @@ class PostMetaSaveChangesTest extends WP_UnitTestCase {
 		$this->assertSame( 'filtered', get_post_meta( $post_id, '_crb_diff_filter', true ) );
 	}
 
+	public function testExistingDuplicateKeysAreConsolidatedInTheSameSave() {
+		$post_id = self::factory()->post->create();
+		$field = Field::make( 'text', 'crb_atomic_duplicates' );
+		$this->set_datastore( $field, $post_id );
+		add_post_meta( $post_id, '_crb_atomic_duplicates', 'old' );
+		add_post_meta( $post_id, '_crb_atomic_duplicates', 'duplicate' );
+
+		$this->assertTrue( $field->set_value( 'new' )->save() );
+		$this->assertSame( array( 'new' ), get_post_meta( $post_id, '_crb_atomic_duplicates' ) );
+	}
+
+	public function testFailedUpdateRollsBackTheWholeField() {
+		$post_id = self::factory()->post->create();
+		$field = Field::make( 'complex', 'crb_atomic_rows' )->add_fields( array(
+			Field::make( 'text', 'left' ),
+			Field::make( 'text', 'right' ),
+		) );
+		$this->set_datastore( $field, $post_id );
+		$this->assertTrue( $field->set_value( array(
+			array( 'left' => 'old left', 'right' => 'old right' ),
+			array( 'left' => 'keep this row', 'right' => '' ),
+		) )->save() );
+		$previous = get_post_meta( $post_id );
+
+		global $wpdb;
+		$updates = 0;
+		$fail = function( $query ) use ( $wpdb, &$updates ) {
+			if ( stripos( ltrim( $query ), 'UPDATE ' ) === 0 &&
+				strpos( $query, $wpdb->postmeta ) !== false && ++$updates === 2 ) {
+				return '';
+			}
+			return $query;
+		};
+		add_filter( 'query', $fail, PHP_INT_MAX );
+		try {
+			$this->assertFalse( $field->set_value( array( array( 'left' => 'new left', 'right' => 'new right' ) ) )->save() );
+		} finally {
+			remove_filter( 'query', $fail, PHP_INT_MAX );
+		}
+		$this->assertSame( 2, $updates );
+		$this->assertSame( $previous, get_post_meta( $post_id ) );
+		$field->load();
+		$this->assertSame( 'old left', $field->get_formatted_value()[0]['left'] );
+
+		$this->assertTrue( $field->set_value( array( array( 'left' => 'retry left', 'right' => 'retry right' ) ) )->save() );
+		$field->load();
+		$this->assertCount( 1, $field->get_formatted_value() );
+		$this->assertSame( 'retry right', $field->get_formatted_value()[0]['right'] );
+	}
+
+	public function testOverlappingSaveFromMetadataHookCannotMixRows() {
+		$post_id = self::factory()->post->create();
+		$field = Field::make( 'complex', 'crb_atomic_overlap' )->add_fields( array(
+			Field::make( 'text', 'left' ),
+			Field::make( 'text', 'right' ),
+		) );
+		$this->set_datastore( $field, $post_id );
+		$this->assertTrue( $field->set_value( array( array( 'left' => 'old left', 'right' => 'old right' ) ) )->save() );
+		$other = clone $field;
+		$overlap_result = null;
+		$overlap = function( $id, $object_id ) use ( $other, $post_id, &$overlap_result ) {
+			if ( (int) $object_id === $post_id && null === $overlap_result ) {
+				$overlap_result = $other->set_value( array( array( 'left' => 'B left', 'right' => 'B right' ) ) )->save();
+			}
+		};
+		add_action( 'updated_post_meta', $overlap, 10, 2 );
+		try {
+			$this->assertTrue( $field->set_value( array( array( 'left' => 'A left', 'right' => 'A right' ) ) )->save() );
+		} finally {
+			remove_action( 'updated_post_meta', $overlap );
+		}
+		$this->assertFalse( $overlap_result );
+		$field->load();
+		$row = $field->get_formatted_value()[0];
+		$this->assertSame( 'A left', $row['left'] );
+		$this->assertSame( 'A right', $row['right'] );
+	}
+
 	private function set_datastore( $field, $post_id ) {
 		$datastore = new Post_Meta_Datastore();
 		$datastore->set_object_id( $post_id );

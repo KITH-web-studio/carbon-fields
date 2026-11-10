@@ -1,6 +1,6 @@
 <?php
 
-// Modified by KITH Web Studio on 2026-11-10 to cache reads and save only changed post metadata.
+// Modified by KITH Web Studio on 2026-11-10 for cached reads and transactional updates to changed post metadata.
 
 namespace Carbon_Fields\Datastore;
 
@@ -79,39 +79,75 @@ class Post_Meta_Datastore extends Meta_Datastore {
 			$this->get_full_hierarchy_index_for_field( $root_field )
 		);
 		$where = $this->key_toolset->storage_key_patterns_to_sql( 'meta_key', $patterns );
-		$rows = $wpdb->get_results( "SELECT meta_id, meta_key, meta_value FROM {$wpdb->postmeta}
-			WHERE post_id = {$post_id} AND {$where}" );
-		if ( $wpdb->last_error ) {
+		$query = "SELECT meta_id, meta_key, meta_value FROM {$wpdb->postmeta} WHERE post_id = {$post_id} AND {$where}";
+		$current = $this->read_current_rows( $query );
+		if ( ! is_array( $current ) ) {
+			return $current;
+		}
+
+		if ( count( $current ) === count( $desired ) ) {
+			$matches = true;
+			foreach ( $desired as $key => $value ) {
+				if ( ! isset( $current[ $key ] ) || count( $current[ $key ] ) !== 1 ||
+					$current[ $key ][0]->meta_value !== (string) maybe_serialize( $value ) ) {
+					$matches = false;
+					break;
+				}
+			}
+			if ( $matches ) {
+				return true;
+			}
+		}
+
+		return Post_Meta_Transaction::run( array( $post_id ), function() use ( $query, $post_id, $desired ) {
+			$current = $this->read_current_rows( $query . ' FOR UPDATE' );
+			return is_array( $current ) && $this->apply_changes( $post_id, $current, $desired );
+		} );
+	}
+
+	private function read_current_rows( $query ) {
+		global $wpdb;
+
+		if ( false === $wpdb->query( $query ) ) {
 			return false;
 		}
 
 		$current = array();
+		$rows = $wpdb->last_result;
 		foreach ( $rows as $row ) {
-			// Keep the previous cleanup behavior for duplicate or noncanonical keys.
-			if ( isset( $current[ $row->meta_key ] ) || preg_match( '/[^a-z0-9_|:\-]/', $row->meta_key ) ) {
+			// Leave noncanonical storage formats to their existing compatibility path.
+			if ( preg_match( '/[^a-z0-9_|:\-]/', $row->meta_key ) ) {
 				return null;
 			}
-			$current[ $row->meta_key ] = $row;
+			$current[ $row->meta_key ][] = $row;
 		}
+		return $current;
+	}
 
+	private function apply_changes( $post_id, $current, $desired ) {
 		foreach ( $desired as $key => $value ) {
 			if ( ! isset( $current[ $key ] ) ) {
 				if ( ! add_metadata( 'post', $post_id, $key, wp_slash( $value ), true ) ) {
 					return false;
 				}
-			} elseif ( $current[ $key ]->meta_value !== (string) maybe_serialize( $value ) ) {
+				continue;
+			}
+
+			// Leave duplicate rows in the removal list, preserving one row for each key.
+			$row = array_shift( $current[ $key ] );
+			if ( $row->meta_value !== (string) maybe_serialize( $value ) ) {
 				// Updating by ID avoids rebuilding the entire metadata cache before each update.
-				if ( ! update_metadata_by_mid( 'post', $current[ $key ]->meta_id, $value ) ) {
+				if ( ! update_metadata_by_mid( 'post', $row->meta_id, $value ) ) {
 					return false;
 				}
 			}
-			unset( $current[ $key ] );
 		}
 
-		// Keep old rows when writing the replacement data fails.
-		foreach ( $current as $row ) {
-			if ( ! delete_metadata_by_mid( 'post', $row->meta_id ) ) {
-				return false;
+		foreach ( $current as $rows ) {
+			foreach ( $rows as $row ) {
+				if ( ! delete_metadata_by_mid( 'post', $row->meta_id ) ) {
+					return false;
+				}
 			}
 		}
 		return true;

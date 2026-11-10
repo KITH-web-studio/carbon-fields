@@ -423,8 +423,9 @@ class Field implements Datastore_Holder_Interface {
 	 * Save value to storage
 	 */
 	public function save() {
-		if ( null !== $this->save_post_meta_changes( array( $this ) ) ) {
-			return;
+		$saved = $this->save_post_meta_changes( array( $this ) );
+		if ( null !== $saved ) {
+			return $saved;
 		}
 
 		$delete_on_save = apply_filters( 'carbon_fields_should_delete_field_value_on_save', true, $this );
@@ -446,6 +447,10 @@ class Field implements Datastore_Holder_Interface {
 	 */
 	protected function save_post_meta_changes( $fields ) {
 		$datastore = $this->get_datastore();
+		if ( $datastore instanceof \Carbon_Fields\Datastore\Post_Meta_Datastore &&
+			\Carbon_Fields\Datastore\Post_Meta_Transaction::is_active() ) {
+			return false;
+		}
 		if ( empty( $this->get_hierarchy() ) && $datastore instanceof \Carbon_Fields\Datastore\Post_Meta_Datastore ) {
 			return $datastore->save_changes( $this, $fields );
 		}

@@ -1,5 +1,7 @@
 <?php
 
+// Modified by KITH Web Studio on 2026-11-10 to propagate container save results.
+
 namespace Carbon_Fields\Container;
 
 use Carbon_Fields\Carbon_Fields;
@@ -333,7 +335,7 @@ abstract class Container implements Datastore_Holder_Interface {
 	public function _save() {
 		$param = func_get_args();
 		if ( call_user_func_array( array( $this, '_is_valid_save' ), $param ) ) {
-			call_user_func_array( array( $this, 'save' ), $param );
+			return call_user_func_array( array( $this, 'save' ), $param );
 		}
 	}
 
