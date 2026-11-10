@@ -10,6 +10,7 @@ import { get } from 'lodash';
 import './style.scss';
 import MediaLibrary from '../../components/media-library';
 import apiFetch from '../../utils/api-fetch';
+import getSvgPreviewUrl from '../../utils/get-svg-preview-url';
 
 class FileField extends Component {
 	/**
@@ -131,6 +132,7 @@ class FileField extends Component {
 	render() {
 		const { data } = this.state;
 
+		const svgPreview = getSvgPreviewUrl( data );
 		const {
 			value,
 			name,
@@ -161,7 +163,11 @@ class FileField extends Component {
 							{ ( value && !! data.id ) && (
 								<div className="cf-file__content">
 									<div className="cf-file__preview">
-										<img src={ this.getThumb() } className="cf-file__image" />
+										<img
+											src={ svgPreview || this.getThumb() }
+											className={ svgPreview ? 'cf-file__image cf-file__image--svg' : 'cf-file__image' }
+											alt=""
+										/>
 
 										<button type="button" className="cf-file__remove dashicons-before dashicons-no-alt" onClick={ this.handleClear }></button>
 									</div>

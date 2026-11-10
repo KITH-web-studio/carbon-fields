@@ -14,6 +14,7 @@ import './style.scss';
 import MediaLibrary from '../../components/media-library';
 import Sortable from '../../components/sortable';
 import fetchAttachmentsData from '../../utils/fetch-attachments-data';
+import getSvgPreviewUrl from '../../utils/get-svg-preview-url';
 
 class MediaGalleryField extends Component {
 	/**
@@ -149,9 +150,11 @@ class MediaGalleryField extends Component {
 											const attachment = attachmentsData.find( ( attachmentData ) => attachmentData.id === id );
 											const className = [ 'cf-media-gallery__item' ];
 											const isAttachmentLoaded = !! attachment;
+											const svgPreview = isAttachmentLoaded && getSvgPreviewUrl( attachment );
+											const isImage = isAttachmentLoaded && ( svgPreview || attachment.type === 'image' );
 
 											if ( isAttachmentLoaded ) {
-												className.push( `cf-media-gallery__item--${ attachment.type }` );
+												className.push( `cf-media-gallery__item--${ isImage ? 'image' : attachment.type }` );
 											}
 
 											if ( selectedItem === index ) {
@@ -163,11 +166,11 @@ class MediaGalleryField extends Component {
 													<div className="cf-media-gallery__item-inner">
 														<div className="cf-media-gallery__item-preview">
 															{ isAttachmentLoaded && (
-																attachment.type === 'image'
+																isImage
 																	? (
 																		<img
-																			className="cf-media-gallery__item-thumb"
-																			src={ this.getAttachmentThumb( attachment ) }
+																			className={ svgPreview ? 'cf-media-gallery__item-thumb cf-media-gallery__item-thumb--svg' : 'cf-media-gallery__item-thumb' }
+																			src={ svgPreview || this.getAttachmentThumb( attachment ) }
 																		/>
 																	)
 																	: (

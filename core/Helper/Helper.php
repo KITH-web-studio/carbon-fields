@@ -606,7 +606,11 @@ class Helper {
 		$attachment_metadata['filetype']  = wp_check_filetype( $attachment_metadata['file_url'] );
 		$attachment_metadata['file_type'] = preg_replace( '~\/.+$~', '', $attachment_metadata['filetype']['type'] ); // image, video, etc..
 
-		if ( $attachment_metadata['file_type'] == 'image' ) {
+		if ( 'image/svg+xml' === $attachment->post_mime_type ) {
+			$attachment_metadata['filetype'] = array( 'ext' => 'svg', 'type' => 'image/svg+xml' );
+			$attachment_metadata['file_type'] = 'image';
+			$attachment_metadata['thumb_url'] = $attachment_metadata['file_url'];
+		} elseif ( $attachment_metadata['file_type'] == 'image' ) {
 			$attachment_metadata['thumb_url'] = $attachment_metadata['file_url'];
 
 			if ( $type == 'id' ) {
