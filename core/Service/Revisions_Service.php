@@ -1,5 +1,7 @@
 <?php
 
+// Modified by KITH Web Studio on 2026-11-10 to cache field reads within a request.
+
 namespace Carbon_Fields\Service;
 
 use Carbon_Fields\Carbon_Fields;
@@ -227,6 +229,7 @@ class Revisions_Service extends Service {
 
 	    $this->delete_old_meta( $to_id, $meta_to_copy );
 	    $this->insert_new_meta( $to_id, $meta_to_copy );
+	    \Carbon_Fields\Datastore\Post_Meta_Datastore::invalidate_storage_cache();
 	}
 
 	protected function meta_key_matches_names( $meta_key, $names ) {

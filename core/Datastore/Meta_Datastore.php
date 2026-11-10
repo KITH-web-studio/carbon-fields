@@ -1,5 +1,7 @@
 <?php
 
+// Modified by KITH Web Studio on 2026-11-10 to cache field reads within a request.
+
 namespace Carbon_Fields\Datastore;
 
 use Carbon_Fields\Field\Field;
@@ -22,11 +24,9 @@ abstract class Meta_Datastore extends Key_Value_Datastore {
 	 * @return \stdClass[] Array of {key, value} objects
 	 */
 	protected function get_storage_array( Field $field, $storage_key_patterns ) {
-		global $wpdb;
-
 		$storage_key_comparisons = $this->key_toolset->storage_key_patterns_to_sql( '`meta_key`', $storage_key_patterns );
 
-		$storage_array = $wpdb->get_results( '
+		$storage_array = $this->get_storage_query_rows( '
 			SELECT `meta_key` AS `key`, `meta_value` AS `value`
 			FROM ' . $this->get_table_name() . '
 			WHERE `' . $this->get_table_field_name() . '` = ' . intval( $this->get_object_id() ) . '
@@ -37,6 +37,17 @@ abstract class Meta_Datastore extends Key_Value_Datastore {
 		$storage_array = apply_filters( 'carbon_fields_datastore_storage_array', $storage_array, $this, $storage_key_patterns );
 
 		return $storage_array;
+	}
+
+	/**
+	 * Fetch raw storage query results.
+	 *
+	 * @param string $query
+	 * @return \stdClass[]
+	 */
+	protected function get_storage_query_rows( $query ) {
+		global $wpdb;
+		return $wpdb->get_results( $query );
 	}
 
 	/**

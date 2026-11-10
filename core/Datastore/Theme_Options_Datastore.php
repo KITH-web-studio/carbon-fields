@@ -1,5 +1,7 @@
 <?php
 
+// Modified by KITH Web Studio on 2026-11-10 to cache field reads within a request.
+
 namespace Carbon_Fields\Datastore;
 
 use Carbon_Fields\Field\Field;
@@ -12,7 +14,24 @@ class Theme_Options_Datastore extends Key_Value_Datastore {
 	/**
 	 * Initialization tasks.
 	 */
-	public function init() {}
+	public function init() {
+		$callback = array( __CLASS__, 'invalidate_storage_cache' );
+		// Option-specific hooks run after the write but before the generic post-write hooks.
+		foreach ( array( 'add_option', 'update_option', 'delete_option' ) as $hook ) {
+			add_action( $hook, $callback, PHP_INT_MAX, 0 );
+		}
+		foreach ( array( 'added_option', 'updated_option', 'deleted_option' ) as $hook ) {
+			add_action( $hook, $callback, -PHP_INT_MAX, 0 );
+		}
+	}
+
+	/**
+	 * Clear cached option queries for the current site.
+	 */
+	public static function invalidate_storage_cache() {
+		global $wpdb;
+		static::clear_storage_query_cache( $wpdb->options );
+	}
 
 	/**
 	 * Get a raw database query results array for a field
@@ -26,7 +45,7 @@ class Theme_Options_Datastore extends Key_Value_Datastore {
 
 		$storage_key_comparisons = $this->key_toolset->storage_key_patterns_to_sql( '`option_name`', $storage_key_patterns );
 
-		$storage_array = $wpdb->get_results( '
+		$storage_array = $this->get_cached_storage_rows( $wpdb->options, '
 			SELECT `option_name` AS `key`, `option_value` AS `value`
 			FROM ' . $wpdb->options . '
 			WHERE ' . $storage_key_comparisons . '

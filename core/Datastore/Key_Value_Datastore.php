@@ -1,5 +1,7 @@
 <?php
 
+// Modified by KITH Web Studio on 2026-11-10 to cache field reads within a request.
+
 namespace Carbon_Fields\Datastore;
 
 use Carbon_Fields\Helper\Helper;
@@ -11,6 +13,46 @@ use Carbon_Fields\Exception\Incorrect_Syntax_Exception;
  * Provides basic functionality to save in a key-value storage
  */
 abstract class Key_Value_Datastore extends Datastore {
+
+	/**
+	 * Raw storage query rows for the current request, indexed by table and SQL.
+	 *
+	 * @var array
+	 */
+	private static $storage_query_cache = array();
+
+	/**
+	 * Fetch raw rows without letting storage filters mutate the cached data.
+	 *
+	 * @param string $table
+	 * @param string $query
+	 * @return \stdClass[]
+	 */
+	protected function get_cached_storage_rows( $table, $query ) {
+		global $wpdb;
+
+		if ( ! isset( self::$storage_query_cache[ $table ][ $query ] ) ) {
+			$rows = $wpdb->get_results( $query, ARRAY_A );
+			if ( empty( $wpdb->last_error ) ) {
+				self::$storage_query_cache[ $table ][ $query ] = $rows;
+			}
+		} else {
+			$rows = self::$storage_query_cache[ $table ][ $query ];
+		}
+
+		return array_map( function( $row ) {
+			return (object) $row;
+		}, $rows );
+	}
+
+	/**
+	 * Invalidate raw storage queries after a write to the table.
+	 *
+	 * @param string $table
+	 */
+	protected static function clear_storage_query_cache( $table ) {
+		unset( self::$storage_query_cache[ $table ] );
+	}
 
 	/**
 	 * Key Toolset for key generation and comparison utilities
