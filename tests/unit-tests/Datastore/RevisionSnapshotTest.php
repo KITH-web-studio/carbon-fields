@@ -9,6 +9,60 @@ use Carbon_Fields\Service\Revisions_Service;
  * @group datastore
  */
 class RevisionSnapshotTest extends WP_UnitTestCase {
+	/**
+	 * @dataProvider revision_title_pairs
+	 */
+	public function testWordPressRestorePreservesBothHistoricalSnapshots( $second_title, $creates_revision ) {
+		$post_id = self::factory()->post->create( array( 'post_title' => 'Title A', 'post_status' => 'publish' ) );
+		$field = Field::make( 'text', 'crb_snapshot_history' );
+		$container = Container::make( 'post_meta', 'KITH restore history fixture' )->add_fields( array( $field ) );
+		$container->set_post_id( $post_id );
+		$service = Carbon_Fields::service( 'revisions' );
+		$enabled_here = $service->enable();
+		$key = '_crb_snapshot_history';
+		try {
+			$this->assertTrue( $field->set_value( 'snapshot A' )->save() );
+			$revision_a = _wp_put_post_revision( $post_id );
+			$this->assertIsInt( $revision_a );
+			$this->assertTrue( $service->maybe_copy_meta_to_revision( $post_id, $container ) );
+
+			$this->assertSame( $post_id, wp_update_post( array( 'ID' => $post_id, 'post_title' => $second_title ) ) );
+			$this->assertTrue( $field->set_value( 'snapshot B' )->save() );
+			$revision_b = _wp_put_post_revision( $post_id );
+			$this->assertIsInt( $revision_b );
+			$this->assertTrue( $service->maybe_copy_meta_to_revision( $post_id, $container ) );
+			$previous_ids = array_keys( wp_get_post_revisions( $post_id ) );
+
+			$this->assertSame( $post_id, wp_restore_post_revision( $revision_a ) );
+			$this->assertSame( 'snapshot A', get_post_meta( $post_id, $key, true ) );
+			$this->assertSame( 'snapshot A', get_post_meta( $revision_a, $key, true ) );
+			$this->assertSame( 'snapshot B', get_post_meta( $revision_b, $key, true ) );
+
+			$created_ids = array_values( array_diff( array_keys( wp_get_post_revisions( $post_id ) ), $previous_ids ) );
+			$this->assertCount( $creates_revision ? 1 : 0, $created_ids );
+			if ( $creates_revision ) {
+				$this->assertSame( 'snapshot A', get_post_meta( $created_ids[0], $key, true ) );
+			}
+
+			$this->assertSame( $post_id, wp_restore_post_revision( $revision_b ) );
+			$this->assertSame( 'snapshot B', get_post_meta( $post_id, $key, true ) );
+			$this->assertSame( 'snapshot A', get_post_meta( $revision_a, $key, true ) );
+			$this->assertSame( 'snapshot B', get_post_meta( $revision_b, $key, true ) );
+		} finally {
+			if ( $enabled_here ) {
+				$service->disable();
+			}
+			$container->set_revisions_disabled( true );
+		}
+	}
+
+	public static function revision_title_pairs() {
+		return array(
+			'without a new WordPress revision' => array( 'Title A', false ),
+			'with a new WordPress revision' => array( 'Title B', true ),
+		);
+	}
+
 	public function testRestoringOldRevisionRemovesLaterRowsButKeepsUncapturedFields() {
 		$post_id = self::factory()->post->create();
 		$complex = Field::make( 'complex', 'crb_snapshot_rows' )->add_fields( array( Field::make( 'text', 'title' ) ) );

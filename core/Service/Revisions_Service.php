@@ -13,11 +13,14 @@ class Revisions_Service extends Service {
 	const CHANGE_KEY = 'carbon_fields_changed';
 	const SNAPSHOT_SCOPE_KEY = '_carbon_fields:revision_scope';
 
+	private $revisions_created_during_restore = array();
+
 	protected function enabled() {
 		add_filter( 'carbon_get_post_meta_post_id', array( $this, 'update_post_id_on_preview' ), 10, 3 );
 		add_action( 'carbon_fields_post_meta_container_saved', array( $this, 'maybe_copy_meta_to_revision' ), 10, 2 );
 		add_filter('_wp_post_revision_fields', array( $this, 'maybe_save_revision' ), 10, 2 );
 		add_filter('_wp_post_revision_fields', array( $this, 'add_fields_to_revision' ), 10, 2 );
+		add_action( '_wp_put_post_revision', array( $this, 'record_revision_created_during_restore' ), 10, 2 );
 		add_action( 'wp_restore_post_revision', array( $this, 'restore_post_revision' ), 10, 2 );
 		add_filter( 'wp_save_post_revision_check_for_changes', array( $this, 'check_for_changes' ), 10, 3 );
 	}
@@ -27,7 +30,9 @@ class Revisions_Service extends Service {
 		remove_action( 'carbon_fields_post_meta_container_saved', array( $this, 'maybe_copy_meta_to_revision' ), 10 );
 		remove_filter('_wp_post_revision_fields', array( $this, 'maybe_save_revision' ), 10 );
 		remove_filter('_wp_post_revision_fields', array( $this, 'add_fields_to_revision' ), 10 );
+		remove_action( '_wp_put_post_revision', array( $this, 'record_revision_created_during_restore' ), 10 );
 		remove_action( 'wp_restore_post_revision', array( $this, 'restore_post_revision' ), 10 );
+		$this->revisions_created_during_restore = array();
 		remove_filter( 'wp_save_post_revision_check_for_changes', array( $this, 'check_for_changes' ), 10 );
 	}
 
@@ -73,6 +78,10 @@ class Revisions_Service extends Service {
 	 */
 	public function maybe_copy_meta_to_revision( $post_id, $container ) {
 		if ( ! $container || $container->get_revisions_disabled() ) {
+			return;
+		}
+
+		if ( doing_action( 'save_post' ) && $this->get_restoring_revision_id() ) {
 			return;
 		}
 
@@ -158,11 +167,61 @@ class Revisions_Service extends Service {
 		return $value;
 	}
 
+	/**
+	 * Keep the ID emitted by WordPress while it updates the post for this restore.
+	 *
+	 * @param int $revision_id Newly created revision.
+	 * @param int|null $post_id Parent post, supplied by WordPress 6.4 and later.
+	 */
+	public function record_revision_created_during_restore( $revision_id, $post_id = null ) {
+		$source_id = $this->get_restoring_revision_id();
+		if ( ! $source_id ) {
+			return;
+		}
+
+		$post_id = $post_id ? (int) $post_id : (int) wp_is_post_revision( $revision_id );
+		if ( $post_id && (int) wp_is_post_revision( $source_id ) === $post_id ) {
+			$this->revisions_created_during_restore[ $source_id ] = (int) $revision_id;
+		}
+	}
+
+	/**
+	 * WordPress signals a restore after wp_update_post has already saved its revision.
+	 * Identify the source from the direct caller of that update.
+	 *
+	 * @return int
+	 */
+	private function get_restoring_revision_id() {
+		$trace = debug_backtrace();
+		foreach ( $trace as $index => $frame ) {
+			if ( 'wp_update_post' !== $frame['function'] || isset( $frame['class'] ) ) {
+				continue;
+			}
+			$caller = isset( $trace[ $index + 1 ] ) ? $trace[ $index + 1 ] : array();
+			if ( ! isset( $caller['function'], $caller['args'][0] ) ||
+				'wp_restore_post_revision' !== $caller['function'] || isset( $caller['class'] ) ) {
+				return 0;
+			}
+			$source = $caller['args'][0];
+			if ( $source instanceof \WP_Post ) {
+				return (int) $source->ID;
+			}
+			if ( is_array( $source ) ) {
+				return isset( $source['ID'] ) ? (int) $source['ID'] : 0;
+			}
+			return (int) $source;
+		}
+		return 0;
+	}
+
 	public function restore_post_revision( $post_id, $revision_id ) {
 		$targets = array( (int) $post_id );
-		$latest = $this->get_latest_post_revision( $post_id );
-		if ( $latest && (int) $latest->ID !== (int) $revision_id ) {
-			$targets[] = (int) $latest->ID;
+		if ( isset( $this->revisions_created_during_restore[ $revision_id ] ) ) {
+			$created_id = $this->revisions_created_during_restore[ $revision_id ];
+			unset( $this->revisions_created_during_restore[ $revision_id ] );
+			if ( $created_id !== (int) $revision_id && (int) wp_is_post_revision( $created_id ) === (int) $post_id ) {
+				$targets[] = $created_id;
+			}
 		}
 
 		$restored = $this->copy_meta( $revision_id, $targets, true );
