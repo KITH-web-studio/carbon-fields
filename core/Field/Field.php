@@ -1,5 +1,7 @@
 <?php
 
+// Modified by KITH Web Studio on 2026-11-10 to save only changed post metadata.
+
 namespace Carbon_Fields\Field;
 
 use Carbon_Fields\Carbon_Fields;
@@ -421,6 +423,10 @@ class Field implements Datastore_Holder_Interface {
 	 * Save value to storage
 	 */
 	public function save() {
+		if ( null !== $this->save_post_meta_changes( array( $this ) ) ) {
+			return;
+		}
+
 		$delete_on_save = apply_filters( 'carbon_fields_should_delete_field_value_on_save', true, $this );
 		if ( $delete_on_save ) {
 			$this->delete();
@@ -430,6 +436,20 @@ class Field implements Datastore_Holder_Interface {
 		if ( $save ) {
 			$this->get_datastore()->save( apply_filters( 'carbon_fields_before_field_save', $this ) );
 		}
+	}
+
+	/**
+	 * Try saving a root field through the standard post meta datastore.
+	 *
+	 * @param iterable $fields Root field and any populated descendants.
+	 * @return bool|null Null when the field needs the existing save procedure.
+	 */
+	protected function save_post_meta_changes( $fields ) {
+		$datastore = $this->get_datastore();
+		if ( empty( $this->get_hierarchy() ) && $datastore instanceof \Carbon_Fields\Datastore\Post_Meta_Datastore ) {
+			return $datastore->save_changes( $this, $fields );
+		}
+		return null;
 	}
 
 	/**

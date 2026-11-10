@@ -1,5 +1,7 @@
 <?php
 
+// Modified by KITH Web Studio on 2026-11-10 to save only changed post metadata.
+
 namespace Carbon_Fields\Field;
 
 use Carbon_Fields\Datastore\Datastore_Interface;
@@ -410,6 +412,10 @@ class Complex_Field extends Field {
 	 * Save all contained groups of fields.
 	 */
 	public function save() {
+		if ( null !== $this->save_post_meta_changes( $this->get_storage_fields() ) ) {
+			return;
+		}
+
 		// Only delete root field values as nested field values should be deleted in a cascading manner by the datastore
 		$hierarchy = $this->get_hierarchy();
 		$delete_on_save = empty( $hierarchy );
@@ -428,6 +434,33 @@ class Complex_Field extends Field {
 						continue;
 					}
 					$field->save();
+				}
+			}
+		}
+	}
+
+	/**
+	 * Iterate over the root and populated child fields in storage order.
+	 *
+	 * @return \Generator
+	 */
+	protected function get_storage_fields() {
+		yield $this;
+
+		$groups = $this->get_prefilled_groups( $this->get_value(), $this->get_value_tree() );
+		foreach ( $groups as $fields ) {
+			foreach ( $fields as $field ) {
+				if ( ! ( $field instanceof Field ) ||
+					in_array( get_class( $field ), array( Html_Field::class, Separator_Field::class, Block_Preview_Field::class ), true ) ) {
+					continue;
+				}
+
+				if ( $field instanceof self ) {
+					foreach ( $field->get_storage_fields() as $nested_field ) {
+						yield $nested_field;
+					}
+				} else {
+					yield $field;
 				}
 			}
 		}

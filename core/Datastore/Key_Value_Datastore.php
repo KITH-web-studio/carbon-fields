@@ -1,6 +1,6 @@
 <?php
 
-// Modified by KITH Web Studio on 2026-11-10 to cache field reads within a request.
+// Modified by KITH Web Studio on 2026-11-10 for request caching and shared storage key generation.
 
 namespace Carbon_Fields\Datastore;
 
@@ -214,6 +214,18 @@ abstract class Key_Value_Datastore extends Datastore {
 	 * @param Field $field The field to save.
 	 */
 	public function save( Field $field ) {
+		foreach ( $this->get_storage_pairs( $field ) as $key => $value ) {
+			$this->save_key_value_pair( $key, $value );
+		}
+	}
+
+	/**
+	 * Generate the stored keys and values, including the marker for an empty field.
+	 *
+	 * @param Field $field
+	 * @return \Generator
+	 */
+	protected function get_storage_pairs( Field $field ) {
 		$value_set = $field->get_full_value();
 
 		if ( empty( $value_set ) && $field->get_value_set()->keepalive() ) {
@@ -224,7 +236,7 @@ abstract class Key_Value_Datastore extends Datastore {
 				0,
 				$this->key_toolset->get_keepalive_property()
 			);
-			$this->save_key_value_pair( $storage_key, '' );
+			yield $storage_key => '';
 		}
 		foreach ( $value_set as $value_group_index => $values ) {
 			foreach ( $values as $property => $value ) {
@@ -235,7 +247,7 @@ abstract class Key_Value_Datastore extends Datastore {
 					$value_group_index,
 					$property
 				);
-				$this->save_key_value_pair( $storage_key, $value );
+				yield $storage_key => $value;
 			}
 		}
 	}

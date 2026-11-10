@@ -1,6 +1,6 @@
 <?php
 
-// Modified by KITH Web Studio on 2026-11-10 to cache field reads within a request.
+// Modified by KITH Web Studio on 2026-11-10 to invalidate metadata caches after copying revisions.
 
 namespace Carbon_Fields\Service;
 
@@ -229,6 +229,7 @@ class Revisions_Service extends Service {
 
 	    $this->delete_old_meta( $to_id, $meta_to_copy );
 	    $this->insert_new_meta( $to_id, $meta_to_copy );
+	    wp_cache_delete( $to_id, 'post_meta' );
 	    \Carbon_Fields\Datastore\Post_Meta_Datastore::invalidate_storage_cache();
 	}
 
