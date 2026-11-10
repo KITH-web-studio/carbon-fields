@@ -125,3 +125,27 @@ msgstr "Зберегти зміни"
 #: templates/Container/widget.php:4
 msgid "No options are available for this widget."
 msgstr "Для цього віджета немає опцій."
+
+#: core/Container/Theme_Options_Container.php core/REST_API/Router.php
+msgid "Shared values"
+msgstr "Спільні значення"
+
+#: core/Container/Theme_Options_Container.php core/REST_API/Router.php
+msgid "Settings language"
+msgstr "Мова налаштувань"
+
+#: core/Container/Theme_Options_Container.php core/REST_API/Router.php
+msgid "Shared values are used by languages without their own saved values."
+msgstr "Спільні значення використовуються для мов, які не мають власних збережених значень."
+
+#: core/Container/Theme_Options_Container.php core/REST_API/Router.php
+msgid "Untranslated fields use shared values. Saving changes only the selected language."
+msgstr "Поля без перекладу використовують спільні значення. Збереження змінює лише вибрану мову."
+
+#: core/Container/Theme_Options_Container.php core/REST_API/Router.php
+msgid "The settings language could not be verified. Reload the page and try again."
+msgstr "Не вдалося перевірити мову налаштувань. Перезавантажте сторінку та спробуйте ще раз."
+
+#: core/Container/Theme_Options_Container.php core/REST_API/Router.php
+msgid "Unknown settings language."
+msgstr "Невідома мова налаштувань."

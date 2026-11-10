@@ -188,10 +188,13 @@ class Helper {
 	 *
 	 * @param  string $name         Field name
 	 * @param  string $container_id
+	 * @param  string|null $language Polylang slug, 'all' for shared values, or null for the current language.
 	 * @return mixed
 	 */
-	public static function get_theme_option( $name, $container_id = '' ) {
-		return static::get_value( null, 'theme_options', $container_id, $name );
+	public static function get_theme_option( $name, $container_id = '', $language = null ) {
+		return \Carbon_Fields\Integration\Polylang::with_language( $language, function() use ( $name, $container_id ) {
+			return static::get_value( null, 'theme_options', $container_id, $name );
+		} );
 	}
 
 	/**
@@ -200,9 +203,12 @@ class Helper {
 	 * @param  string $name         Field name
 	 * @param  array  $value
 	 * @param  string $container_id
+	 * @param  string|null $language Polylang slug, 'all' for shared values, or null for the current language.
 	 */
-	public static function set_theme_option( $name, $value, $container_id = '' ) {
-		static::set_value( null, 'theme_options', $container_id, $name, $value );
+	public static function set_theme_option( $name, $value, $container_id = '', $language = null ) {
+		return \Carbon_Fields\Integration\Polylang::with_language( $language, function() use ( $name, $value, $container_id ) {
+			return static::set_value( null, 'theme_options', $container_id, $name, $value );
+		} );
 	}
 
 	/**

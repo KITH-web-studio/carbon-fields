@@ -4,11 +4,102 @@ namespace Carbon_Fields\Container;
 
 use Carbon_Fields\Datastore\Datastore;
 use Carbon_Fields\Exception\Incorrect_Syntax_Exception;
+use Carbon_Fields\Integration\Polylang;
+use Carbon_Fields\Helper\Helper;
 
 /**
  * Theme options container class.
  */
 class Theme_Options_Container extends Container {
+	protected $multilingual = true;
+
+	/**
+	 * Keep a container shared across languages when explicitly disabled.
+	 */
+	public function set_multilingual( $enabled ) {
+		$this->multilingual = (bool) $enabled;
+		if ( $this->get_datastore() instanceof \Carbon_Fields\Datastore\Theme_Options_Datastore ) {
+			$this->get_datastore()->set_multilingual( $enabled );
+		}
+		return $this;
+	}
+
+	public function is_multilingual() {
+		return $this->multilingual && $this->get_datastore() instanceof \Carbon_Fields\Datastore\Theme_Options_Datastore && Polylang::active();
+	}
+
+	public function set_datastore( \Carbon_Fields\Datastore\Datastore_Interface $datastore, $set_as_default = false ) {
+		parent::set_datastore( $datastore, $set_as_default );
+		if ( $this->get_datastore() instanceof \Carbon_Fields\Datastore\Theme_Options_Datastore ) {
+			$this->get_datastore()->set_multilingual( $this->multilingual );
+		}
+		return $this;
+	}
+
+	protected function language_input_name() {
+		return $this->get_id() . '_language';
+	}
+
+	protected function verified_nonce_in_request() {
+		$input = Helper::input();
+		$name = $this->get_nonce_name();
+		return isset( $input[ $name ] ) && is_string( $input[ $name ] ) && parent::verified_nonce_in_request();
+	}
+
+	protected function verified_language_in_request() {
+		$input = Helper::input();
+		$name = $this->language_input_name();
+		if ( ! $this->is_multilingual() ) {
+			// A form opened before Polylang was disabled must not overwrite shared data.
+			return ! isset( $input[ $name ] );
+		}
+		return isset( $input[ $name ], $input[ $name . '_nonce' ] ) &&
+			is_string( $input[ $name ] ) && '' !== $input[ $name ] &&
+			Polylang::valid_language( $input[ $name ] ) && is_string( $input[ $name . '_nonce' ] ) &&
+			wp_verify_nonce( $input[ $name . '_nonce' ], $name . ':' . $input[ $name ] );
+	}
+
+	/**
+	 * Expose Polylang's own toolbar selector on this settings page.
+	 */
+	public function admin_language_items( $items, $all_items = array() ) {
+		return $this->is_multilingual() && $this->should_activate() && $all_items ? $all_items : $items;
+	}
+
+	public function render_language_fields() {
+		if ( ! $this->is_multilingual() ) {
+			return;
+		}
+		$language = Polylang::current_language();
+		$token = '' === $language ? 'all' : $language;
+		$name = $this->language_input_name();
+		echo '<input type="hidden" name="' . esc_attr( $name ) . '" value="' . esc_attr( $token ) . '">';
+		$slugs = Polylang::languages();
+		$names = pll_languages_list( array( 'fields' => 'name', 'hide_empty' => false ) );
+		$labels = array( 'all' => __( 'Shared values', 'carbon-fields' ) );
+		foreach ( $slugs as $index => $slug ) {
+			$labels[ $slug ] = isset( $names[ $index ] ) ? $names[ $index ] : $slug;
+		}
+		echo '<nav class="nav-tab-wrapper" aria-label="' . esc_attr__( 'Settings language', 'carbon-fields' ) . '">';
+		foreach ( $labels as $slug => $label ) {
+			$url = add_query_arg( array( 'page' => $this->get_page_file(), 'lang' => $slug ), remove_query_arg( 'settings-updated' ) );
+			echo '<a class="nav-tab' . ( $slug === $token ? ' nav-tab-active' : '' ) . '" href="' . esc_url( $url ) . '"' . ( $slug === $token ? ' aria-current="page"' : '' ) . '>' . esc_html( $label ) . '</a>';
+		}
+		$description = 'all' === $token ?
+			__( 'Shared values are used by languages without their own saved values.', 'carbon-fields' ) :
+			__( 'Untranslated fields use shared values. Saving changes only the selected language.', 'carbon-fields' );
+		echo '</nav><p class="description">' . esc_html( $description ) . '</p>';
+	}
+
+	public function render_language_complete() {
+		if ( $this->is_multilingual() ) {
+			$language = Polylang::current_language();
+			$token = '' === $language ? 'all' : $language;
+			$name = $this->language_input_name();
+			// Place the language nonce after all field inputs to reject truncated forms.
+			wp_nonce_field( $name . ':' . $token, $name . '_nonce', false );
+		}
+	}
 
 	/**
 	 * Array of registered page slugs to verify uniqueness with
@@ -75,6 +166,9 @@ class Theme_Options_Container extends Container {
 		$registered = $this->register_page();
 		if ( $registered ) {
 			add_action( 'admin_menu', array( $this, '_attach' ) );
+			add_filter( 'pll_admin_languages_filter', array( $this, 'admin_language_items' ), 10, 2 );
+			add_action( $this->get_id() . '_before_fields', array( $this, 'render_language_fields' ) );
+			add_action( $this->get_id() . '_after_fields', array( $this, 'render_language_complete' ) );
 		}
 	}
 
@@ -88,6 +182,10 @@ class Theme_Options_Container extends Container {
 			return false;
 		}
 
+		if ( ! $this->verified_language_in_request() ) {
+			$this->errors[] = esc_html__( 'The settings language could not be verified. Reload the page and try again.', 'carbon-fields' );
+			return false;
+		}
 		return $this->is_valid_attach_for_object( null );
 	}
 
@@ -98,16 +196,26 @@ class Theme_Options_Container extends Container {
 	 * @param mixed $user_data
 	 */
 	public function save( $user_data = null ) {
-		try {
-			parent::save( $user_data );
-		} catch ( Incorrect_Syntax_Exception $e ) {
-			$this->errors[] = $e->getMessage();
+		if ( ! $this->verified_language_in_request() ) {
+			return new \WP_Error( 'carbon_fields_invalid_language', __( 'The settings language could not be verified. Reload the page and try again.', 'carbon-fields' ) );
 		}
-
-		do_action( 'carbon_fields_' . $this->type . '_container_saved', $user_data, $this );
+		$input = Helper::input();
+		$language = $this->is_multilingual() ? $input[ $this->language_input_name() ] : null;
+		Polylang::with_language( $language, function() use ( $user_data ) {
+			try {
+				parent::save( $user_data );
+			} catch ( Incorrect_Syntax_Exception $e ) {
+				$this->errors[] = $e->getMessage();
+			}
+			do_action( 'carbon_fields_' . $this->type . '_container_saved', $user_data, $this );
+		} );
 
 		if ( ! headers_sent() ) {
-			wp_redirect( add_query_arg( array( 'settings-updated' => 'true' ) ) );
+			$args = array( 'settings-updated' => 'true' );
+			if ( null !== $language ) {
+				$args['lang'] = $language;
+			}
+			wp_safe_redirect( add_query_arg( $args ) );
 		}
 	}
 

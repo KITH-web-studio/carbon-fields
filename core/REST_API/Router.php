@@ -250,13 +250,13 @@ class Router {
 	 * @return array|\WP_REST_Response
 	 */
 	public function options_accessor( $request ) {
-		$request_type = $request->get_method();
-
-		if ( $request_type === 'POST' ) {
-			return $this->set_options( $request );
+		$language = \Carbon_Fields\Integration\Polylang::active() ? $request->get_param( 'lang' ) : null;
+		if ( null !== $language && ! \Carbon_Fields\Integration\Polylang::valid_language( $language ) ) {
+			return new \WP_Error( 'carbon_fields_invalid_language', __( 'Unknown settings language.', 'carbon-fields' ), array( 'status' => 400 ) );
 		}
-
-		return $this->get_options();
+		return \Carbon_Fields\Integration\Polylang::with_language( $language, function() use ( $request ) {
+			return 'POST' === $request->get_method() ? $this->set_options( $request ) : $this->get_options();
+		} );
 	}
 
 	/**
@@ -496,6 +496,9 @@ class Router {
 	 */
 	protected function set_options( $request ) {
 		$options = $request->get_params();
+		if ( \Carbon_Fields\Integration\Polylang::active() ) {
+			unset( $options['lang'] );
+		}
 
 		if ( empty( $options ) ) {
 			return new \WP_REST_Response( __( 'No option names provided', 'carbon-fields' ) );

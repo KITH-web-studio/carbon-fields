@@ -121,3 +121,27 @@ msgstr ""
 #: templates/Container/widget.php:4
 msgid "No options are available for this widget."
 msgstr ""
+
+#: core/Container/Theme_Options_Container.php
+msgid "Shared values"
+msgstr ""
+
+#: core/Container/Theme_Options_Container.php
+msgid "Settings language"
+msgstr ""
+
+#: core/Container/Theme_Options_Container.php
+msgid "Shared values are used by languages without their own saved values."
+msgstr ""
+
+#: core/Container/Theme_Options_Container.php
+msgid "Untranslated fields use shared values. Saving changes only the selected language."
+msgstr ""
+
+#: core/Container/Theme_Options_Container.php
+msgid "The settings language could not be verified. Reload the page and try again."
+msgstr ""
+
+#: core/REST_API/Router.php
+msgid "Unknown settings language."
+msgstr ""

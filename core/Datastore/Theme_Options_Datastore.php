@@ -5,11 +5,28 @@
 namespace Carbon_Fields\Datastore;
 
 use Carbon_Fields\Field\Field;
+use Carbon_Fields\Integration\Polylang;
 
 /**
  * Theme options datastore class.
  */
 class Theme_Options_Datastore extends Key_Value_Datastore {
+	protected $multilingual = true;
+
+	public function set_multilingual( $enabled ) {
+		$this->multilingual = (bool) $enabled;
+		return $this;
+	}
+
+	protected function language_prefix() {
+		$language = $this->multilingual ? Polylang::current_language() : '';
+		return '' !== $language ? '_kith_cf_pll:' . Polylang::language_id( $language ) . ':' : '';
+	}
+
+	protected function root_marker( Field $field ) {
+		$hierarchy = $this->get_full_hierarchy_for_field( $field );
+		return $this->language_prefix() . '#root:' . $hierarchy[0];
+	}
 
 	/**
 	 * Initialization tasks.
@@ -41,9 +58,27 @@ class Theme_Options_Datastore extends Key_Value_Datastore {
 	 * @return array<stdClass> Array of {key, value} objects
 	 */
 	protected function get_storage_array( Field $field, $storage_key_patterns ) {
-		global $wpdb;
+		$prefix = $this->language_prefix();
+		$storage_array = $this->query_storage_array( $storage_key_patterns, $prefix );
+		if ( '' !== $prefix && empty( $storage_array ) && ! get_option( $this->root_marker( $field ), false ) ) {
+			// Fall back for an entire root field, never merge translated and shared rows.
+			$hierarchy = $this->get_full_hierarchy_for_field( $field );
+			$root_patterns = $this->key_toolset->get_storage_key_getter_patterns( true, array( $hierarchy[0] ) );
+			if ( empty( $this->query_storage_array( $root_patterns, $prefix ) ) ) {
+				$storage_array = $this->query_storage_array( $storage_key_patterns, '' );
+			}
+		}
+		return apply_filters( 'carbon_fields_datastore_storage_array', $storage_array, $this, $storage_key_patterns );
+	}
 
-		$storage_key_comparisons = $this->key_toolset->storage_key_patterns_to_sql( '`option_name`', $storage_key_patterns );
+	protected function query_storage_array( $storage_key_patterns, $prefix ) {
+		global $wpdb;
+		$patterns = array();
+		foreach ( $storage_key_patterns as $key => $comparison ) {
+			$patterns[ $prefix . $key ] = $comparison;
+		}
+
+		$storage_key_comparisons = $this->key_toolset->storage_key_patterns_to_sql( '`option_name`', $patterns );
 
 		$storage_array = $this->get_cached_storage_rows( $wpdb->options, '
 			SELECT `option_name` AS `key`, `option_value` AS `value`
@@ -52,8 +87,11 @@ class Theme_Options_Datastore extends Key_Value_Datastore {
 			ORDER BY `option_name` ASC
 		' );
 
-		$storage_array = apply_filters( 'carbon_fields_datastore_storage_array', $storage_array, $this, $storage_key_patterns );
-
+		if ( '' !== $prefix ) {
+			foreach ( $storage_array as $row ) {
+				$row->key = substr( $row->key, strlen( $prefix ) );
+			}
+		}
 		return $storage_array;
 	}
 
@@ -75,6 +113,7 @@ class Theme_Options_Datastore extends Key_Value_Datastore {
 	 * @param bool $autoload
 	 */
 	protected function save_key_value_pair_with_autoload( $key, $value, $autoload = true ) {
+		$key = $this->language_prefix() . $key;
 		$autoload = $autoload ? 'yes': 'no';
 		$notoptions = wp_cache_get( 'notoptions', 'options' );
 		$notoptions[ $key ] = '';
@@ -115,6 +154,9 @@ class Theme_Options_Datastore extends Key_Value_Datastore {
 				$this->save_key_value_pair_with_autoload( $storage_key, $value, $field->get_autoload() );
 			}
 		}
+		if ( '' !== $this->language_prefix() && empty( $field->get_hierarchy() ) ) {
+			update_option( $this->root_marker( $field ), 1, false );
+		}
 	}
 
 	/**
@@ -131,6 +173,14 @@ class Theme_Options_Datastore extends Key_Value_Datastore {
 			$this->get_full_hierarchy_for_field( $field ),
 			$this->get_full_hierarchy_index_for_field( $field )
 		);
+		$prefix = $this->language_prefix();
+		if ( '' !== $prefix ) {
+			$patterns = array();
+			foreach ( $storage_key_patterns as $key => $comparison ) {
+				$patterns[ $prefix . $key ] = $comparison;
+			}
+			$storage_key_patterns = $patterns;
+		}
 		$storage_key_comparisons = $this->key_toolset->storage_key_patterns_to_sql( '`option_name`', $storage_key_patterns );
 
 		$option_names = $wpdb->get_col( '
@@ -141,6 +191,9 @@ class Theme_Options_Datastore extends Key_Value_Datastore {
 
 		foreach ( $option_names as $option_name ) {
 			delete_option( $option_name );
+		}
+		if ( '' !== $prefix && empty( $field->get_hierarchy() ) ) {
+			delete_option( $this->root_marker( $field ) );
 		}
 	}
 }

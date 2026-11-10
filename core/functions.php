@@ -42,14 +42,14 @@ if ( ! function_exists( 'carbon_set_post_meta' ) ) {
 }
 
 if ( ! function_exists( 'carbon_get_theme_option' ) ) {
-	function carbon_get_theme_option( $name, $container_id = '' ) {
-		return Helper::get_theme_option( $name, $container_id );
+	function carbon_get_theme_option( $name, $container_id = '', $language = null ) {
+		return Helper::get_theme_option( $name, $container_id, $language );
 	}
 }
 
 if ( ! function_exists( 'carbon_set_theme_option' ) ) {
-	function carbon_set_theme_option( $name, $value, $container_id = '' ) {
-		Helper::set_theme_option( $name, $value, $container_id );
+	function carbon_set_theme_option( $name, $value, $container_id = '', $language = null ) {
+		return Helper::set_theme_option( $name, $value, $container_id, $language );
 	}
 }
 

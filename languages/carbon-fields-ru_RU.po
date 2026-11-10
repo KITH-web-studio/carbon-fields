@@ -120,3 +120,27 @@ msgstr "Сохранить изменения"
 #: templates/Container/widget.php:4
 msgid "No options are available for this widget."
 msgstr "Нет доступных настроек для этого виджета."
+
+#: core/Container/Theme_Options_Container.php core/REST_API/Router.php
+msgid "Shared values"
+msgstr "Общие значения"
+
+#: core/Container/Theme_Options_Container.php core/REST_API/Router.php
+msgid "Settings language"
+msgstr "Язык настроек"
+
+#: core/Container/Theme_Options_Container.php core/REST_API/Router.php
+msgid "Shared values are used by languages without their own saved values."
+msgstr "Общие значения используются для языков, у которых нет собственных сохранённых значений."
+
+#: core/Container/Theme_Options_Container.php core/REST_API/Router.php
+msgid "Untranslated fields use shared values. Saving changes only the selected language."
+msgstr "Поля без перевода используют общие значения. Сохранение изменяет только выбранный язык."
+
+#: core/Container/Theme_Options_Container.php core/REST_API/Router.php
+msgid "The settings language could not be verified. Reload the page and try again."
+msgstr "Не удалось проверить язык настроек. Перезагрузите страницу и попробуйте снова."
+
+#: core/Container/Theme_Options_Container.php core/REST_API/Router.php
+msgid "Unknown settings language."
+msgstr "Неизвестный язык настроек."
