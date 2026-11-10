@@ -1,6 +1,6 @@
 <?php
 
-// Modified by KITH Web Studio on 2026-11-10 for exact transactional revision snapshots and cache invalidation.
+// Modified by KITH Web Studio on 2026-11-10 for transactional snapshots of newly created revisions.
 
 namespace Carbon_Fields\Service;
 
@@ -14,34 +14,42 @@ class Revisions_Service extends Service {
 	const SNAPSHOT_SCOPE_KEY = '_carbon_fields:revision_scope';
 
 	private $revisions_created_during_restore = array();
+	private $pending_revisions = array();
 
 	protected function enabled() {
 		add_filter( 'carbon_get_post_meta_post_id', array( $this, 'update_post_id_on_preview' ), 10, 3 );
-		add_action( 'carbon_fields_post_meta_container_saved', array( $this, 'maybe_copy_meta_to_revision' ), 10, 2 );
+		add_action( 'shutdown', array( $this, 'save_pending_revisions' ) );
 		add_filter('_wp_post_revision_fields', array( $this, 'maybe_save_revision' ), 10, 2 );
 		add_filter('_wp_post_revision_fields', array( $this, 'add_fields_to_revision' ), 10, 2 );
-		add_action( '_wp_put_post_revision', array( $this, 'record_revision_created_during_restore' ), 10, 2 );
+		add_action( '_wp_put_post_revision', array( $this, 'capture_new_revision' ), 10, 2 );
 		add_action( 'wp_restore_post_revision', array( $this, 'restore_post_revision' ), 10, 2 );
 		add_filter( 'wp_save_post_revision_check_for_changes', array( $this, 'check_for_changes' ), 10, 3 );
 	}
 
 	protected function disabled() {
 		remove_filter( 'carbon_get_post_meta_post_id', array( $this, 'update_post_id_on_preview' ), 10 );
-		remove_action( 'carbon_fields_post_meta_container_saved', array( $this, 'maybe_copy_meta_to_revision' ), 10 );
+		remove_action( 'shutdown', array( $this, 'save_pending_revisions' ) );
+		$this->pending_revisions = array();
 		remove_filter('_wp_post_revision_fields', array( $this, 'maybe_save_revision' ), 10 );
 		remove_filter('_wp_post_revision_fields', array( $this, 'add_fields_to_revision' ), 10 );
-		remove_action( '_wp_put_post_revision', array( $this, 'record_revision_created_during_restore' ), 10 );
+		remove_action( '_wp_put_post_revision', array( $this, 'capture_new_revision' ), 10 );
 		remove_action( 'wp_restore_post_revision', array( $this, 'restore_post_revision' ), 10 );
 		$this->revisions_created_during_restore = array();
 		remove_filter( 'wp_save_post_revision_check_for_changes', array( $this, 'check_for_changes' ), 10 );
 	}
 
 	public function check_for_changes( $return, $last_revision, $post ) {
-		if ( empty( $_POST[ self::CHANGE_KEY ] ) ) {
-			return $return;
+		if ( isset( $this->pending_revisions[ $post->ID ] ) && ! $this->get_restoring_revision_id() ) {
+			return false;
 		}
 
-		return false;
+		// Keep the editor's preview flag separate from normal form saves.
+		if ( isset( $_POST['wp-preview'] ) && 'dopreview' === $_POST['wp-preview'] &&
+			! empty( $_POST[ self::CHANGE_KEY ] ) ) {
+			return false;
+		}
+
+		return $return;
 	}
 
 	public function update_post_id_on_preview( $id, $name, $container_id ) {
@@ -73,24 +81,78 @@ class Revisions_Service extends Service {
 	}
 
 	/**
-	 * @param int $post_id
-	 * @param \Carbon_Fields\Container\Post_Meta_Container $container
+	 * Detect net changes to revisioned fields without reading any extra metadata on a no-op.
+	 * Compatibility saves can delete and reinsert identical values, so a write alone
+	 * is not evidence of a change.
 	 */
-	public function maybe_copy_meta_to_revision( $post_id, $container ) {
-		if ( ! $container || $container->get_revisions_disabled() ) {
-			return;
+	public function track_container_save( $post_id, $container, $save ) {
+		$post_id = (int) $post_id;
+		if ( ! $this->is_enabled() || $container->get_revisions_disabled() ||
+			! $post_id || isset( $this->pending_revisions[ $post_id ] ) ||
+			! ( $post = get_post( $post_id ) ) || 'revision' === $post->post_type ||
+			! wp_revisions_enabled( $post ) || $this->get_restoring_revision_id() ) {
+			return $save();
 		}
 
-		if ( doing_action( 'save_post' ) && $this->get_restoring_revision_id() ) {
-			return;
+		$patterns = $this->get_snapshot_patterns( $container );
+		if ( empty( $patterns ) ) {
+			return $save();
 		}
 
-		$revision = $this->get_latest_post_revision( $post_id );
-		if ( empty( $revision ) ) {
-			return;
+		$before = null;
+		$capture_before = function( $meta_ids, $object_id, $key ) use ( $post_id, $patterns, &$before ) {
+			if ( null !== $before || $post_id !== (int) $object_id ) {
+				return;
+			}
+			$segments = explode( Key_Toolset::SEGMENT_GLUE, $key, 2 );
+			if ( isset( $patterns[ $segments[0] ] ) ) {
+				$before = $this->get_snapshot_values( $post_id, $patterns );
+			}
+		};
+		$before_add = function( $object_id, $key ) use ( $capture_before ) {
+			$capture_before( null, $object_id, $key );
+		};
+		add_action( 'add_post_meta', $before_add, -PHP_INT_MAX, 2 );
+		add_action( 'update_post_meta', $capture_before, -PHP_INT_MAX, 3 );
+		add_action( 'delete_post_meta', $capture_before, -PHP_INT_MAX, 3 );
+		try {
+			$saved = $save();
+		} finally {
+			remove_action( 'add_post_meta', $before_add, -PHP_INT_MAX );
+			remove_action( 'update_post_meta', $capture_before, -PHP_INT_MAX );
+			remove_action( 'delete_post_meta', $capture_before, -PHP_INT_MAX );
 		}
 
-		return $this->copy_meta( $post_id, array( $revision->ID ), false );
+		if ( false !== $saved && is_array( $before ) ) {
+			$after = $this->get_snapshot_values( $post_id, $patterns );
+			if ( is_array( $after ) && $before !== $after ) {
+				$this->pending_revisions[ $post_id ] = true;
+			}
+		}
+		return $saved;
+	}
+
+	/**
+	 * Older WordPress versions create the normal revision before saving metaboxes.
+	 * Standalone metabox saves can also finish without a core revision callback.
+	 */
+	public function save_pending_revisions() {
+		foreach ( array_keys( $this->pending_revisions ) as $post_id ) {
+			wp_save_post_revision( $post_id );
+			unset( $this->pending_revisions[ $post_id ] );
+		}
+	}
+
+	private function get_snapshot_values( $post_id, $patterns ) {
+		$rows = $this->read_snapshot_rows( array( $post_id ), $patterns, false );
+		if ( false === $rows || ! isset( $rows[ $post_id ] ) ) {
+			return false === $rows ? false : array();
+		}
+		$values = $this->collect_snapshot_keys( $rows[ $post_id ], array_keys( $patterns ) );
+		ksort( $values, SORT_STRING );
+		return array_map( function( $rows ) {
+			return array_column( $rows, 'value' );
+		}, $values );
 	}
 
 	public function maybe_save_revision( $fields, $post = null ) {
@@ -168,21 +230,25 @@ class Revisions_Service extends Service {
 	}
 
 	/**
-	 * Keep the ID emitted by WordPress while it updates the post for this restore.
+	 * Capture only revisions that WordPress has just created.
 	 *
 	 * @param int $revision_id Newly created revision.
 	 * @param int|null $post_id Parent post, supplied by WordPress 6.4 and later.
 	 */
-	public function record_revision_created_during_restore( $revision_id, $post_id = null ) {
-		$source_id = $this->get_restoring_revision_id();
-		if ( ! $source_id ) {
+	public function capture_new_revision( $revision_id, $post_id = null ) {
+		$post_id = $post_id ? (int) $post_id : (int) wp_is_post_revision( $revision_id );
+		if ( ! $post_id || wp_is_post_autosave( $revision_id ) ) {
 			return;
 		}
 
-		$post_id = $post_id ? (int) $post_id : (int) wp_is_post_revision( $revision_id );
-		if ( $post_id && (int) wp_is_post_revision( $source_id ) === $post_id ) {
+		$source_id = $this->get_restoring_revision_id();
+		if ( $source_id && (int) wp_is_post_revision( $source_id ) === $post_id ) {
 			$this->revisions_created_during_restore[ $source_id ] = (int) $revision_id;
+			return;
 		}
+
+		unset( $this->pending_revisions[ $post_id ] );
+		$this->copy_meta( $post_id, array( (int) $revision_id ), false );
 	}
 
 	/**
@@ -320,11 +386,12 @@ class Revisions_Service extends Service {
 	/**
 	 * Scope revisions to storage keys of registered, revision-enabled post fields.
 	 */
-	private function get_snapshot_patterns() {
+	private function get_snapshot_patterns( $container = null ) {
 		$repository = Carbon_Fields::resolve( 'container_repository' );
 		$key_toolset = Carbon_Fields::resolve( 'key_toolset' );
 		$scopes = array();
-		foreach ( $repository->get_containers( 'post_meta' ) as $container ) {
+		$containers = $container ? array( $container ) : $repository->get_containers( 'post_meta' );
+		foreach ( $containers as $container ) {
 			if ( $container->get_revisions_disabled() ) {
 				continue;
 			}
@@ -344,7 +411,7 @@ class Revisions_Service extends Service {
 	/**
 	 * Read source and destination rows in meta ID order, preserving duplicates and raw values.
 	 */
-	private function read_snapshot_rows( $post_ids, $scopes ) {
+	private function read_snapshot_rows( $post_ids, $scopes, $for_update = true ) {
 		global $wpdb;
 
 		$patterns = array( self::SNAPSHOT_SCOPE_KEY => Key_Toolset::PATTERN_COMPARISON_EQUAL );
@@ -353,8 +420,9 @@ class Revisions_Service extends Service {
 		}
 		$ids = implode( ',', array_map( 'intval', $post_ids ) );
 		$where = Carbon_Fields::resolve( 'key_toolset' )->storage_key_patterns_to_sql( 'meta_key', $patterns );
+		$lock = $for_update ? ' FOR UPDATE' : '';
 		if ( false === $wpdb->query( "SELECT post_id, meta_id, meta_key, meta_value FROM {$wpdb->postmeta}
-			WHERE post_id IN ({$ids}) AND {$where} ORDER BY meta_id FOR UPDATE" ) ) {
+			WHERE post_id IN ({$ids}) AND {$where} ORDER BY meta_id{$lock}" ) ) {
 			return false;
 		}
 

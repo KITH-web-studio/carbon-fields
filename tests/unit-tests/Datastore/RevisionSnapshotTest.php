@@ -24,13 +24,11 @@ class RevisionSnapshotTest extends WP_UnitTestCase {
 			$this->assertTrue( $field->set_value( 'snapshot A' )->save() );
 			$revision_a = _wp_put_post_revision( $post_id );
 			$this->assertIsInt( $revision_a );
-			$this->assertTrue( $service->maybe_copy_meta_to_revision( $post_id, $container ) );
 
 			$this->assertSame( $post_id, wp_update_post( array( 'ID' => $post_id, 'post_title' => $second_title ) ) );
 			$this->assertTrue( $field->set_value( 'snapshot B' )->save() );
 			$revision_b = _wp_put_post_revision( $post_id );
 			$this->assertIsInt( $revision_b );
-			$this->assertTrue( $service->maybe_copy_meta_to_revision( $post_id, $container ) );
 			$previous_ids = array_keys( wp_get_post_revisions( $post_id ) );
 
 			$this->assertSame( $post_id, wp_restore_post_revision( $revision_a ) );
@@ -44,6 +42,26 @@ class RevisionSnapshotTest extends WP_UnitTestCase {
 				$this->assertSame( 'snapshot A', get_post_meta( $created_ids[0], $key, true ) );
 			}
 
+			// Run the same save_post handlers as an ordinary Update with the restored form values.
+			$before_update = array_keys( wp_get_post_revisions( $post_id ) );
+			$legacy_save = ! $creates_revision;
+			$legacy_filter = function( $field ) { return $field; };
+			if ( $legacy_save ) {
+				// A compatibility save can physically rewrite rows without changing their values.
+				add_filter( 'carbon_fields_before_field_save', $legacy_filter );
+			}
+			try {
+				$this->submit_metaboxes( $post_id, array( array( $container, $field, 'snapshot A' ) ) );
+				$service->save_pending_revisions();
+			} finally {
+				if ( $legacy_save ) {
+					remove_filter( 'carbon_fields_before_field_save', $legacy_filter );
+				}
+			}
+			$this->assertSame( $before_update, array_keys( wp_get_post_revisions( $post_id ) ) );
+			$this->assertSame( 'snapshot A', get_post_meta( $post_id, $key, true ) );
+			$this->assertSame( 'snapshot B', get_post_meta( $revision_b, $key, true ) );
+
 			$this->assertSame( $post_id, wp_restore_post_revision( $revision_b ) );
 			$this->assertSame( 'snapshot B', get_post_meta( $post_id, $key, true ) );
 			$this->assertSame( 'snapshot A', get_post_meta( $revision_a, $key, true ) );
@@ -53,6 +71,86 @@ class RevisionSnapshotTest extends WP_UnitTestCase {
 				$service->disable();
 			}
 			$container->set_revisions_disabled( true );
+		}
+	}
+
+	/**
+	 * @dataProvider metabox_save_modes
+	 */
+	public function testMetaboxOnlyEditCreatesOneCompleteRevision( $fire_after_hooks ) {
+		$post_id = self::factory()->post->create( array( 'post_title' => 'Same title', 'post_status' => 'publish' ) );
+		$first = Field::make( 'text', 'crb_snapshot_first' );
+		$second = Field::make( 'text', 'crb_snapshot_second' );
+		$one = Container::make( 'post_meta', 'KITH first metabox' )->add_fields( array( $first ) );
+		$two = Container::make( 'post_meta', 'KITH second metabox' )->add_fields( array( $second ) );
+		$service = Carbon_Fields::service( 'revisions' );
+		$enabled_here = $service->enable();
+		try {
+			$previous = _wp_put_post_revision( $post_id );
+			$this->assertIsInt( $previous );
+			$before = array_keys( wp_get_post_revisions( $post_id ) );
+			$this->submit_metaboxes( $post_id, array(
+				array( $one, $first, 'first value' ),
+				array( $two, $second, 'second value' ),
+			), $fire_after_hooks );
+			$after_update = array_diff( array_keys( wp_get_post_revisions( $post_id ) ), $before );
+			$this->assertCount( $fire_after_hooks ? 1 : 0, $after_update );
+			$service->save_pending_revisions();
+			$created = array_values( array_diff( array_keys( wp_get_post_revisions( $post_id ) ), $before ) );
+			$this->assertCount( 1, $created );
+			$this->assertSame( 'first value', get_post_meta( $created[0], '_crb_snapshot_first', true ) );
+			$this->assertSame( 'second value', get_post_meta( $created[0], '_crb_snapshot_second', true ) );
+			$this->assertSame( '', get_post_meta( $previous, '_crb_snapshot_first', true ) );
+			$this->assertSame( '', get_post_meta( $previous, '_crb_snapshot_second', true ) );
+		} finally {
+			if ( $enabled_here ) {
+				$service->disable();
+			}
+			$one->set_revisions_disabled( true );
+			$two->set_revisions_disabled( true );
+		}
+	}
+
+	public static function metabox_save_modes() {
+		return array(
+			'core saves the revision after metaboxes' => array( true ),
+			'no core after-insert callback' => array( false ),
+		);
+	}
+
+	private function submit_metaboxes( $post_id, $fields, $fire_after_hooks = true ) {
+		require_once dirname( dirname( dirname( __DIR__ ) ) ) . '/config.php';
+
+		$old_post = $_POST;
+		$old_server = $_SERVER;
+		$old_user = get_current_user_id();
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_POST = array();
+		foreach ( $fields as list( $container, $field, $value ) ) {
+			$nonce = $container->get_id() . '_nonce';
+			$_POST[ $nonce ] = wp_create_nonce( $nonce );
+			$_POST[ $field->get_name() ] = wp_slash( $value );
+			add_action( 'save_post', array( $container, '_save' ) );
+		}
+		$saves = 0;
+		$observe_save = function( $saved_id ) use ( $post_id, &$saves ) {
+			if ( $post_id === $saved_id ) {
+				++$saves;
+			}
+		};
+		add_action( 'carbon_fields_post_meta_container_saved', $observe_save );
+		try {
+			$this->assertSame( $post_id, wp_update_post( array( 'ID' => $post_id ), false, $fire_after_hooks ) );
+			$this->assertSame( count( $fields ), $saves );
+		} finally {
+			remove_action( 'carbon_fields_post_meta_container_saved', $observe_save );
+			foreach ( $fields as list( $container ) ) {
+				remove_action( 'save_post', array( $container, '_save' ) );
+			}
+			$_POST = $old_post;
+			$_SERVER = $old_server;
+			wp_set_current_user( $old_user );
 		}
 	}
 
@@ -70,11 +168,11 @@ class RevisionSnapshotTest extends WP_UnitTestCase {
 		$container = Container::make( 'post_meta', 'KITH legacy revision fixture' )->add_fields( array( $complex, $text ) );
 		$container->set_post_id( $post_id );
 		$service = Carbon_Fields::service( 'revisions' );
+		$enabled_here = $service->enable();
 		try {
 			$this->assertTrue( $complex->set_value( array( array( 'title' => 'original' ) ) )->save() );
 			$revision_id = _wp_put_post_revision( $post_id );
 			$this->assertIsInt( $revision_id );
-			$this->assertTrue( $service->maybe_copy_meta_to_revision( $post_id, $container ) );
 			$this->assertTrue( delete_metadata( 'post', $revision_id, Revisions_Service::SNAPSHOT_SCOPE_KEY ) );
 
 			$this->assertTrue( $complex->set_value( array(
@@ -92,6 +190,9 @@ class RevisionSnapshotTest extends WP_UnitTestCase {
 			$this->assertSame( 'not captured in the old revision', get_post_meta( $post_id, '_crb_snapshot_text', true ) );
 			$this->assertSame( 'unrelated', get_post_meta( $post_id, '_crb_snapshot_rows_other', true ) );
 		} finally {
+			if ( $enabled_here ) {
+				$service->disable();
+			}
 			$container->set_revisions_disabled( true );
 		}
 	}
@@ -104,11 +205,11 @@ class RevisionSnapshotTest extends WP_UnitTestCase {
 		$container = Container::make( 'post_meta', 'KITH revision rollback fixture' )->add_fields( array( $field ) );
 		$container->set_post_id( $post_id );
 		$service = Carbon_Fields::service( 'revisions' );
+		$enabled_here = $service->enable();
 		try {
 			$this->assertTrue( $field->set_value( 'snapshot' )->save() );
 			$revision_id = _wp_put_post_revision( $post_id );
 			$this->assertIsInt( $revision_id );
-			$this->assertTrue( $service->maybe_copy_meta_to_revision( $post_id, $container ) );
 			$this->assertTrue( $field->set_value( 'keep this value' )->save() );
 
 			$fail = function( $query ) use ( $wpdb ) {
@@ -125,6 +226,9 @@ class RevisionSnapshotTest extends WP_UnitTestCase {
 			}
 			$this->assertSame( 'keep this value', get_post_meta( $post_id, '_crb_snapshot_rollback', true ) );
 		} finally {
+			if ( $enabled_here ) {
+				$service->disable();
+			}
 			$container->set_revisions_disabled( true );
 		}
 	}
@@ -135,10 +239,10 @@ class RevisionSnapshotTest extends WP_UnitTestCase {
 		$container = Container::make( 'post_meta', 'KITH empty revision fixture' )->add_fields( array( $complex ) );
 		$container->set_post_id( $post_id );
 		$service = Carbon_Fields::service( 'revisions' );
+		$enabled_here = $service->enable();
 		try {
 			$revision_id = _wp_put_post_revision( $post_id );
 			$this->assertIsInt( $revision_id );
-			$this->assertTrue( $service->maybe_copy_meta_to_revision( $post_id, $container ) );
 			$this->assertSame( array( '_crb_snapshot_empty' ), json_decode( get_post_meta( $revision_id, Revisions_Service::SNAPSHOT_SCOPE_KEY, true ), true ) );
 			$this->assertTrue( $complex->set_value( array( array( 'title' => 'added later' ) ) )->save() );
 
@@ -146,6 +250,9 @@ class RevisionSnapshotTest extends WP_UnitTestCase {
 			$complex->load();
 			$this->assertSame( array(), $complex->get_formatted_value() );
 		} finally {
+			if ( $enabled_here ) {
+				$service->disable();
+			}
 			$container->set_revisions_disabled( true );
 		}
 	}
