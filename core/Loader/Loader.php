@@ -216,7 +216,7 @@ class Loader {
 			$core_deps[] = 'wp-components';
 		}
 
-		$this->enqueue_script( 'vendor', array( 'wp-polyfill', 'jquery', 'lodash' ) );
+		$this->enqueue_script( 'vendor', array( 'wp-polyfill', 'jquery', 'lodash', 'wp-api-request' ) );
 		$this->enqueue_script( 'core', $core_deps );
 		$this->enqueue_script( 'metaboxes', array( 'carbon-fields-vendor', 'carbon-fields-core' ) );
 

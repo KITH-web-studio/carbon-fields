@@ -19,25 +19,25 @@ class Router {
 		'post_meta' => array(
 			'path'                => '/posts/(?P<id>\d+)',
 			'callback'            => 'get_post_meta',
-			'permission_callback' => 'allow_access',
+			'permission_callback' => 'post_meta_permission',
 			'methods'             => 'GET',
 		),
 		'term_meta' => array(
 			'path'                => '/terms/(?P<id>\d+)',
 			'callback'            => 'get_term_meta',
-			'permission_callback' => 'allow_access',
+			'permission_callback' => 'term_meta_permission',
 			'methods'             => 'GET',
 		),
 		'user_meta' => array(
 			'path'                => '/users/(?P<id>\d+)',
 			'callback'            => 'get_user_meta',
-			'permission_callback' => 'allow_access',
+			'permission_callback' => 'user_meta_permission',
 			'methods'             => 'GET',
 		),
 		'comment_meta' => array(
 			'path'                => '/comments/(?P<id>\d+)',
 			'callback'            => 'get_comment_meta',
-			'permission_callback' => 'allow_access',
+			'permission_callback' => 'comment_meta_permission',
 			'methods'             => 'GET',
 		),
 		'theme_options' => array(
@@ -49,13 +49,13 @@ class Router {
 		'association_data' => array(
 			'path'                => '/association',
 			'callback'            => 'get_association_data',
-			'permission_callback' => 'allow_access',
+			'permission_callback' => 'association_permission',
 			'methods'             => 'GET',
 		),
 		'association_options' => array(
 			'path'                => '/association/options',
 			'callback'            => 'get_association_options',
-			'permission_callback' => 'allow_access',
+			'permission_callback' => 'association_permission',
 			'methods'             => 'GET',
 		),
 		'attachment_data' => array(
@@ -175,6 +175,48 @@ class Router {
 	public function allow_access() {
 		return true;
 	}
+
+	public function post_meta_permission( $request ) {
+		$id = (int) $request['id'];
+		return $id > 0 && $this->can_read_post( get_post( $id ) );
+	}
+
+	public function term_meta_permission( $request ) {
+		$term = get_term( (int) $request['id'] );
+		if ( ! $term || is_wp_error( $term ) ) {
+			return false;
+		}
+		$taxonomy = get_taxonomy( $term->taxonomy );
+		return $taxonomy && ( $taxonomy->publicly_queryable || current_user_can( $taxonomy->cap->manage_terms ) );
+	}
+
+	public function user_meta_permission( $request ) {
+		$id = (int) $request['id'];
+		return $id > 0 && ( get_current_user_id() === $id || current_user_can( 'edit_user', $id ) );
+	}
+
+	public function comment_meta_permission( $request ) {
+		$id = (int) $request['id'];
+		$comment = $id > 0 ? get_comment( $id ) : null;
+		return $comment && $comment->comment_post_ID && $this->can_read_post( get_post( $comment->comment_post_ID ) ) &&
+			( '1' === (string) $comment->comment_approved || current_user_can( 'edit_comment', $comment->comment_ID ) );
+	}
+
+	public function association_permission() {
+		return is_user_logged_in();
+	}
+
+	private function can_read_post( $post ) {
+		if ( ! $post || ( $post->post_password !== '' && ! current_user_can( 'edit_post', $post->ID ) ) ) {
+			return false;
+		}
+
+		$type = get_post_type_object( $post->post_type );
+		$status = get_post_status_object( get_post_status( $post ) );
+		return ( $type && is_post_type_viewable( $type ) && $status && $status->public ) ||
+			current_user_can( 'read_post', $post->ID );
+	}
+
 
 	/**
 	 * Register custom routes
@@ -320,37 +362,48 @@ class Router {
 	 *
 	 * @return array
 	 */
-	public function get_association_data() {
-		$container_id = $_GET['container_id'];
-		$field_id     = $_GET['field_id'];
-		$options      = isset( $_GET['options'] ) ? explode( ';', $_GET['options'] ) : array();
+	public function get_association_data( $request ) {
+		$field = $this->get_association_field( $request );
+		if ( is_wp_error( $field ) ) {
+			return $field;
+		}
+
+		$options = $request->get_param( 'options' );
+		if ( null === $options || '' === $options ) {
+			return array();
+		}
+		if ( ! is_string( $options ) ) {
+			return $this->invalid_association_request();
+		}
+
 		$return_value = array();
+		foreach ( explode( ';', $options ) as $option ) {
+			$parts = explode( ':', $option );
+			if ( count( $parts ) !== 3 || ! ctype_digit( $parts[0] ) || (int) $parts[0] < 1 ||
+				$parts[1] === '' || sanitize_key( $parts[1] ) !== $parts[1] ||
+				sanitize_key( $parts[2] ) !== $parts[2] ) {
+				return $this->invalid_association_request();
+			}
 
-		/** @var \Carbon_Fields\Field\Association_Field $field */
-		$field = Helper::get_field( null, $container_id, $field_id );
+			list( $id, $type, $subtype ) = $parts;
+			$id = (int) $id;
+			if ( ( 'post' === $type && ! get_post_type_object( $subtype ) ) ||
+				( 'term' === $type && ! get_taxonomy( $subtype ) ) ) {
+				return $this->invalid_association_request();
+			}
+			if ( 'post' === $type && ( $post = get_post( $id ) ) && ! $this->can_read_post( $post ) ) {
+				continue;
+			}
 
-		$options = array_map( function ( $option ) {
-			$option = explode( ':', $option );
-
-			return [
-				'id'      => $option[0],
-				'type'    => $option[1],
-				'subtype' => $option[2],
-			];
-		}, $options );
-
-		foreach ( $options as $option ) {
-			$item = array(
-				'type'       => $option['type'],
-				'subtype'    => $option['subtype'],
-				'thumbnail'  => $field->get_thumbnail_by_type( $option['id'], $option['type'], $option['subtype'] ),
-				'id'         => intval( $option['id'] ),
-				'title'      => $field->get_title_by_type( $option['id'], $option['type'], $option['subtype'] ),
-				'label'      => $field->get_item_label( $option['id'], $option['type'], $option['subtype'] ),
-				'is_trashed' => ( $option['type'] == 'post' && get_post_status( $option['id'] ) === 'trash' ),
+			$return_value[] = array(
+				'type'       => $type,
+				'subtype'    => $subtype,
+				'thumbnail'  => $field->get_thumbnail_by_type( $id, $type, $subtype ),
+				'id'         => $id,
+				'title'      => $field->get_title_by_type( $id, $type, $subtype ),
+				'label'      => $field->get_item_label( $id, $type, $subtype ),
+				'is_trashed' => 'post' === $type && 'trash' === get_post_status( $id ),
 			);
-
-			$return_value[] = $item;
 		}
 
 		return $return_value;
@@ -358,26 +411,47 @@ class Router {
 
 	/**
 	 * Get Carbon Fields association options data.
-	 *
-	 * @access public
-	 *
-	 * @return array
 	 */
-	public function get_association_options() {
-		$page = isset( $_GET['page'] ) ? absint( $_GET['page'] )              : 1;
-		$term = isset( $_GET['term'] ) ? sanitize_text_field( $_GET['term'] ) : '';
+	public function get_association_options( $request ) {
+		$field = $this->get_association_field( $request );
+		if ( is_wp_error( $field ) ) {
+			return $field;
+		}
 
-		$container_id = $_GET['container_id'];
-		$field_id     = $_GET['field_id'];
-
-		/** @var \Carbon_Fields\Field\Association_Field $field */
-		$field = Helper::get_field( null, $container_id, $field_id );
+		$page = $request->get_param( 'page' );
+		$term = $request->get_param( 'term' );
+		if ( ( null !== $term && ! is_string( $term ) ) ||
+			( null !== $page && ( ( ! is_int( $page ) && ! is_string( $page ) ) ||
+				! ctype_digit( (string) $page ) || (int) $page < 1 || (int) $page > 1000000 ) ) ) {
+			return $this->invalid_association_request();
+		}
 
 		return $field->get_options( array(
-			'page' => $page,
-			'term' => $term,
+			'page' => null === $page ? 1 : (int) $page,
+			'term' => null === $term ? '' : sanitize_text_field( $term ),
 		) );
 	}
+
+	private function get_association_field( $request ) {
+		$container_id = $request->get_param( 'container_id' );
+		$field_id = $request->get_param( 'field_id' );
+		if ( ! is_string( $container_id ) || ! is_string( $field_id ) || '' === $container_id || '' === $field_id ||
+			sanitize_text_field( $container_id ) !== $container_id || sanitize_text_field( $field_id ) !== $field_id ) {
+			return $this->invalid_association_request();
+		}
+
+		$field = Helper::get_field( null, $container_id, $field_id );
+		if ( ! ( $field instanceof \Carbon_Fields\Field\Association_Field ) ) {
+			return new \WP_Error( 'carbon_fields_association_not_found', __( 'Association field not found.', 'carbon-fields' ), array( 'status' => 404 ) );
+		}
+
+		return $field;
+	}
+
+	private function invalid_association_request() {
+		return new \WP_Error( 'carbon_fields_invalid_association', __( 'Invalid association request.', 'carbon-fields' ), array( 'status' => 400 ) );
+	}
+
 
 	/**
 	 * Get attachment data by given ID or URL.

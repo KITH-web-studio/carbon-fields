@@ -8,7 +8,8 @@ export default ( url, method, data = null ) => {
 		const request = window.jQuery.ajax( {
 			url: url,
 			type: method,
-			data: data
+			data: data,
+			headers: window.wpApiSettings.nonce ? { 'X-WP-Nonce': window.wpApiSettings.nonce } : {}
 		} );
 
 		request.done( ( response ) => {

@@ -29,7 +29,8 @@ class RichTextField extends Component {
 
 		this.state = {
 			iframed: false,
-			modalOpen: false
+			modalOpen: false,
+			editorReady: false
 		};
 	}
 
@@ -40,12 +41,7 @@ class RichTextField extends Component {
 	 */
 	componentDidMount() {
 		if ( this.props.visible ) {
-			if ( this.node.current.ownerDocument !== document ) {
-				this.setState( { iframed: true } );
-			} else {
-				this.attachAutoResizeObserver();
-				this.timer = setTimeout( this.initEditor, 250 );
-			}
+			this.prepareEditor();
 		}
 	}
 
@@ -58,9 +54,23 @@ class RichTextField extends Component {
 	 */
 	componentDidUpdate( prevProps, prevState ) {
 		if ( this.state.modalOpen && ! prevState.modalOpen ) {
-			this.attachAutoResizeObserver();
-			this.timer = setTimeout( this.initEditor, 250 );
+			this.scheduleEditor();
+		} else if ( this.props.visible && ! prevProps.visible && ! this.state.iframed && ! this.observer ) {
+			this.prepareEditor();
 		}
+	}
+
+	prepareEditor() {
+		if ( this.node.current.ownerDocument !== document ) {
+			this.setState( { iframed: true } );
+		} else {
+			this.scheduleEditor();
+		}
+	}
+
+	scheduleEditor() {
+		this.attachAutoResizeObserver();
+		this.timer = setTimeout( this.initEditor, 250 );
 	}
 
 	/**
@@ -128,7 +138,7 @@ class RichTextField extends Component {
 
 		this.destroyEditor();
 
-		this.setState( { modalOpen: false } );
+		this.setState( { modalOpen: false, editorReady: false } );
 	}
 
 	/**
@@ -198,11 +208,11 @@ class RichTextField extends Component {
 
 				{ shouldRenderTabs && (
 					<div className="wp-editor-tabs">
-						<button type="button" id={ `${ id }-tmce` } className="wp-switch-editor switch-tmce" data-wp-editor-id={ id }>
+						<button type="button" id={ `${ id }-tmce` } className="wp-switch-editor switch-tmce" data-wp-editor-id={ id } disabled={ ! this.state.editorReady }>
 							{ __( 'Visual', 'carbon-fields-ui' ) }
 						</button>
 
-						<button type="button" id={ `${ id }-html` } className="wp-switch-editor switch-html" data-wp-editor-id={ id }>
+						<button type="button" id={ `${ id }-html` } className="wp-switch-editor switch-html" data-wp-editor-id={ id } disabled={ ! this.state.editorReady }>
 							{ __( 'Text', 'carbon-fields-ui' ) }
 						</button>
 					</div>
@@ -262,6 +272,11 @@ class RichTextField extends Component {
 		if ( field.rich_editing ) {
 			const editorSetup = ( editor ) => {
 				this.editor = editor;
+				editor.on( 'init', () => {
+					if ( this.editor === editor ) {
+						this.setState( { editorReady: true } );
+					}
+				} );
 
 				editor.on( 'blur Change', () => {
 					editor.save();

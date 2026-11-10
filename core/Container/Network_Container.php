@@ -29,7 +29,7 @@ class Network_Container extends Theme_Options_Container {
 		}
 
 		$this->set_datastore( Datastore::make( 'network' ), $this->has_default_datastore() );
-		$this->set_site_id( SITE_ID_CURRENT_SITE );
+		$this->set_site_id( get_current_network_id() );
 	}
 
 	/**
@@ -49,12 +49,7 @@ class Network_Container extends Theme_Options_Container {
 	 * @return boolean
 	 */
 	protected function site_exists( $id ) {
-		if ( ! function_exists( 'get_blog_status' ) ) {
-			return false;
-		}
-
-		$blog_domain = get_blog_status( $id, 'domain' );
-		return ! empty( $blog_domain );
+		return $id > 0 && function_exists( 'get_network' ) && (bool) get_network( $id );
 	}
 
 	/**

@@ -7,14 +7,12 @@ import distinctUntilChanged from 'callbag-distinct-until-changed';
 import { addFilter } from '@wordpress/hooks';
 import { select } from '@wordpress/data';
 import {
-	get,
-	find,
 	isEqual
 } from 'lodash';
 import {
 	pipe,
 	map,
-	combine,
+	filter,
 	fromEvent
 } from 'callbag-basics';
 
@@ -61,30 +59,6 @@ function getParentIdAncestorsAndLevelFromSelect( node ) {
 }
 
 /**
- * Extracts `post_ancestors` from the list.
- *
- * @param  {number}   parentId
- * @param  {Object[]} posts
- * @param  {Array}    ancestors
- * @return {number[]}
- */
-function getAncestorsFromPostsList( parentId, posts, ancestors = [] ) {
-	const parent = find( posts, [ 'id', parentId ] );
-
-	if ( ! parent ) {
-		return ancestors;
-	}
-
-	ancestors.unshift( parent.id );
-
-	if ( parent.parent ) {
-		return getAncestorsFromPostsList( parent.parent, posts, ancestors );
-	}
-
-	return ancestors;
-}
-
-/**
  * Defines the side effects for Classic Editor.
  */
 addFilter( 'carbon-fields.conditional-display-post-parent.classic', 'carbon-fields/metaboxes', ( ) => {
@@ -104,47 +78,51 @@ addFilter( 'carbon-fields.conditional-display-post-parent.classic', 'carbon-fiel
 /**
  * Defines the side effects for Gutenberg.
  */
-addFilter( 'carbon-fields.conditional-display-post-parent.gutenberg', 'carbon-fields/metaboxes', ( ) => {
-	const { getPostType, getEntityRecords } = select( 'core' );
+addFilter( 'carbon-fields.conditional-display-post-parent.gutenberg', 'carbon-fields/metaboxes', () => {
+	const { getEditedPostAttribute, getCurrentPostId } = select( 'core/editor' );
+	const { getPostType, getEntityRecord, hasFinishedResolution } = select( 'core' );
 
 	return pipe(
-		combine(
-			fromSelector( select( 'core/editor' ).getCurrentPostId ),
-			fromSelector( select( 'core/editor' ).getEditedPostAttribute, 'type' ),
-			fromSelector( select( 'core/editor' ).getEditedPostAttribute, 'parent' )
-		),
-		distinctUntilChanged( isEqual ),
-		map( ( [ postId, postTypeSlug, parentId ] ) => {
-			parentId = parseInt( parentId, 10 );
-
-			if ( isNaN( parentId ) ) {
+		fromSelector( () => {
+			const postType = getEditedPostAttribute( 'type' );
+			const parentId = Number( getEditedPostAttribute( 'parent' ) );
+			if ( ! postType || ! Number.isInteger( parentId ) || parentId < 1 ) {
 				return INITIAL_STATE;
 			}
 
-			const postType = getPostType( postTypeSlug );
-			const isHierarchical = get( postType, [ 'hierarchical' ], false );
-
-			if ( ! isHierarchical ) {
+			const postTypeDefinition = getPostType( postType );
+			if ( ! postTypeDefinition ) {
+				return null;
+			}
+			if ( ! postTypeDefinition.hierarchical ) {
 				return INITIAL_STATE;
 			}
 
-			// Borrowed from https://github.com/WordPress/gutenberg/blob/master/packages/editor/src/components/page-attributes/parent.js
-			const items = getEntityRecords( 'postType', postTypeSlug, {
-				per_page: -1,
-				exclude: postId,
-				parent_exclude: postId,
-				orderby: 'menu_order',
-				order: 'asc'
-			} ) || [];
+			const ancestors = [];
+			const visited = new Set( [ getCurrentPostId() ] );
+			let ancestorId = parentId;
+			while ( ancestorId && ! visited.has( ancestorId ) ) {
+				const args = [ 'postType', postType, ancestorId, { _fields: 'id,parent' } ];
+				const record = getEntityRecord( ...args );
+				if ( ! record && ! hasFinishedResolution( 'getEntityRecord', args ) ) {
+					return null;
+				}
+				if ( ! record ) {
+					break;
+				}
 
-			const ancestors = getAncestorsFromPostsList( parentId, items );
-			const level = ancestors.length + 1;
+				visited.add( ancestorId );
+				ancestors.unshift( ancestorId );
+				ancestorId = Number( record.parent );
+			}
 
 			return {
 				post_ancestors: ancestors,
 				post_parent_id: parentId,
-				post_level: level
+				post_level: ancestors.length + 1
 			};
-		} )
+		} ),
+		filter( Boolean ),
+		distinctUntilChanged( isEqual )
 	);
 } );
