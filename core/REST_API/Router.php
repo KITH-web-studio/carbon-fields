@@ -61,7 +61,7 @@ class Router {
 		'attachment_data' => array(
 			'path'                => '/attachment',
 			'callback'            => 'get_attachment_data',
-			'permission_callback' => 'allow_access',
+			'permission_callback' => 'attachment_data_permission',
 			'methods'             => 'GET',
 			'args'                => 'attachment_data_args_schema',
 		),
@@ -168,12 +168,12 @@ class Router {
 	}
 
 	/**
-	 * Allow access to an endpoint
+	 * Check access to the editor's media metadata endpoint.
 	 *
 	 * @return bool
 	 */
-	public function allow_access() {
-		return true;
+	public function attachment_data_permission() {
+		return is_user_logged_in();
 	}
 
 	public function post_meta_permission( $request ) {
@@ -458,11 +458,24 @@ class Router {
 	 *
 	 * @return array
 	 */
-	public function get_attachment_data() {
-		$type  = sanitize_text_field( $_GET['type'] );
-		$value = sanitize_text_field( $_GET['value'] );
+	public function get_attachment_data( $request ) {
+		$type = $request->get_param( 'type' );
+		$value = $request->get_param( 'value' );
+		if ( 'url' === $type ) {
+			$value = Helper::sanitize_media_url( $value );
+		} elseif ( is_string( $value ) && ctype_digit( $value ) ) {
+			$value = (int) $value;
+		} else {
+			$value = false;
+		}
+		if ( ! $value ) {
+			return new \WP_Error( 'carbon_fields_invalid_attachment', __( 'Invalid attachment reference.', 'carbon-fields' ), array( 'status' => 400 ) );
+		}
 
-		return Helper::get_attachment_metadata( $value, $type );
+		return Helper::get_attachment_metadata( $value, $type, function( $attachment ) {
+			return $this->can_read_post( $attachment ) &&
+				( ! $attachment->post_parent || $this->can_read_post( get_post( $attachment->post_parent ) ) );
+		} );
 	}
 
 	/**
@@ -549,6 +562,7 @@ class Router {
 			'type'       => array(
 				'type'        => 'string',
 				'required'    => true,
+				'enum'        => array( 'id', 'url' ),
 				'description' => __( 'The requested type: ID or URL.', 'carbon-fields' ),
 			),
 			'value'    => array(

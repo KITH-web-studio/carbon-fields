@@ -2,6 +2,7 @@
 
 namespace Carbon_Fields\Field;
 
+use Carbon_Fields\Helper\Helper;
 
 /**
  * File upload field class.
@@ -37,6 +38,20 @@ class File_Field extends Field {
 	public function set_value_type( $value_type ) {
 		$this->value_type = $value_type;
 		return $this;
+	}
+
+	/** @inheritDoc */
+	public function is_valid_form_value( $value ) {
+		if ( ! parent::is_valid_form_value( $value ) || ! is_string( $value ) ) {
+			return false;
+		}
+		if ( '' === $value ) {
+			return true;
+		}
+		if ( 'url' === $this->value_type ) {
+			return '' !== Helper::sanitize_media_url( $value );
+		}
+		return 'id' !== $this->value_type || ctype_digit( $value );
 	}
 
 	/**

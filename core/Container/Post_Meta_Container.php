@@ -15,6 +15,8 @@ use Carbon_Fields\Exception\Incorrect_Syntax_Exception;
  * location information and more.
  */
 class Post_Meta_Container extends Container {
+	const FORM_NONCE_PREFIX = 'cf1:';
+
 	/**
 	 * ID of the post the container is working with
 	 *
@@ -98,6 +100,11 @@ class Post_Meta_Container extends Container {
 			return false;
 		}
 
+		$parent_id = wp_is_post_revision( $post_id );
+		if ( ! current_user_can( 'edit_post', $parent_id ? $parent_id : $post_id ) ) {
+			return false;
+		}
+
 		if ( ! $this->verified_nonce_in_request() ) {
 			return false;
 		}
@@ -109,9 +116,87 @@ class Post_Meta_Container extends Container {
 	 * Surface failed saves on WordPress save hooks.
 	 */
 	public function _save() {
-		if ( false === parent::_save( ...func_get_args() ) ) {
+		$result = parent::_save( ...func_get_args() );
+		if ( is_wp_error( $result ) ) {
+			wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => 400, 'back_link' => true ) );
+		}
+		if ( false === $result ) {
 			wp_die( esc_html__( 'Carbon Fields could not save a field. Please try again.', 'carbon-fields' ), '', array( 'response' => 500, 'back_link' => true ) );
 		}
+	}
+
+	/**
+	 * Verify both the legacy nonce and the nonce used by the protected editor form.
+	 */
+	protected function get_nonce_value() {
+		return wp_create_nonce( $this->get_nonce_name() . ':' . static::FORM_NONCE_PREFIX );
+	}
+
+	protected function verified_nonce_in_request() {
+		$input = Helper::input();
+		$name = $this->get_nonce_name();
+		$nonce = isset( $input[ $name ] ) ? $input[ $name ] : '';
+		if ( ! is_string( $nonce ) ) {
+			return false;
+		}
+		if ( strpos( $nonce, static::FORM_NONCE_PREFIX ) === 0 ) {
+			$nonce = substr( $nonce, strlen( static::FORM_NONCE_PREFIX ) );
+			$name .= ':' . static::FORM_NONCE_PREFIX;
+		}
+		return wp_verify_nonce( $nonce, $name );
+	}
+
+	/**
+	 * Read protected editor data before any field or revision can be written.
+	 */
+	protected function get_save_input() {
+		$input = Helper::input();
+		$name = $this->get_nonce_name();
+		if ( ! isset( $input[ $name ] ) || ! is_string( $input[ $name ] ) || strpos( $input[ $name ], static::FORM_NONCE_PREFIX ) !== 0 ) {
+			return $input;
+		}
+
+		$mode = isset( $input[ $name . '_mode' ] ) ? $input[ $name . '_mode' ] : null;
+		$complete = isset( $input[ $name . '_complete' ] ) ? $input[ $name . '_complete' ] : null;
+		if ( $mode !== $complete ) {
+			return $this->incomplete_form_error();
+		}
+		$packed = 'packed' === $mode;
+		if ( $packed && isset( $input[ $name . '_payload' ] ) && is_string( $input[ $name . '_payload' ] ) ) {
+			$payload = json_decode( $input[ $name . '_payload' ], true );
+			if ( ! isset( $payload['fields'] ) || ! is_array( $payload['fields'] ) ) {
+				return $this->incomplete_form_error();
+			}
+			$submitted = $payload['fields'];
+		} elseif ( 'native' === $mode ) {
+			$submitted = $input;
+		} else {
+			return $this->incomplete_form_error();
+		}
+
+		$fields = $input;
+		foreach ( $this->fields as $field ) {
+			$field_name = $field->get_name();
+			if ( $packed && ! array_key_exists( $field_name, $submitted ) ) {
+				return $this->incomplete_form_error();
+			}
+			$value = isset( $submitted[ $field_name ] ) ? $submitted[ $field_name ] : null;
+			if ( null === $value && isset( $input[ $field_name ] ) ) {
+				$value = $input[ $field_name ];
+			}
+			if ( null === $value ) {
+				continue;
+			}
+			if ( ! $field->is_valid_form_value( $value ) ) {
+				return $this->incomplete_form_error();
+			}
+			$fields[ $field_name ] = $value;
+		}
+		return $fields;
+	}
+
+	protected function incomplete_form_error() {
+		return new \WP_Error( 'carbon_fields_incomplete_form', __( 'Carbon Fields received an incomplete form. The custom fields in this box were not saved. Reload the editor and try again.', 'carbon-fields' ) );
 	}
 
 	/**
@@ -121,14 +206,19 @@ class Post_Meta_Container extends Container {
 	 * @param int $post_id ID of the post against which save() is ran
 	 */
 	public function save( $post_id = null ) {
+		$input = $this->get_save_input();
+		if ( is_wp_error( $input ) ) {
+			return $input;
+		}
+
 		// Unhook action to garantee single save
 		remove_action( 'save_post', array( $this, '_save' ) );
 
 		$this->set_post_id( $post_id );
 
-		$saved = Carbon_Fields::service( 'revisions' )->track_container_save( $post_id, $this, function() {
+		$saved = Carbon_Fields::service( 'revisions' )->track_container_save( $post_id, $this, function() use ( $input ) {
 			foreach ( $this->fields as $field ) {
-				$field->set_value_from_input( Helper::input() );
+				$field->set_value_from_input( $input );
 				if ( false === $field->save() ) {
 					return false;
 				}

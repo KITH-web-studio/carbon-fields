@@ -511,9 +511,16 @@ class Helper {
 		 */
 		$url = apply_filters( 'carbon_fields_attachment_id_base_url', $url );
 
-		$filename = wp_basename( $url );
-
-		if ( strpos( $url, $dir['baseurl'] . '/' ) !== false ) {
+		$url = static::sanitize_media_url( $url );
+		$base = set_url_scheme( trailingslashit( $dir['baseurl'] ), 'https' );
+		$path = $url ? set_url_scheme( strtok( $url, '?#' ), 'https' ) : '';
+		if ( 0 === strpos( $path, $base ) && strlen( $path ) > strlen( $base ) ) {
+			$relative = rawurldecode( substr( $path, strlen( $base ) ) );
+			$filename = wp_basename( $relative );
+			$attachment_id = attachment_url_to_postid( $path );
+			if ( $attachment_id ) {
+				return apply_filters( 'carbon_fields_attachment_id_from_url', $attachment_id, $url );
+			}
 			$query_args = array(
 				'post_type'   => 'attachment',
 				'post_status' => 'inherit',
@@ -532,11 +539,14 @@ class Helper {
 			if ( $query->have_posts() ) {
 				foreach ( $query->posts as $post_id ) {
 					$meta                = wp_get_attachment_metadata( $post_id );
-					$original_file       = wp_basename( $meta['file'] );
+					if ( empty( $meta['file'] ) ) {
+						continue;
+					}
+					$original_file       = $meta['file'];
 					$sizes 				 = isset( $meta['sizes'] ) && ! empty( $meta['sizes'] ) ? $meta['sizes'] : array();
 					$cropped_image_files = wp_list_pluck( $sizes, 'file' );
 
-					if ( $original_file === $filename || in_array( $filename, $cropped_image_files ) ) {
+					if ( $original_file === $relative || ( dirname( $original_file ) === dirname( $relative ) && in_array( $filename, $cropped_image_files, true ) ) ) {
 						$attachment_id = intval( $post_id );
 
 						break;
@@ -557,6 +567,29 @@ class Helper {
 	}
 
 	/**
+	 * Allow HTTP(S) media URLs and paths relative to the site's origin.
+	 */
+	public static function sanitize_media_url( $url ) {
+		if ( ! is_string( $url ) || preg_match( '/[\x00-\x1f\x7f]/', $url ) || false !== strpos( $url, '\\' ) ) {
+			return '';
+		}
+		$url = trim( $url );
+		if ( ! preg_match( '~^(https?://|//|/[^/])~i', $url ) ) {
+			return '';
+		}
+		$parts = wp_parse_url( $url );
+		if ( isset( $parts['user'] ) || isset( $parts['pass'] ) ) {
+			return '';
+		}
+		if ( 0 !== strpos( $url, '/' ) || 0 === strpos( $url, '//' ) ) {
+			if ( empty( $parts['host'] ) ) {
+				return '';
+			}
+		}
+		return esc_url_raw( $url, array( 'http', 'https' ) );
+	}
+
+	/**
 	 * Returns attachment metadata from an ID.
 	 *
 	 * @static
@@ -566,7 +599,7 @@ class Helper {
 	 * @param  string  $type Value Type. Can be either id or url.
 	 * @return array
 	 */
-	public static function get_attachment_metadata( $id, $type ) {
+	public static function get_attachment_metadata( $id, $type, $can_read = null ) {
 		$attachment_metadata = array(
 			'id'        => 0,
 			'thumb_url' => '',
@@ -576,16 +609,24 @@ class Helper {
 
 		// when `$type` is set to 'url' the `$id` will hold the url, not the id
 		if ( $type === 'url' ) {
-			$attachment_id = static::get_attachment_id( $id );
+			$url = static::sanitize_media_url( $id );
+			$attachment_id = $url ? static::get_attachment_id( $url ) : 0;
 
-			if ( $attachment_id === 0 ) {
-				$attachment_metadata['thumb_url'] = $id;
+			if ( ! $attachment_id ) {
+				$attachment_metadata['thumb_url'] = $url;
+				$attachment_metadata['file_url'] = $url;
+				$attachment_metadata['file_name'] = wp_basename( (string) wp_parse_url( $url, PHP_URL_PATH ) );
 			}
 
 			$id = $attachment_id;
 		}
 
-		$attachment = get_post( $id );
+		$attachment = $id ? get_post( $id ) : null;
+
+		if ( $can_read && ( $id || 'id' === $type ) &&
+			( ! $attachment || 'attachment' !== $attachment->post_type || ! call_user_func( $can_read, $attachment ) ) ) {
+			return new \WP_Error( 'carbon_fields_attachment_not_found', __( 'Attachment not found.', 'carbon-fields' ), array( 'status' => 404 ) );
+		}
 
 		if ( ! $attachment ) {
 			/**
@@ -601,15 +642,25 @@ class Helper {
 		}
 
 		$attachment_metadata['id']        = intval( $id );
-		$attachment_metadata['file_url']  = is_numeric( $id ) ? wp_get_attachment_url( $id ) : $id;
-		$attachment_metadata['file_name'] = wp_basename( $attachment_metadata['file_url'] );
-		$attachment_metadata['filetype']  = wp_check_filetype( $attachment_metadata['file_url'] );
+		$attachment_metadata['file_url']  = 'url' === $type ? $url : static::sanitize_media_url( wp_get_attachment_url( $id ) );
+		$file_path = (string) wp_parse_url( $attachment_metadata['file_url'], PHP_URL_PATH );
+		$attachment_metadata['file_name'] = wp_basename( $file_path );
+		$attachment_metadata['filetype']  = wp_check_filetype( $file_path );
 		$attachment_metadata['file_type'] = preg_replace( '~\/.+$~', '', $attachment_metadata['filetype']['type'] ); // image, video, etc..
 
 		if ( 'image/svg+xml' === $attachment->post_mime_type ) {
 			$attachment_metadata['filetype'] = array( 'ext' => 'svg', 'type' => 'image/svg+xml' );
 			$attachment_metadata['file_type'] = 'image';
 			$attachment_metadata['thumb_url'] = $attachment_metadata['file_url'];
+		} elseif ( strpos( $attachment->post_mime_type, 'video/' ) === 0 || 'video' === $attachment_metadata['file_type'] ) {
+			$attachment_metadata['file_type'] = 'video';
+			$poster_id = get_post_thumbnail_id( $attachment );
+			$poster_post = $poster_id ? get_post( $poster_id ) : null;
+			$poster = $poster_post && 'attachment' === $poster_post->post_type && ( ! $can_read || call_user_func( $can_read, $poster_post ) )
+				? static::sanitize_media_url( wp_get_attachment_image_url( $poster_id, 'full' ) )
+				: '';
+			$attachment_metadata['video_poster_url'] = $poster ? $poster : '';
+			$attachment_metadata['thumb_url'] = $poster ? $poster : wp_mime_type_icon( $id );
 		} elseif ( $attachment_metadata['file_type'] == 'image' ) {
 			$attachment_metadata['thumb_url'] = $attachment_metadata['file_url'];
 
@@ -655,7 +706,7 @@ class Helper {
 	 * @return array
 	 */
 	public static function expand_compacted_input( $input ) {
-		if ( isset( $input[ \Carbon_Fields\COMPACT_INPUT_KEY ] ) ) {
+		if ( isset( $input[ \Carbon_Fields\COMPACT_INPUT_KEY ] ) && is_array( $input[ \Carbon_Fields\COMPACT_INPUT_KEY ] ) ) {
 			$inputs = $input[ \Carbon_Fields\COMPACT_INPUT_KEY ];
 			$input = array_merge( $input, $inputs );
 		}

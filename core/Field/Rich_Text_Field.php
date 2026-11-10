@@ -54,6 +54,16 @@ class Rich_Text_Field extends Textarea_Field {
 		return $this;
 	}
 
+	/** @inheritDoc */
+	public function set_value_from_input( $input ) {
+		parent::set_value_from_input( $input );
+		$value = $this->get_value();
+		if ( is_string( $value ) && ! current_user_can( 'unfiltered_html' ) ) {
+			$this->set_value( wp_kses_post( $value ) );
+		}
+		return $this;
+	}
+
 	/**
 	 * Calc the settings hash
 	 *

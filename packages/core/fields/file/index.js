@@ -9,8 +9,10 @@ import { get } from 'lodash';
  */
 import './style.scss';
 import MediaLibrary from '../../components/media-library';
+import VideoPreview, { isVideoAttachment } from '../../components/video-preview';
 import apiFetch from '../../utils/api-fetch';
 import getSvgPreviewUrl from '../../utils/get-svg-preview-url';
+import getSafeMediaUrl from '../../utils/get-safe-media-url';
 
 class FileField extends Component {
 	/**
@@ -31,19 +33,17 @@ class FileField extends Component {
 		const { value, field } = this.props;
 
 		if ( value ) {
-			let endpoint = '';
-
-			if ( window.wpApiSettings.root.indexOf( '?rest_route' ) !== -1 ) {
-				endpoint = `${ window.wpApiSettings.root }carbon-fields/v1/attachment&type=${ field.value_type }&value=${ value }`;
-			} else {
-				endpoint = `${ window.wpApiSettings.root }carbon-fields/v1/attachment?type=${ field.value_type }&value=${ value }`;
-			}
-
-			// TODO: Refactor this to use `@wordpress/api-fetch` package.
 			apiFetch(
-				endpoint,
-				'get'
-			).then( this.handleFileDataChange );
+				`${ window.wpApiSettings.root }carbon-fields/v1/attachment`,
+				'get',
+				{ type: field.value_type, value }
+			).then( ( data ) => {
+				if ( this.props.value === value ) {
+					this.handleFileDataChange( data );
+				}
+			}, () => {
+				// The saved value remains visible if attachment data cannot be loaded.
+			} );
 		}
 	}
 
@@ -78,7 +78,11 @@ class FileField extends Component {
 	getFileName() {
 		const { data } = this.state;
 
-		return data.filename || data.file_name;
+		const { value, field } = this.props;
+
+		return data.filename || data.file_name || ( field.value_type === 'url'
+			? String( value ).split( /[?#]/, 1 )[ 0 ].split( '/' ).pop()
+			: `#${ value }` );
 	}
 
 	/**
@@ -133,6 +137,8 @@ class FileField extends Component {
 		const { data } = this.state;
 
 		const svgPreview = getSvgPreviewUrl( data );
+		const isVideo = isVideoAttachment( data );
+		const thumbnail = svgPreview || getSafeMediaUrl( this.getThumb() );
 		const {
 			value,
 			name,
@@ -141,6 +147,20 @@ class FileField extends Component {
 			mediaLibraryButtonLabel,
 			mediaLibraryTitle
 		} = this.props;
+
+		let preview = <span className="cf-file__image dashicons dashicons-media-default" aria-hidden="true" />;
+		if ( isVideo ) {
+			preview = <VideoPreview key={ value } attachment={ data } />;
+		} else if ( thumbnail ) {
+			preview = (
+				<img
+					src={ thumbnail }
+					className={ svgPreview ? 'cf-file__image cf-file__image--svg' : 'cf-file__image' }
+					alt=""
+					referrerPolicy="no-referrer"
+				/>
+			);
+		}
 
 		return (
 			<MediaLibrary
@@ -160,14 +180,10 @@ class FileField extends Component {
 								readOnly
 							/>
 
-							{ ( value && !! data.id ) && (
+							{ !! value && (
 								<div className="cf-file__content">
 									<div className="cf-file__preview">
-										<img
-											src={ svgPreview || this.getThumb() }
-											className={ svgPreview ? 'cf-file__image cf-file__image--svg' : 'cf-file__image' }
-											alt=""
-										/>
+										{ preview }
 
 										<button type="button" className="cf-file__remove dashicons-before dashicons-no-alt" onClick={ this.handleClear }></button>
 									</div>

@@ -10,3 +10,7 @@ msgstr ""
 #: packages/core/fields/color/index.js:155
 msgid "Clear"
 msgstr ""
+
+#: packages/metaboxes/components/container/index.js:195
+msgid "Show field"
+msgstr ""

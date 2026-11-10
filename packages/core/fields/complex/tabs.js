@@ -3,6 +3,7 @@
  */
 import cx from 'classnames';
 import { forwardRef } from '@wordpress/element';
+import sanitizePreviewHtml from '../../utils/sanitize-preview-html';
 
 /**
  * Renders the tabs navigation.
@@ -46,7 +47,7 @@ function ComplexTabs( {
 									? (
 										<span
 											className="cf-complex__tabs-title"
-											dangerouslySetInnerHTML={ { __html: item.label } }
+											dangerouslySetInnerHTML={ { __html: sanitizePreviewHtml( item.label ) } }
 										></span>
 									)
 									: (

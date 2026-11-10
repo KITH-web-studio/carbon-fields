@@ -107,10 +107,19 @@ final class Post_Meta_Transaction {
 			if ( false === $wpdb->query( 'SAVEPOINT ' . $savepoint ) ) {
 				return false;
 			}
-			if ( false !== $wpdb->query( 'ROLLBACK TO SAVEPOINT ' . $savepoint ) ) {
-				return $savepoint;
+			try {
+				if ( false !== $wpdb->query( 'ROLLBACK TO SAVEPOINT ' . $savepoint ) ) {
+					return $savepoint;
+				}
+				$error_code = mysqli_errno( $wpdb->dbh );
+			} catch ( \mysqli_sql_exception $exception ) {
+				// Older WordPress can leave mysqli in strict reporting mode.
+				if ( 1305 !== $exception->getCode() ) {
+					throw $exception;
+				}
+				$error_code = 1305;
 			}
-			if ( 1305 !== mysqli_errno( $wpdb->dbh ) ) {
+			if ( 1305 !== $error_code ) {
 				return false;
 			}
 		} finally {

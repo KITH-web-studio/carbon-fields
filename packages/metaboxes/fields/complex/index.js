@@ -24,6 +24,7 @@ import { uniqueId } from '@carbon-fields/core';
 import './style.scss';
 import Field from '../../components/field';
 import flattenField from '../../utils/flatten-field';
+import { ComplexRevealContext } from '../../utils/lazy-complex';
 
 class ComplexField extends Component {
 	/**
@@ -51,7 +52,7 @@ class ComplexField extends Component {
 
 		group.id = uniqueId();
 		group.container_id = field.container_id;
-		group.fields = group.fields.map( ( groupField ) => flattenField( groupField, field.container_id, fields ) );
+		group.fields = group.fields.map( ( groupField ) => flattenField( groupField, field.container_id, fields, field.lazyComplex ) );
 
 		// Make sure that the group is expanded even
 		// `set_collapsed(true)` is used.
@@ -271,24 +272,30 @@ addFilter( 'carbon-fields.complex.metabox', 'carbon-fields/metaboxes', ( Origina
 				handleToggleGroup,
 				handleToggleAllGroups
 			} ) => (
-				<OriginalComplexField
-					groupIdKey="id"
-					groupFilterKey="name"
-					id={ id }
-					field={ field }
-					name={ name }
-					value={ value }
-					groupValues={ groupValues }
-					allGroupsAreCollapsed={ allGroupsAreCollapsed }
-					onGroupSetup={ handleGroupSetup }
-					onGroupFieldSetup={ handleGroupFieldSetup }
-					onAddGroup={ handleAddGroup }
-					onCloneGroup={ handleCloneGroup }
-					onRemoveGroup={ handleRemoveGroup }
-					onToggleGroup={ handleToggleGroup }
-					onToggleAllGroups={ handleToggleAllGroups }
-					onChange={ props.onChange }
-				/>
+				<ComplexRevealContext.Consumer>
+					{ ( reveal ) => (
+						<OriginalComplexField
+							groupIdKey="id"
+							groupFilterKey="name"
+							id={ id }
+							field={ field }
+							name={ name }
+							value={ value }
+							groupValues={ groupValues }
+							lazy={ !! field.lazyComplex }
+							reveal={ reveal }
+							allGroupsAreCollapsed={ allGroupsAreCollapsed }
+							onGroupSetup={ handleGroupSetup }
+							onGroupFieldSetup={ handleGroupFieldSetup }
+							onAddGroup={ handleAddGroup }
+							onCloneGroup={ handleCloneGroup }
+							onRemoveGroup={ handleRemoveGroup }
+							onToggleGroup={ handleToggleGroup }
+							onToggleAllGroups={ handleToggleAllGroups }
+							onChange={ props.onChange }
+						/>
+					) }
+				</ComplexRevealContext.Consumer>
 			) }
 		</ComplexField>
 	);

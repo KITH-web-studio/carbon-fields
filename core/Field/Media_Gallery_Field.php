@@ -124,6 +124,19 @@ class Media_Gallery_Field extends Field {
 		return $this;
 	}
 
+	/** @inheritDoc */
+	public function is_valid_form_value( $value ) {
+		if ( ! parent::is_valid_form_value( $value ) || ! is_array( $value ) ) {
+			return false;
+		}
+		foreach ( $value as $id ) {
+			if ( ! is_string( $id ) || ! ctype_digit( $id ) || (int) $id < 1 ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	/**
 	 * Converts the field values into a usable associative array.
 	 *

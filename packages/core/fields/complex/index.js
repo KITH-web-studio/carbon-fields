@@ -13,6 +13,7 @@ import {
 	find,
 	isEmpty,
 	isString,
+	memoize,
 	template
 } from 'lodash';
 
@@ -25,6 +26,9 @@ import ComplexTabs from './tabs';
 import ComplexInserter from './inserter';
 import ComplexGroup from './group';
 import ComplexPlaceholder from './placeholder';
+
+const lazyTabSelections = new Map();
+const compileLabelTemplate = memoize( template );
 
 class ComplexField extends Component {
 	/**
@@ -48,8 +52,21 @@ class ComplexField extends Component {
 	 */
 	state = {
 		currentDraggedGroup: null,
-		currentTab: get( this.props.value, `0.${ this.props.groupIdKey }`, null )
+		currentTab: this.getInitialTab()
 	};
+
+	getInitialTab() {
+		const { id, groupIdKey, lazy, reveal, value } = this.props;
+		const selected = lazy && ( ( reveal && reveal[ id ] ) || lazyTabSelections.get( id ) );
+		return selected && this.findGroup( selected ) ? selected : get( value, `0.${ groupIdKey }`, null );
+	}
+
+	componentDidUpdate( previous ) {
+		const { id, lazy, reveal } = this.props;
+		if ( lazy && reveal && reveal !== previous.reveal && reveal[ id ] ) {
+			this.handleTabsChange( reveal[ id ] );
+		}
+	}
 
 	/**
 	 * Returns true if the field is using tabs for the layout.
@@ -133,7 +150,7 @@ class ComplexField extends Component {
 			}
 
 			try {
-				const label = template( group.label_template )( {
+				const label = compileLabelTemplate( group.label_template )( {
 					$_index: index,
 					...values
 				} );
@@ -206,9 +223,7 @@ class ComplexField extends Component {
 			const currentIndex = value.indexOf( group );
 			const nextIndex = currentIndex > 0 ? currentIndex - 1 : 1;
 
-			this.setState( {
-				currentTab: get( value, `${ nextIndex }.${ groupIdKey }`, null )
-			} );
+			this.handleTabsChange( get( value, `${ nextIndex }.${ groupIdKey }`, null ) );
 		}
 
 		onRemoveGroup( group );
@@ -272,6 +287,9 @@ class ComplexField extends Component {
 	 * @return {void}
 	 */
 	handleTabsChange = ( groupId ) => {
+		if ( this.props.lazy ) {
+			lazyTabSelections.set( this.props.id, groupId );
+		}
 		this.setState( {
 			currentTab: groupId
 		} );
@@ -288,6 +306,7 @@ class ComplexField extends Component {
 		const {
 			value,
 			field,
+			lazy,
 			groupIdKey,
 			groupFilterKey,
 			allGroupsAreCollapsed,
@@ -316,6 +335,7 @@ class ComplexField extends Component {
 					<Sortable
 						items={ value }
 						forwardedRef={ this.tabsList }
+						batchHandles={ lazy }
 						options={ {
 							axis: field.layout === 'tabbed-vertical' ? 'y' : 'x',
 							forcePlaceholderSize: true
@@ -367,22 +387,27 @@ class ComplexField extends Component {
 						onStop={ this.handleGroupsSortStop }
 					>
 						<div className="cf-complex__groups" ref={ this.groupsList }>
-							{ value.map( ( group, index ) => (
-								// The `key` will be assigned via `onGroupSetup`.
-								// eslint-disable-next-line react/jsx-key
-								<ComplexGroup key={ `${ group[ groupFilterKey ] }-${ index }` } { ...onGroupSetup( group, {
-									index,
-									label: groupLabels[ index ],
-									dragged: group[ groupIdKey ] === currentDraggedGroup,
-									tabbed: this.isTabbed,
-									hidden: this.isTabbed && group[ groupIdKey ] !== currentTab,
-									allowClone: field.duplicate_groups_allowed && ! this.isMaximumReached,
-									onFieldSetup: onGroupFieldSetup,
-									onClone: this.handleCloneGroup,
-									onRemove: this.handleRemoveGroup,
-									onToggle: onToggleGroup
-								} ) } />
-							) ) }
+							{ value.map( ( group, index ) => {
+								const groupId = group[ groupIdKey ];
+								const hidden = this.isTabbed && groupId !== currentTab;
+								if ( lazy && hidden ) {
+									return null;
+								}
+								return (
+									<ComplexGroup key={ lazy ? groupId : `${ group[ groupFilterKey ] }-${ index }` } { ...onGroupSetup( group, {
+										index,
+										label: groupLabels[ index ],
+										dragged: groupId === currentDraggedGroup,
+										tabbed: this.isTabbed,
+										hidden,
+										allowClone: field.duplicate_groups_allowed && ! this.isMaximumReached,
+										onFieldSetup: onGroupFieldSetup,
+										onClone: this.handleCloneGroup,
+										onRemove: this.handleRemoveGroup,
+										onToggle: onToggleGroup
+									} ) } />
+								);
+							} ) }
 						</div>
 					</Sortable>
 				) }

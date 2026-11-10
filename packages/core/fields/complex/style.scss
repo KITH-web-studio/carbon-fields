@@ -306,6 +306,9 @@
 
 	&--tabbed-vertical#{&}--current {
 		border-right-color: $color-white !important;
+		background-color: $wp-color-gray-light-500;
+		box-shadow: inset 3px 0 0 $wp-color-dark-silver-gray;
+		font-weight: 600;
 	}
 }
 

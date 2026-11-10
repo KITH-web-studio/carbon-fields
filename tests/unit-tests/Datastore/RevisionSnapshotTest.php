@@ -12,7 +12,7 @@ class RevisionSnapshotTest extends WP_UnitTestCase {
 	/**
 	 * @dataProvider revision_title_pairs
 	 */
-	public function testWordPressRestorePreservesBothHistoricalSnapshots( $second_title, $creates_revision ) {
+	public function testWordPressRestorePreservesBothHistoricalSnapshots( $second_title, $creates_revision, $packed = false ) {
 		$post_id = self::factory()->post->create( array( 'post_title' => 'Title A', 'post_status' => 'publish' ) );
 		$field = Field::make( 'text', 'crb_snapshot_history' );
 		$container = Container::make( 'post_meta', 'KITH restore history fixture' )->add_fields( array( $field ) );
@@ -51,7 +51,7 @@ class RevisionSnapshotTest extends WP_UnitTestCase {
 				add_filter( 'carbon_fields_before_field_save', $legacy_filter );
 			}
 			try {
-				$this->submit_metaboxes( $post_id, array( array( $container, $field, 'snapshot A' ) ) );
+				$this->submit_metaboxes( $post_id, array( array( $container, $field, 'snapshot A' ) ), true, $packed );
 				$service->save_pending_revisions();
 			} finally {
 				if ( $legacy_save ) {
@@ -118,7 +118,7 @@ class RevisionSnapshotTest extends WP_UnitTestCase {
 		);
 	}
 
-	private function submit_metaboxes( $post_id, $fields, $fire_after_hooks = true ) {
+	private function submit_metaboxes( $post_id, $fields, $fire_after_hooks = true, $packed = false ) {
 		require_once dirname( dirname( dirname( __DIR__ ) ) ) . '/config.php';
 
 		$old_post = $_POST;
@@ -130,7 +130,14 @@ class RevisionSnapshotTest extends WP_UnitTestCase {
 		foreach ( $fields as list( $container, $field, $value ) ) {
 			$nonce = $container->get_id() . '_nonce';
 			$_POST[ $nonce ] = wp_create_nonce( $nonce );
-			$_POST[ $field->get_name() ] = wp_slash( $value );
+			if ( $packed ) {
+				$_POST[ $nonce ] = 'cf1:' . wp_create_nonce( $nonce . ':cf1:' );
+				$_POST[ $nonce . '_mode' ] = 'packed';
+				$_POST[ $nonce . '_complete' ] = 'packed';
+				$_POST[ $nonce . '_payload' ] = wp_slash( wp_json_encode( array( 'fields' => array( $field->get_name() => $value ) ) ) );
+			} else {
+				$_POST[ $field->get_name() ] = wp_slash( $value );
+			}
 			add_action( 'save_post', array( $container, '_save' ) );
 		}
 		$saves = 0;
@@ -158,6 +165,8 @@ class RevisionSnapshotTest extends WP_UnitTestCase {
 		return array(
 			'without a new WordPress revision' => array( 'Title A', false ),
 			'with a new WordPress revision' => array( 'Title B', true ),
+			'packed form without a new WordPress revision' => array( 'Title A', false, true ),
+			'packed form with a new WordPress revision' => array( 'Title B', true, true ),
 		);
 	}
 

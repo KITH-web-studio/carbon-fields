@@ -480,6 +480,31 @@ class Field implements Datastore_Holder_Interface {
 	}
 
 	/**
+	 * Validate the shape of a value decoded from the editor's JSON form.
+	 */
+	public function is_valid_form_value( $value ) {
+		// Custom fields can define a different representation for their form controls.
+		if ( strpos( get_class( $this ), __NAMESPACE__ . '\\' ) !== 0 ) {
+			return true;
+		}
+		if ( Value_Set::TYPE_SINGLE_VALUE === $this->get_value_set()->get_type() ) {
+			return is_string( $value );
+		}
+		if ( 'multiselect' === $this->get_type() && is_string( $value ) ) {
+			return true;
+		}
+		if ( ! is_array( $value ) ) {
+			return false;
+		}
+		foreach ( $value as $item ) {
+			if ( ! is_string( $item ) ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
 	 * Return whether the datastore instance is the default one or has been overriden
 	 *
 	 * @return boolean

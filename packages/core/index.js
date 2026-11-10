@@ -23,7 +23,7 @@ export { getFieldType, registerFieldType } from './registry/fields';
 export { default as Field } from './components/field';
 export { default as withFilters } from './hocs/with-filters';
 export { default as withProps } from './hocs/with-props';
-export { default as withValidation } from './hocs/with-validation';
+export { default as withValidation, getFieldValidationError } from './hocs/with-validation';
 export { default as withConditionalLogic } from './hocs/with-conditional-logic';
 export { default as uniqueId } from './utils/unique-id';
 export { default as fromSelector } from './utils/from-selector';

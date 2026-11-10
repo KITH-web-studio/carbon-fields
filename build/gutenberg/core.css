@@ -841,6 +841,9 @@
 }
 .cf-complex__tabs-item--tabbed-vertical.cf-complex__tabs-item--current {
   border-right-color: #fff !important;
+  background-color: #e2e4e7;
+  box-shadow: inset 3px 0 0 #82878c;
+  font-weight: 600;
 }
 
 /**
@@ -1972,6 +1975,65 @@ span.flatpickr-weekday {
   border-radius: 50%;
   background-color: #191e23;
   color: #fff;
+}
+/* ==========================================================================
+   Colors
+   ========================================================================== */
+/* ==========================================================================
+   WordPress Colors - https://make.wordpress.org/design/handbook/design-guide/foundations/colors/
+   ========================================================================== */
+/* ==========================================================================
+   Gutenberg Colors - https://github.com/WordPress/gutenberg/blob/master/assets/stylesheets/_colors.scss
+   ========================================================================== */
+/* ==========================================================================
+   Fonts
+   ========================================================================== */
+/* ==========================================================================
+   Variables
+   ========================================================================== */
+/* ==========================================================================
+   WordPress Variables
+   ========================================================================== */
+/* ==========================================================================
+   Gutenberg Variables - https://github.com/WordPress/gutenberg/blob/master/assets/stylesheets/_variables.scss
+   ========================================================================== */
+/* ==========================================================================
+   WP Admin CSS Custom Properties - https://github.com/WordPress/wordpress-develop/blob/trunk/src/wp-admin/css/common.css
+   ========================================================================== */
+/* ==========================================================================
+   Mixins
+   ========================================================================== */
+.cf-video-preview {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  place-items: center;
+  background: #e2e4e7;
+  color: #191e23;
+}
+.cf-video-preview img,
+.cf-video-preview video {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  -o-object-fit: contain;
+     object-fit: contain;
+  pointer-events: none;
+}
+.cf-video-preview video {
+  visibility: hidden;
+}
+.cf-video-preview .cf-video-preview__frame--loaded {
+  visibility: visible;
 }
 /* ==========================================================================
    Colors

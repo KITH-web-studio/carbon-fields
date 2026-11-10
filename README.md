@@ -12,6 +12,12 @@ Custom fields can be created for post types, taxonomy terms, users, comments, op
 
 Supports PHP 5.6.20 or higher.
 
+### GitHub release updates
+
+The standalone WordPress plugin checks stable releases in the KITH Web Studio repository. Install the ZIP containing the updater once, then use the regular WordPress plugin update controls. Automatic updates follow the site's WordPress settings.
+
+Release tags must use a version such as `v3.6.11.9`, with an uploaded asset named `kith-carbon-fields-3.6.11.9.zip`. Drafts, prereleases and source archives are excluded. Results are cached for six hours. WordPress's **Check again** link refreshes the cache.
+
 ### Quickstart
 
 See [Quickstart](https://github.com/htmlburger/carbon-fields-docs/tree/master/documentation/10-quickstart.md)

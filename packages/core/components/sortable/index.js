@@ -4,16 +4,39 @@
 import produce from 'immer';
 import { Component, Children } from '@wordpress/element';
 
+function registerBatchedSortable( $ ) {
+	if ( $.cf && $.cf.batchedSortable ) {
+		return;
+	}
+
+	// jQuery UI sorts and rebinds its tracked elements for each handle it adds.
+	// The tab list uses the items themselves as handles, so register them together.
+	$.widget( 'cf.batchedSortable', $.ui.sortable, {
+		widgetEventPrefix: 'sort',
+		_setHandleClassName() {
+			this._removeClass( this.element.find( '.ui-sortable-handle' ), 'ui-sortable-handle' );
+			this._addClass( $( this.items.map( ( { item } ) => item[ 0 ] ) ), 'ui-sortable-handle' );
+		}
+	} );
+}
+
 class Sortable extends Component {
+	get plugin() {
+		return this.props.batchHandles ? 'batchedSortable' : 'sortable';
+	}
+
 	/**
 	 * Lifecycle hook.
 	 *
 	 * @return {void}
 	 */
 	componentDidMount() {
-		const { options, forwardedRef } = this.props;
-
-		window.jQuery( forwardedRef.current ).sortable( {
+		const { options, forwardedRef, batchHandles } = this.props;
+		const $ = window.jQuery;
+		if ( batchHandles ) {
+			registerBatchedSortable( $ );
+		}
+		$( forwardedRef.current )[ this.plugin ]( {
 			...options,
 			start: this.handleStart,
 			update: this.handleUpdate,
@@ -29,10 +52,10 @@ class Sortable extends Component {
 	componentWillUnmount() {
 		const { forwardedRef } = this.props;
 		const $element = window.jQuery( forwardedRef.current );
-		const instance = $element.sortable( 'instance' );
+		const instance = $element[ this.plugin ]( 'instance' );
 
 		if ( instance ) {
-			$element.sortable( 'destroy' );
+			$element[ this.plugin ]( 'destroy' );
 		}
 	}
 
@@ -72,7 +95,7 @@ class Sortable extends Component {
 
 		ui.item.removeData( 'index' );
 
-		window.jQuery( forwardedRef.current ).sortable( 'cancel' );
+		window.jQuery( forwardedRef.current )[ this.plugin ]( 'cancel' );
 
 		onUpdate( produce( items, ( draft ) => {
 			draft.splice( newIndex, 0, ...draft.splice( oldIndex, 1 ) );

@@ -14,6 +14,7 @@ import cx from 'classnames';
  * Internal dependencies.
  */
 import './style.scss';
+import sanitizePreviewHtml from '../../utils/sanitize-preview-html';
 
 class RichTextField extends Component {
 	/**
@@ -240,7 +241,7 @@ class RichTextField extends Component {
 			<div className="cf-rich-text__preview-wrap">
 				<button type="button" className="cf-rich-text__preview" onClick={ this.openModal }>
 					{ value ? (
-						<span className="cf-rich-text__preview-content" dangerouslySetInnerHTML={ { __html: value } } />
+						<span className="cf-rich-text__preview-content" dangerouslySetInnerHTML={ { __html: sanitizePreviewHtml( value ) } } />
 					) : (
 						<span className="cf-rich-text__preview-placeholder">{ __( 'Click to edit', 'carbon-fields-ui' ) }</span>
 					) }
@@ -283,6 +284,9 @@ class RichTextField extends Component {
 
 					this.handleChange( editor.getContent() );
 				} );
+				if ( field.lazyComplex ) {
+					editor.on( 'input Undo Redo', () => this.handleChange( editor.getContent() ) );
+				}
 			};
 
 			// eslint-disable-next-line no-unused-vars

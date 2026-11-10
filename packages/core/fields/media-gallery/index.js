@@ -12,9 +12,11 @@ import { withState, compose } from '@wordpress/compose';
  */
 import './style.scss';
 import MediaLibrary from '../../components/media-library';
+import VideoPreview, { isVideoAttachment } from '../../components/video-preview';
 import Sortable from '../../components/sortable';
 import fetchAttachmentsData from '../../utils/fetch-attachments-data';
 import getSvgPreviewUrl from '../../utils/get-svg-preview-url';
+import getSafeMediaUrl from '../../utils/get-safe-media-url';
 
 class MediaGalleryField extends Component {
 	/**
@@ -107,6 +109,34 @@ class MediaGalleryField extends Component {
 		return attachment.url;
 	}
 
+	renderAttachmentPreview( attachment ) {
+		if ( ! attachment ) {
+			return <span className="cf-media-gallery__item-icon dashicons dashicons-media-default" aria-hidden="true" />;
+		}
+
+		if ( isVideoAttachment( attachment ) ) {
+			return <VideoPreview key={ attachment.id } attachment={ attachment } />;
+		}
+
+		const svg = getSvgPreviewUrl( attachment );
+		const thumbnail = svg || getSafeMediaUrl( attachment.type === 'image' ? this.getAttachmentThumb( attachment ) : attachment.icon );
+		if ( ! thumbnail ) {
+			return <span className="cf-media-gallery__item-icon dashicons dashicons-media-default" aria-hidden="true" />;
+		}
+		if ( svg || attachment.type === 'image' ) {
+			return (
+				<img
+					className={ svg ? 'cf-media-gallery__item-thumb cf-media-gallery__item-thumb--svg' : 'cf-media-gallery__item-thumb' }
+					src={ thumbnail }
+					alt=""
+					referrerPolicy="no-referrer"
+				/>
+			);
+		}
+
+		return <img className="cf-media-gallery__item-icon" src={ thumbnail } alt="" referrerPolicy="no-referrer" />;
+	}
+
 	/**
 	 * Render the component.
 	 *
@@ -147,7 +177,7 @@ class MediaGalleryField extends Component {
 								<div className="cf-media-gallery__inner">
 									<ul className="cf-media-gallery__list" ref={ this.attachmentsList }>
 										{ value.map( ( id, index ) => { // eslint-disable-line no-shadow
-											const attachment = attachmentsData.find( ( attachmentData ) => attachmentData.id === id );
+											const attachment = attachmentsData.find( ( attachmentData ) => String( attachmentData.id ) === String( id ) );
 											const className = [ 'cf-media-gallery__item' ];
 											const isAttachmentLoaded = !! attachment;
 											const svgPreview = isAttachmentLoaded && getSvgPreviewUrl( attachment );
@@ -165,36 +195,17 @@ class MediaGalleryField extends Component {
 												<li className={ className.join( ' ' ) } key={ index } onClick={ () => this.handleAttachmentSelect( index ) }>
 													<div className="cf-media-gallery__item-inner">
 														<div className="cf-media-gallery__item-preview">
-															{ isAttachmentLoaded && (
-																isImage
-																	? (
-																		<img
-																			className={ svgPreview ? 'cf-media-gallery__item-thumb cf-media-gallery__item-thumb--svg' : 'cf-media-gallery__item-thumb' }
-																			src={ svgPreview || this.getAttachmentThumb( attachment ) }
-																		/>
-																	)
-																	: (
-																		<img
-																			className="cf-media-gallery__item-icon"
-																			src={ attachment.icon }
-																		/>
-																	)
-															) }
+															{ this.renderAttachmentPreview( attachment ) }
 														</div>
 
-														{ isAttachmentLoaded && (
-															<span className="cf-media-gallery__item-name">
-																{ attachment.filename }
-															</span>
-														) }
-
-														{ isAttachmentLoaded && (
-															<button
-																type="button"
-																className="cf-media-gallery__item-remove dashicons-before dashicons-no-alt"
-																onClick={ () => this.handleAttachmentRemove( index ) }
-															></button>
-														) }
+														<span className="cf-media-gallery__item-name">
+															{ attachment?.filename || `#${ id }` }
+														</span>
+														<button
+															type="button"
+															className="cf-media-gallery__item-remove dashicons-before dashicons-no-alt"
+															onClick={ () => this.handleAttachmentRemove( index ) }
+														></button>
 													</div>
 
 													<input
@@ -237,11 +248,15 @@ function handler( props ) {
 			case 'COMPONENT_MOUNTED':
 				const { value, setState } = props;
 
-				fetchAttachmentsData( value ).then( ( attachmentsData ) => {
-					setState( {
-						attachmentsData: [ ...props.attachmentsData, ...attachmentsData ]
+				if ( value.length ) {
+					fetchAttachmentsData( value ).then( ( attachmentsData ) => {
+						setState( ( state ) => ( {
+							attachmentsData: [ ...state.attachmentsData, ...attachmentsData ]
+						} ) );
+					}, () => {
+						// Keep displaying saved IDs when attachment data cannot be loaded.
 					} );
-				} );
+				}
 
 				break;
 		}

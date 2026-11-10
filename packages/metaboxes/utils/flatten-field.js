@@ -14,9 +14,10 @@ import { uniqueId } from '@carbon-fields/core';
  * @param  {Object}   field
  * @param  {string}   containerId
  * @param  {Object[]} accumulator
+ * @param  {boolean}  lazy
  * @return {Object}
  */
-export default function flattenField( field, containerId, accumulator ) {
+export default function flattenField( field, containerId, accumulator, lazy = false ) {
 	field = cloneDeep( field );
 
 	// Replace the id of the field.
@@ -24,6 +25,9 @@ export default function flattenField( field, containerId, accumulator ) {
 
 	// Keep reference to the container.
 	field.container_id = containerId;
+	if ( lazy ) {
+		field.lazyComplex = true;
+	}
 
 	// The complex fields represent a nested structure of fields.
 	// So we need to flat them as well.
@@ -31,7 +35,7 @@ export default function flattenField( field, containerId, accumulator ) {
 		field.value.forEach( ( group ) => {
 			group.id = uniqueId();
 			group.container_id = containerId;
-			group.fields = group.fields.map( ( groupField ) => flattenField( groupField, containerId, accumulator ) );
+			group.fields = group.fields.map( ( groupField ) => flattenField( groupField, containerId, accumulator, lazy ) );
 		} );
 	}
 

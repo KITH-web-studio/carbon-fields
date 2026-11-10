@@ -409,6 +409,31 @@ class Complex_Field extends Field {
 	}
 
 	/**
+	 * Check that a decoded editor payload contains complete group records.
+	 */
+	public function is_valid_form_value( $groups ) {
+		if ( ! is_array( $groups ) ) {
+			return false;
+		}
+		foreach ( $groups as $values ) {
+			if ( ! is_array( $values ) || ! isset( $values[ Value_Set::VALUE_PROPERTY ] ) || ! is_string( $values[ Value_Set::VALUE_PROPERTY ] ) ) {
+				return false;
+			}
+			$group = $this->get_group_by_name( $values[ Value_Set::VALUE_PROPERTY ] );
+			if ( ! $group ) {
+				return false;
+			}
+			foreach ( $group->get_fields() as $field ) {
+				$name = $field->get_name();
+				if ( array_key_exists( $name, $values ) && ! $field->is_valid_form_value( $values[ $name ] ) ) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	/**
 	 * Save all contained groups of fields.
 	 */
 	public function save() {

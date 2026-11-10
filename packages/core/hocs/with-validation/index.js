@@ -23,6 +23,11 @@ import empty from 'callbag-empty';
  */
 import required from './required';
 
+export function getFieldValidationError( field, value ) {
+	const hook = `carbon-fields.${ field.type }.validate`;
+	return hasFilter( hook ) ? applyFilters( hook, field, value ) : required( value );
+}
+
 /**
  * The function that controls the stream of side-effects.
  *
@@ -31,7 +36,7 @@ import required from './required';
  * @return {Object}
  */
 function aperture( component, props ) {
-	if ( ! props.field.required ) {
+	if ( ! props.field.required || props.field.lazyComplex ) {
 		return empty;
 	}
 
@@ -98,10 +103,7 @@ function handler( props ) {
 			case 'VALIDATE':
 				const { value, transient } = effect.payload;
 
-				const hook = `carbon-fields.${ field.type }.validate`;
-				const error = hasFilter( hook )
-					? applyFilters( hook, field, value )
-					: required( value );
+				const error = getFieldValidationError( field, value );
 
 				if ( error ) {
 					if ( ! transient ) {
