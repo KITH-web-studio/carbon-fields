@@ -2,6 +2,17 @@
    Complex
    ========================================================================== */
 
+.cf-complex__undo.notice {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	flex: 0 0 100%;
+	gap: 8px;
+	box-sizing: border-box;
+	margin: 0 0 12px;
+	padding: 8px 12px;
+}
+
 .cf-complex__groups {
 	flex: 1;
 	position: relative;

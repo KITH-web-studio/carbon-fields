@@ -27,6 +27,7 @@
 
 	.cf-complex--tabbed-vertical > & {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: flex-start;
 	}
 }

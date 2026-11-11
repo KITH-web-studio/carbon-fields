@@ -2,6 +2,10 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.12
+
+- Restore the last removed complex row in place with all of its nested values.
+
 ## 3.6.11.11
 
 - Add `copy_once`, `sync`, and `independent` policies for top-level post fields in Polylang translations.

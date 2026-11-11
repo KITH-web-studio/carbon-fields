@@ -498,6 +498,18 @@
 /* ==========================================================================
    Complex
    ========================================================================== */
+.cf-complex__undo.notice {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  flex: 0 0 100%;
+  grid-gap: 8px;
+  gap: 8px;
+  box-sizing: border-box;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+}
+
 .cf-complex__groups {
   flex: 1;
   position: relative;
@@ -3129,6 +3141,7 @@ span.flatpickr-weekday {
 }
 .cf-complex--tabbed-vertical > .cf-field__body {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
 }
 

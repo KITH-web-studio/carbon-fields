@@ -118,7 +118,7 @@ class ComplexField extends Component {
 	 * Handles removing of group.
 	 *
 	 * @param  {Object} group
-	 * @return {void}
+	 * @return {Function} Restores the removed group at the given index.
 	 */
 	handleRemoveGroup = ( group ) => {
 		const {
@@ -128,6 +128,7 @@ class ComplexField extends Component {
 		} = this.props;
 
 		const groupIndex = findIndex( value, [ '_id', group._id ] );
+		const wasCollapsed = this.state.collapsedGroups.includes( group._id );
 
 		onChange( id, produce( value, ( draft ) => {
 			draft.splice( groupIndex, 1 );
@@ -136,6 +137,17 @@ class ComplexField extends Component {
 		this.setState( ( { collapsedGroups } ) => ( {
 			collapsedGroups: without( collapsedGroups, group._id )
 		} ) );
+
+		return ( index ) => {
+			const restored = this.props.value.slice();
+			restored.splice( index, 0, group );
+			this.props.onChange( id, restored );
+			if ( wasCollapsed ) {
+				this.setState( ( { collapsedGroups } ) => ( {
+					collapsedGroups: [ ...collapsedGroups, group._id ]
+				} ) );
+			}
+		};
 	}
 
 	/**

@@ -250,3 +250,11 @@ msgstr "Непідтримуваний стан контейнера - \"%1$s\".
 #: packages/metaboxes/monitors/conditional-display/handler/index.js:73
 msgid "Unsupported container condition relation used - \"%1$s\"."
 msgstr "Використано непідтримуване відношення умов контейнера - \"%1$s\"."
+
+#: packages/core/fields/complex/index.js:391
+msgid "Entry removed."
+msgstr "Рядок видалено."
+
+#: packages/core/fields/complex/index.js:393
+msgid "Undo removal"
+msgstr "Скасувати видалення"

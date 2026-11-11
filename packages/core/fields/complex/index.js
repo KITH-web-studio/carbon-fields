@@ -45,6 +45,10 @@ class ComplexField extends Component {
 	 */
 	tabsList = createRef();
 
+	undoButton = createRef();
+
+	focusRestoredGroupId = null;
+
 	/**
 	 * Local state.
 	 *
@@ -52,7 +56,8 @@ class ComplexField extends Component {
 	 */
 	state = {
 		currentDraggedGroup: null,
-		currentTab: this.getInitialTab()
+		currentTab: this.getInitialTab(),
+		removedGroup: null
 	};
 
 	getInitialTab() {
@@ -65,6 +70,15 @@ class ComplexField extends Component {
 		const { id, lazy, reveal } = this.props;
 		if ( lazy && reveal && reveal !== previous.reveal && reveal[ id ] ) {
 			this.handleTabsChange( reveal[ id ] );
+		}
+
+		if ( this.focusRestoredGroupId !== null ) {
+			const groups = this.groupsList.current?.children || [];
+			const row = Array.from( groups ).find( ( group ) => ! group.hidden && group.dataset.groupId === this.focusRestoredGroupId );
+			if ( row ) {
+				this.focusRestoredGroupId = null;
+				row.focus();
+			}
 		}
 	}
 
@@ -214,19 +228,60 @@ class ComplexField extends Component {
 		const {
 			value,
 			groupIdKey,
+			groupFilterKey,
 			onRemoveGroup
 		} = this.props;
 
 		const group = this.findGroup( groupId );
-
-		if ( this.isTabbed ) {
-			const currentIndex = value.indexOf( group );
-			const nextIndex = currentIndex > 0 ? currentIndex - 1 : 1;
-
-			this.handleTabsChange( get( value, `${ nextIndex }.${ groupIdKey }`, null ) );
+		if ( ! group ) {
+			return;
 		}
 
-		onRemoveGroup( group );
+		const index = value.indexOf( group );
+		if ( this.isTabbed && this.state.currentTab === groupId ) {
+			const nextIndex = index > 0 ? index - 1 : 1;
+			this.handleTabsChange( get( value, `${ nextIndex }.${ groupIdKey }`, null ) );
+		}
+		const restore = onRemoveGroup( group );
+		if ( typeof restore === 'function' ) {
+			this.setState( {
+				removedGroup: {
+					id: groupId,
+					name: group[ groupFilterKey ],
+					index,
+					previousId: value[ index - 1 ]?.[ groupIdKey ],
+					nextId: value[ index + 1 ]?.[ groupIdKey ],
+					restore
+				}
+			}, () => this.undoButton.current?.focus() );
+		}
+	}
+
+	canRestoreGroup() {
+		const { removedGroup } = this.state;
+		const { value, field, groupFilterKey } = this.props;
+		return removedGroup && ! this.findGroup( removedGroup.id ) && ! this.isMaximumReached &&
+			( field.duplicate_groups_allowed || ! value.some( ( group ) => group[ groupFilterKey ] === removedGroup.name ) );
+	}
+
+	handleRestoreGroup = () => {
+		if ( ! this.canRestoreGroup() ) {
+			return;
+		}
+		const { removedGroup } = this.state;
+		const { value, groupIdKey } = this.props;
+		const { id, index, previousId, nextId, restore } = removedGroup;
+		const next = value.findIndex( ( group ) => group[ groupIdKey ] === nextId );
+		const previous = value.findIndex( ( group ) => group[ groupIdKey ] === previousId );
+		// Follow a surviving neighbor if rows have moved since the removal.
+		const position = next >= 0 ? next : ( previous >= 0 ? previous + 1 : Math.min( index, value.length ) );
+
+		this.focusRestoredGroupId = String( id );
+		restore( position );
+		if ( this.isTabbed ) {
+			this.handleTabsChange( id );
+		}
+		this.setState( { removedGroup: null } );
 	}
 
 	/**
@@ -331,6 +386,14 @@ class ComplexField extends Component {
 
 		return (
 			<Fragment>
+				{ this.canRestoreGroup() && (
+					<div className="notice notice-info inline cf-complex__undo">
+						<span role="status">{ __( 'Entry removed.', 'carbon-fields-ui' ) }</span>
+						<button type="button" className="button button-small" ref={ this.undoButton } onClick={ this.handleRestoreGroup }>
+							{ __( 'Undo removal', 'carbon-fields-ui' ) }
+						</button>
+					</div>
+				) }
 				{ this.isTabbed && !! value.length && (
 					<Sortable
 						items={ value }
@@ -394,7 +457,7 @@ class ComplexField extends Component {
 									return null;
 								}
 								return (
-									<ComplexGroup key={ lazy ? groupId : `${ group[ groupFilterKey ] }-${ index }` } { ...onGroupSetup( group, {
+									<ComplexGroup key={ groupId } { ...onGroupSetup( group, {
 										index,
 										label: groupLabels[ index ],
 										dragged: groupId === currentDraggedGroup,

@@ -14,3 +14,11 @@ msgstr ""
 #: packages/metaboxes/components/container/index.js:195
 msgid "Show field"
 msgstr ""
+
+#: packages/core/fields/complex/index.js:391
+msgid "Entry removed."
+msgstr ""
+
+#: packages/core/fields/complex/index.js:393
+msgid "Undo removal"
+msgstr ""

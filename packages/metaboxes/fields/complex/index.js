@@ -5,7 +5,7 @@ import produce from 'immer';
 import { Component } from '@wordpress/element';
 import { addFilter } from '@wordpress/hooks';
 import { compose } from '@wordpress/compose';
-import { withDispatch, withSelect } from '@wordpress/data';
+import { select, withDispatch, withSelect } from '@wordpress/data';
 import {
 	find,
 	assign,
@@ -102,7 +102,7 @@ class ComplexField extends Component {
 	 * Handles removing of group.
 	 *
 	 * @param  {Object} group
-	 * @return {void}
+	 * @return {Function} Restores the removed group at the given index.
 	 */
 	handleRemoveGroup = ( group ) => {
 		const {
@@ -111,11 +111,29 @@ class ComplexField extends Component {
 			onChange
 		} = this.props;
 
+		const fields = select( 'carbon-fields/metaboxes' ).getFields();
+		const removedFields = [];
+		const collectFields = ( references ) => {
+			for ( const { id: fieldId } of references ) {
+				const field = fields[ fieldId ];
+				removedFields.push( field );
+				if ( field.type === 'complex' ) {
+					field.value.forEach( ( row ) => collectFields( row.fields ) );
+				}
+			}
+		};
+		collectFields( group.fields );
 		onChange(
 			id,
 			without( value, group ),
 			group.fields.map( ( groupField ) => groupField.id )
 		);
+
+		return ( index ) => {
+			const restored = this.props.value.slice();
+			restored.splice( index, 0, group );
+			this.props.onChange( id, restored, [], removedFields );
+		};
 	}
 
 	/**

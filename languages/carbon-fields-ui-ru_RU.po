@@ -221,3 +221,11 @@ msgstr "Неподдерживаемое условие контейнера - \
 #: packages/metaboxes/monitors/conditional-display/handler/index.js:73
 msgid "Unsupported container condition relation used - \"%1$s\"."
 msgstr "Используется неподдерживаемое отношение условий контейнера - \"%1$s\"."
+
+#: packages/core/fields/complex/index.js:391
+msgid "Entry removed."
+msgstr "Строка удалена."
+
+#: packages/core/fields/complex/index.js:393
+msgid "Undo removal"
+msgstr "Отменить удаление"

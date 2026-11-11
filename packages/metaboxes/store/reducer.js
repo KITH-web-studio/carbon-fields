@@ -128,7 +128,8 @@ export function fields( state = {}, action ) {
 				const {
 					fieldId,
 					value,
-					fieldsToRemove
+					fieldsToRemove,
+					fieldsToRestore = []
 				} = action.payload;
 
 				draft[ fieldId ].value = value;
@@ -139,6 +140,9 @@ export function fields( state = {}, action ) {
 
 				fieldIdsToRemove.forEach( ( fieldIdToRemove ) => {
 					unset( draft, fieldIdToRemove );
+				} );
+				fieldsToRestore.forEach( ( field ) => {
+					draft[ field.id ] = field;
 				} );
 			} );
 

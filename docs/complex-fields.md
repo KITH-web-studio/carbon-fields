@@ -44,6 +44,8 @@ Layouts are `grid`, `tabbed-horizontal`, and `tabbed-vertical`. `set_min()` and 
 
 Keep the field names and named row type identifiers stable after saving content. `value` and `_type` are reserved for internal row structure.
 
+After removing a row, click **Undo removal** to return it to its place with all nested values, including unsaved edits. Each open complex field offers undo for its most recent removal until the editor reloads.
+
 ## Render the rows
 
 Read the whole complex with the same field getter as a regular field. Each named row includes its `_type`, its own field values, and any nested row arrays.

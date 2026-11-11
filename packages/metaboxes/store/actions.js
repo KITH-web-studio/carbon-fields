@@ -39,15 +39,17 @@ export function updateState( containers, fields ) {
  * @param  {mixed}    value
  * @param  {string[]} fieldsToRemove It's used by the complex fields to remove the nested
  *                                 fields within a single action.
+ * @param  {Object[]} fieldsToRestore Nested fields restored along with their row.
  * @return {Object}
  */
-export function updateFieldValue( fieldId, value, fieldsToRemove = [] ) {
+export function updateFieldValue( fieldId, value, fieldsToRemove = [], fieldsToRestore = [] ) {
 	return {
 		type: 'UPDATE_FIELD_VALUE',
 		payload: {
 			fieldId,
 			value,
-			fieldsToRemove
+			fieldsToRemove,
+			fieldsToRestore
 		}
 	};
 }

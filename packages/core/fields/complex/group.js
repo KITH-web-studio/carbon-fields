@@ -60,6 +60,7 @@ class ComplexGroup extends Component {
 	 */
 	render() {
 		const {
+			id,
 			index,
 			label,
 			name,
@@ -102,7 +103,7 @@ class ComplexGroup extends Component {
 		);
 
 		return (
-			<div className={ groupClasses } hidden={ hidden }>
+			<div className={ groupClasses } hidden={ hidden } data-group-id={ id } tabIndex={ -1 }>
 				{ name && (
 					<input
 						type="hidden"
