@@ -2,6 +2,11 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.13
+
+- Search vertical complex tabs by row title or position and open a result with the keyboard.
+- Show matches in a dropdown anchored to the search field.
+
 ## 3.6.11.12
 
 - Restore the last removed complex row in place with all of its nested values.

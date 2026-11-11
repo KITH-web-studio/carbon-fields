@@ -23,6 +23,7 @@ import {
 import './style.scss';
 import Sortable from '../../components/sortable';
 import ComplexTabs from './tabs';
+import ComplexTabSearch from './tab-search';
 import ComplexInserter from './inserter';
 import ComplexGroup from './group';
 import ComplexPlaceholder from './placeholder';
@@ -47,7 +48,7 @@ class ComplexField extends Component {
 
 	undoButton = createRef();
 
-	focusRestoredGroupId = null;
+	focusGroupId = null;
 
 	/**
 	 * Local state.
@@ -72,11 +73,11 @@ class ComplexField extends Component {
 			this.handleTabsChange( reveal[ id ] );
 		}
 
-		if ( this.focusRestoredGroupId !== null ) {
+		if ( this.focusGroupId !== null ) {
 			const groups = this.groupsList.current?.children || [];
-			const row = Array.from( groups ).find( ( group ) => ! group.hidden && group.dataset.groupId === this.focusRestoredGroupId );
+			const row = Array.from( groups ).find( ( group ) => ! group.hidden && group.dataset.groupId === this.focusGroupId );
 			if ( row ) {
-				this.focusRestoredGroupId = null;
+				this.focusGroupId = null;
 				row.focus();
 			}
 		}
@@ -276,7 +277,7 @@ class ComplexField extends Component {
 		// Follow a surviving neighbor if rows have moved since the removal.
 		const position = next >= 0 ? next : ( previous >= 0 ? previous + 1 : Math.min( index, value.length ) );
 
-		this.focusRestoredGroupId = String( id );
+		this.focusGroupId = String( id );
 		restore( position );
 		if ( this.isTabbed ) {
 			this.handleTabsChange( id );
@@ -350,6 +351,11 @@ class ComplexField extends Component {
 		} );
 	}
 
+	handleSearchSelect = ( groupId ) => {
+		this.focusGroupId = String( groupId );
+		this.handleTabsChange( groupId );
+	}
+
 	/**
 	 * Renders the component.
 	 *
@@ -359,6 +365,7 @@ class ComplexField extends Component {
 		const { currentDraggedGroup, currentTab } = this.state;
 
 		const {
+			id,
 			value,
 			field,
 			lazy,
@@ -393,6 +400,9 @@ class ComplexField extends Component {
 							{ __( 'Undo removal', 'carbon-fields-ui' ) }
 						</button>
 					</div>
+				) }
+				{ field.layout === 'tabbed-vertical' && !! tabs.length && (
+					<ComplexTabSearch id={ `${ id }-row-search` } items={ tabs } onSelect={ this.handleSearchSelect } />
 				) }
 				{ this.isTabbed && !! value.length && (
 					<Sortable

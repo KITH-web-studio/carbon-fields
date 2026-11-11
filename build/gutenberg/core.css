@@ -801,6 +801,95 @@
 /**
  * Tabs
  */
+.cf-complex__search {
+  position: relative;
+  box-sizing: border-box;
+  flex: 0 0 100%;
+  min-width: 0;
+  margin-bottom: 12px;
+}
+.cf-complex__search label {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.cf-complex__search-input[type=search] {
+  box-sizing: border-box;
+  min-height: 30px;
+  padding: 0 8px;
+  border: 1px solid #82878c;
+  border-radius: 4px;
+  background-color: #fff;
+  color: #32373c;
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: none;
+  width: 100%;
+  max-width: 320px;
+  margin: 0;
+}
+.cf-complex__search-input[type=search]:focus {
+  border-color: #3858e9;
+  border-color: var(--wp-admin-theme-color, #3858e9);
+  box-shadow: 0 0 0 1.5px #3858e9;
+  box-shadow: 0 0 0 var(--wp-admin-border-width-focus, 1.5px) var(--wp-admin-theme-color, #3858e9);
+  outline: 2px solid transparent;
+}
+
+[dir="ltr"] .cf-complex__search-popup {
+  left: 0;
+}
+
+[dir="rtl"] .cf-complex__search-popup {
+  right: 0;
+}
+
+.cf-complex__search-popup {
+  position: absolute;
+  top: 100%;
+  z-index: 2;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 320px;
+  margin-top: 4px;
+  border-radius: 4px;
+  background: #fff;
+  color: #32373c;
+}
+.cf-complex__search-popup[data-open] {
+  box-shadow: 0 0 0 1px #e2e4e7, 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.cf-complex__search-status:not(:empty) {
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.cf-complex__search-results {
+  max-height: min(240px, 45vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0;
+  border-top: 1px solid #e2e4e7;
+  margin: 0;
+  list-style: none;
+}
+.cf-complex__search-results li {
+  padding: 4px 8px;
+  margin: 0;
+  cursor: pointer;
+  word-wrap: anywhere;
+}
+.cf-complex__search-results li:hover, .cf-complex__search-results li[aria-selected=true] {
+  background: #fbfbfc;
+  box-shadow: inset 3px 0 0 #3858e9;
+  box-shadow: inset 3px 0 0 var(--wp-admin-theme-color, #3858e9);
+}
+
+.cf-complex__search-number {
+  font-weight: 600;
+}
+
 .cf-complex__tabs {
   position: relative;
   z-index: 1;

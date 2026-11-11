@@ -46,6 +46,8 @@ Keep the field names and named row type identifiers stable after saving content.
 
 After removing a row, click **Undo removal** to return it to its place with all nested values, including unsaved edits. Each open complex field offers undo for its most recent removal until the editor reloads.
 
+In a vertical complex, use **Find a row** to jump to a row by its current title or position. Type part of a title, a number, or a position such as `#42`. Use the arrow keys and Enter to open a result. Press Escape to clear the search.
+
 ## Render the rows
 
 Read the whole complex with the same field getter as a regular field. Each named row includes its `_type`, its own field values, and any nested row arrays.

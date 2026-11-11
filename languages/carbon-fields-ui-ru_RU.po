@@ -229,3 +229,27 @@ msgstr "Строка удалена."
 #: packages/core/fields/complex/index.js:393
 msgid "Undo removal"
 msgstr "Отменить удаление"
+
+#: packages/core/fields/complex/tab-search.js:116
+msgid "Find a row"
+msgstr "Найти строку"
+
+#: packages/core/fields/complex/tab-search.js:127
+msgid "Title or row number"
+msgstr "Заголовок или номер строки"
+
+#: packages/core/fields/complex/tab-search.js:143
+msgid "Matching rows"
+msgstr "Найденные строки"
+
+#: packages/core/fields/complex/tab-search.js:106
+msgid "No matching rows."
+msgstr "Строки не найдены."
+
+#: packages/core/fields/complex/tab-search.js:108
+msgid "Showing %1$d of %2$d results."
+msgstr "Показано %1$d из %2$d результатов."
+
+#: packages/core/fields/complex/tab-search.js:110
+msgid "Results: %d"
+msgstr "Найдено: %d"
