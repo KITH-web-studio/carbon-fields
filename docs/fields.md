@@ -65,6 +65,18 @@ add_action( 'carbon_fields_register_fields', function () {
 
 `set_options()` can also take a callback that returns the options. See [containers](containers.md) for conditions that apply to a whole box.
 
+### Search within a select
+
+Call `set_searchable()` on a `select` to let editors filter its options by label. Type to search, use the arrow keys to highlight a result, and press Enter to choose it. Escape closes the list and keeps the current selection. Tab also closes the list and moves focus to the next control.
+
+```php
+Field::make( 'select', 'office', 'Office' )
+    ->set_options( array( 'kyiv' => 'Kyiv', 'warsaw' => 'Warsaw' ) )
+    ->set_searchable();
+```
+
+You can combine search with `set_dependent_options()`. The search uses the choices available for the current source value.
+
 ### Dependent select lists
 
 Use `set_dependent_options( $source, $choices )` on a `select` to change its options when another select changes. Pass the source field's base name and an array of option lists keyed by the source values. The source is a regular select in the same container or complex row. You can place the two fields on different tabs.

@@ -118,3 +118,7 @@ msgstr ""
 #: packages/core/fields/select/index.js:55
 msgid "Select an option"
 msgstr ""
+
+#: packages/core/fields/select/searchable.js:119
+msgid "No matching options."
+msgstr ""

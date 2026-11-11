@@ -9,6 +9,7 @@ import { __ } from '@wordpress/i18n';
  */
 import './style.scss';
 import NoOptions from '../../components/no-options';
+import SearchableSelect from './searchable';
 import { getDependentOptions, getSelectSourceValue, getSelectValue } from '../../utils/dependent-select';
 
 export class SelectField extends Component {
@@ -40,6 +41,22 @@ export class SelectField extends Component {
 		const dependent = !! field.dependent_options;
 		const options = dependent ? getDependentOptions( field, optionsSourceValue ) : field.options;
 		const value = dependent ? getSelectValue( options, this.props.value ) : getSelectSourceValue( field, this.props.value );
+		const emptyLabel = options.length ? __( 'Select an option', 'carbon-fields-ui' ) : __( 'No options.', 'carbon-fields-ui' );
+
+		if ( field.searchable && ( dependent || options.length > 0 ) ) {
+			return (
+				<SearchableSelect
+					id={ id }
+					name={ name }
+					label={ field.label }
+					required={ field.required }
+					options={ options }
+					value={ value }
+					emptyLabel={ dependent ? emptyLabel : '' }
+					onChange={ this.props.onChange }
+				/>
+			);
+		}
 
 		return (
 			dependent || options.length > 0
@@ -52,7 +69,7 @@ export class SelectField extends Component {
 						onChange={ this.handleChange }
 					>
 						{ dependent && (
-							<option value="">{ options.length ? __( 'Select an option', 'carbon-fields-ui' ) : __( 'No options.', 'carbon-fields-ui' ) }</option>
+							<option value="">{ emptyLabel }</option>
 						) }
 						{ options.map( ( option ) => (
 							<option key={ option.value } value={ option.value }>

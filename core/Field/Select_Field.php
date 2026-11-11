@@ -11,6 +11,18 @@ use Carbon_Fields\Helper\Helper;
 class Select_Field extends Predefined_Options_Field {
 	protected $options_source = '';
 	protected $dependent_options = array();
+	protected $searchable = false;
+
+	/**
+	 * Enable search in this select's editor control.
+	 *
+	 * @param bool $searchable
+	 * @return self
+	 */
+	public function set_searchable( $searchable = true ) {
+		$this->searchable = (bool) $searchable;
+		return $this;
+	}
 
 	/**
 	 * Set options keyed by the value of another select in the same container or row.
@@ -80,6 +92,9 @@ class Select_Field extends Predefined_Options_Field {
 	 */
 	public function to_json( $load ) {
 		$field_data = parent::to_json( $load );
+		if ( $this->searchable ) {
+			$field_data['searchable'] = true;
+		}
 
 		if ( $this->options_source !== '' ) {
 			$choices = array();

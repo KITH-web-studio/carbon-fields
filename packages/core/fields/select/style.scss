@@ -7,3 +7,53 @@
 	display: block;
 	margin: 0;
 }
+
+.cf-select__search {
+	position: relative;
+	min-width: 0;
+}
+
+.cf-select__popup {
+	position: absolute;
+	top: 100%;
+	inset-inline: 0;
+	z-index: 5;
+	margin-top: 4px;
+	border: 1px solid $wp-color-gray-light-500;
+	border-radius: 4px;
+	background: $color-white;
+	color: $wp-color-base-gray;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, .12);
+}
+
+.cf-select__status:not(:empty) {
+	padding: 6px 8px;
+	font-size: 12px;
+}
+
+.cf-select__options {
+	position: relative;
+	max-height: min(240px, 45vh);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: 0;
+	margin: 0;
+	list-style: none;
+
+	li {
+		padding: 6px 8px;
+		margin: 0;
+		cursor: pointer;
+		overflow-wrap: anywhere;
+
+		&[aria-selected="true"] {
+			font-weight: 600;
+		}
+
+		&:hover,
+		&[data-active] {
+			background: $wp-color-gray-light-100;
+			box-shadow: inset 3px 0 0 $wp-admin-theme-color;
+		}
+	}
+}

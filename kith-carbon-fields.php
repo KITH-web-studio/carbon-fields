@@ -3,7 +3,7 @@
  * Plugin Name: KITH Carbon Fields
  * Plugin URI: https://github.com/KITH-web-studio/carbon-fields
  * Description: Custom fields for WordPress. A fork of Carbon Fields by htmlBurger, maintained and developed by KITH Web Studio.
- * Version: 3.6.11.16
+ * Version: 3.6.11.17
  * Requires at least: 5.0
  * Requires PHP: 5.6.20
  * Author: KITH Web Studio

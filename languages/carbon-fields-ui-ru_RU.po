@@ -333,3 +333,7 @@ msgstr "Показать поле"
 #: packages/core/fields/select/index.js:55
 msgid "Select an option"
 msgstr "Выберите вариант"
+
+#: packages/core/fields/select/searchable.js:119
+msgid "No matching options."
+msgstr "Подходящих вариантов нет."

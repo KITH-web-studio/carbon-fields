@@ -2,6 +2,10 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.17
+
+- Enable keyboard-accessible option search on individual select fields, including dependent selects.
+
 ## 3.6.11.16
 
 - Define dependent select options in PHP and update the choices independently within each complex row.
