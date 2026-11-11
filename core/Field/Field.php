@@ -198,6 +198,49 @@ class Field implements Datastore_Holder_Interface {
 	 */
 	protected $visible_in_rest_api = false;
 
+	protected $translation = 'copy_once';
+	protected $translation_datastore_original;
+
+	/**
+	 * Translation policy for a root field, including its complete complex tree.
+	 */
+	public function set_translation( $mode ) {
+		if ( ! in_array( $mode, array( 'copy_once', 'sync', 'independent' ), true ) ) {
+			Incorrect_Syntax_Exception::raise( 'Unknown field translation mode.' );
+			return $this;
+		}
+		if ( ! empty( $this->hierarchy ) ) {
+			Incorrect_Syntax_Exception::raise( 'Set the translation mode on the root field or complex, not on a nested field.' );
+			return $this;
+		}
+		$this->translation = $mode;
+		if ( $this->get_datastore() ) {
+			$this->set_datastore( $this->get_datastore(), $this->has_default_datastore() );
+		}
+		return $this;
+	}
+
+	public function get_translation() {
+		return $this->translation;
+	}
+
+	/**
+	 * Isolate shared theme-option fields from their container's language datastore.
+	 */
+	protected function translation_datastore( Datastore_Interface $datastore ) {
+		if ( $this->translation_datastore_original && $datastore === $this->datastore ) {
+			$datastore = $this->translation_datastore_original;
+		}
+		$this->translation_datastore_original = null;
+		if ( 'sync' === $this->translation && empty( $this->hierarchy ) &&
+			get_class( $datastore ) === 'Carbon_Fields\\Datastore\\Theme_Options_Datastore' ) {
+			$this->translation_datastore_original = $datastore;
+			$datastore = clone $datastore;
+			$datastore->set_multilingual( false );
+		}
+		return $datastore;
+	}
+
 	/**
 	 * Clone the Value_Set object as well
 	 *
@@ -340,6 +383,16 @@ class Field implements Datastore_Holder_Interface {
 	 * @return self  $this
 	 */
 	public function set_hierarchy( $hierarchy ) {
+		if ( ! empty( $hierarchy ) && 'copy_once' !== $this->translation ) {
+			// Keep storage ownership safe even when syntax errors are admin notices.
+			$this->translation = 'copy_once';
+			$this->hierarchy = $hierarchy;
+			if ( $this->get_datastore() ) {
+				$this->set_datastore( $this->get_datastore(), $this->has_default_datastore() );
+			}
+			Incorrect_Syntax_Exception::raise( 'Set the translation mode on the root field or complex, not on a nested field.' );
+			return $this;
+		}
 		$this->hierarchy = $hierarchy;
 		return $this;
 	}
@@ -533,7 +586,7 @@ class Field implements Datastore_Holder_Interface {
 		if ( $set_as_default && ! $this->has_default_datastore() ) {
 			return $this; // datastore has been overriden with a custom one - abort changing to a default one
 		}
-		$this->datastore = $datastore;
+		$this->datastore = $this->translation_datastore( $datastore );
 		$this->has_default_datastore = $set_as_default;
 		return $this;
 	}

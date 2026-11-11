@@ -345,8 +345,12 @@ class Revisions_Service extends Service {
 			return true;
 		}
 
-		$post_ids = array_merge( array( $from_id ), $targets );
-		return Post_Meta_Transaction::run( $post_ids, function() use ( $from_id, $targets, $restoring, $post_ids, $patterns ) {
+		$translation_targets = $restoring ? \Carbon_Fields\Integration\Polylang_Post_Meta::revision_targets( $targets[0], array_keys( $patterns ) ) : array();
+		if ( false === $translation_targets ) {
+			return false;
+		}
+		$post_ids = array_merge( array( $from_id ), $targets, array_keys( $translation_targets ) );
+		return Post_Meta_Transaction::run( $post_ids, function() use ( $from_id, $targets, $restoring, $post_ids, $patterns, $translation_targets ) {
 			$meta = $this->read_snapshot_rows( $post_ids, $patterns );
 			if ( false === $meta ) {
 				return false;
@@ -376,6 +380,13 @@ class Revisions_Service extends Service {
 				}
 
 				if ( ! $this->apply_snapshot( $target, $existing, $wanted ) ) {
+					return false;
+				}
+			}
+			foreach ( $translation_targets as $target => $roots ) {
+				$shared_scope = array_intersect( $scope, $roots );
+				$current = isset( $meta[ $target ] ) ? $meta[ $target ] : array();
+				if ( ! $this->apply_snapshot( $target, $this->collect_snapshot_keys( $current, $shared_scope ), $this->collect_snapshot_keys( $source, $shared_scope ) ) ) {
 					return false;
 				}
 			}

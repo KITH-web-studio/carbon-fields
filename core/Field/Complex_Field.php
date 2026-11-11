@@ -160,7 +160,7 @@ class Complex_Field extends Field {
 		if ( $set_as_default && ! $this->has_default_datastore() ) {
 			return $this; // datastore has been overriden with a custom one - abort changing to a default one
 		}
-		$this->datastore = $datastore;
+		$this->datastore = $this->translation_datastore( $datastore );
 		$this->has_default_datastore = $set_as_default;
 
 		$this->update_child_datastore( $this->get_datastore(), true );

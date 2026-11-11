@@ -1,11 +1,11 @@
 # Development environment
 
-This setup is only meant for development use - for production follow [Quickstart](https://carbonfields.net/docs/carbon-fields-quickstart/?crb_version=2-1-0) instead.
+This setup is for local development. For a WordPress site, follow the [installation guide](docs/installation.md).
 
 1. Setup a blank WordPress installation
 1. Add a new `carbon-fields` directory inside your theme of choice and switch to it
     1. Fork this repository and clone your fork
-    1. Run `git checkout development`
+    1. Run `git checkout main`
     1. Run `composer install`
     1. Run `npm install` or `yarn install`
     1. Run `npm run build` or `yarn run build`
@@ -32,11 +32,15 @@ This setup is only meant for development use - for production follow [Quickstart
 # Preparation
 
 1. Make sure your local branches are up to date
-1. Always start your contribution branches from the `development` branch
+1. Base your changes on the `main` branch
 1. If you are making JavaScript contributions, run `npm run start` or `yarn start` to run the dev build task (tracks file changes)
 
 ## Pull Request Process
 
-1. Target the `development` branch for pull requests
+1. Target the `main` branch for pull requests
 1. Include a detailed description of your contribution
 1. Make sure you follow the current codestyle
+
+## Documentation
+
+Update the relevant [English](docs/index.md) and [Russian](docs/ru/index.md) guides when a change affects a setting, public API, upgrade, or editor workflow. Keep PHP and JavaScript examples equivalent across translations. Include a runnable example for new APIs and explain how the change treats existing data. Add a short entry to the [English](CHANGELOG.md) and [Russian](CHANGELOG.ru.md) changelogs for user-facing changes. Keep the documentation with the code change.

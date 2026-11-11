@@ -63,6 +63,8 @@ class Loader {
 		# Enable post meta revisions service
 		\Carbon_Fields\Carbon_Fields::service( 'revisions' )->enable();
 
+		\Carbon_Fields\Integration\Polylang_Post_Meta::boot();
+
 		# Initialize sidebar manager
 		$this->sidebar_manager->boot();
 	}

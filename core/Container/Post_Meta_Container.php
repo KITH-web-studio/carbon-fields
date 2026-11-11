@@ -7,7 +7,9 @@ namespace Carbon_Fields\Container;
 use Carbon_Fields\Carbon_Fields;
 use Carbon_Fields\Helper\Helper;
 use Carbon_Fields\Datastore\Datastore;
+use Carbon_Fields\Datastore\Post_Meta_Datastore;
 use Carbon_Fields\Exception\Incorrect_Syntax_Exception;
+use Carbon_Fields\Integration\Polylang;
 
 /**
  * Field container designed to extend WordPress custom fields functionality,
@@ -199,6 +201,26 @@ class Post_Meta_Container extends Container {
 		return new \WP_Error( 'carbon_fields_incomplete_form', __( 'Carbon Fields received an incomplete form. The custom fields in this box were not saved. Reload the editor and try again.', 'carbon-fields' ) );
 	}
 
+	private function get_translation_sync_fields() {
+		$names = array();
+		foreach ( $this->fields as $field ) {
+			$datastore = $field->get_datastore();
+			if ( 'sync' === $field->get_translation() && $datastore && get_class( $datastore ) === Post_Meta_Datastore::class ) {
+				$names[] = $field->get_name();
+			}
+		}
+		return $names && Polylang::active() ? $names : array();
+	}
+
+	public function to_json( $load ) {
+		$data = parent::to_json( $load );
+		$names = $this->get_translation_sync_fields();
+		if ( $names ) {
+			$data['settings']['translationSyncFields'] = $names;
+		}
+		return $data;
+	}
+
 	/**
 	 * Perform save operation after successful is_valid_save() check.
 	 * The call is propagated to all fields in the container.
@@ -211,13 +233,35 @@ class Post_Meta_Container extends Container {
 			return $input;
 		}
 
+		$skip = array();
+		$nonce_name = $this->get_nonce_name();
+		$nonce = isset( $input[ $nonce_name ] ) ? $input[ $nonce_name ] : '';
+		$sync_fields = $this->get_translation_sync_fields();
+		if ( $sync_fields && ! wp_is_post_revision( $post_id ) && is_string( $nonce ) &&
+			0 === strpos( $nonce, static::FORM_NONCE_PREFIX ) ) {
+			$key = $nonce_name . '_translation_changes';
+			$changes = isset( $input[ $key ] ) && is_string( $input[ $key ] ) ? json_decode( $input[ $key ] ) : null;
+			if ( ! is_array( $changes ) ) {
+				return $this->incomplete_form_error();
+			}
+			foreach ( $changes as $name ) {
+				if ( ! in_array( $name, $sync_fields, true ) ) {
+					return $this->incomplete_form_error();
+				}
+			}
+			$skip = array_fill_keys( array_diff( $sync_fields, $changes ), true );
+		}
+
 		// Unhook action to garantee single save
 		remove_action( 'save_post', array( $this, '_save' ) );
 
 		$this->set_post_id( $post_id );
 
-		$saved = Carbon_Fields::service( 'revisions' )->track_container_save( $post_id, $this, function() use ( $input ) {
+		$saved = Carbon_Fields::service( 'revisions' )->track_container_save( $post_id, $this, function() use ( $input, $skip ) {
 			foreach ( $this->fields as $field ) {
+				if ( isset( $skip[ $field->get_name() ] ) ) {
+					continue;
+				}
 				$field->set_value_from_input( $input );
 				if ( false === $field->save() ) {
 					return false;
