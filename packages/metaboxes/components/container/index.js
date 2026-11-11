@@ -15,7 +15,7 @@ import {
 /**
  * Carbon Fields dependencies.
  */
-import { getFieldType } from '@carbon-fields/core';
+import { focusComplexField, getFieldType } from '@carbon-fields/core';
 
 /**
  * Internal dependencies.
@@ -95,18 +95,9 @@ class Container extends Component {
 		const currentTab = Object.keys( tabs ).find( ( tab ) => tabs[ tab ].includes( rootName ) ) || this.state.currentTab;
 		dispatch( 'carbon-fields/core' ).markAsInvalid( field.id, error );
 		cancelAnimationFrame( this.focusFrame );
-		this.setState( { currentTab, reveal: path }, () => {
+		this.setState( { currentTab, reveal: { groups: path, fieldId: field.id } }, () => {
 			this.focusFrame = requestAnimationFrame( () => {
-				const target = this.node.current.ownerDocument.getElementById( field.id );
-				if ( target ) {
-					target.scrollIntoView( { block: 'center' } );
-					target.focus();
-				} else {
-					const wrapper = this.node.current.querySelector( '.cf-field--invalid' );
-					if ( wrapper ) {
-						wrapper.scrollIntoView( { block: 'center' } );
-					}
-				}
+				focusComplexField( this.node.current.ownerDocument, field.id );
 				this.setState( { reveal: null } );
 			} );
 		} );

@@ -6,6 +6,7 @@ import distinctUntilChanged from 'callbag-distinct-until-changed';
 import { hasFilter, applyFilters } from '@wordpress/hooks';
 import { compose } from '@wordpress/compose';
 import { withDispatch } from '@wordpress/data';
+import { useContext } from '@wordpress/element';
 import { withEffects } from 'refract-callbag';
 import { debounce } from 'callbag-debounce';
 import {
@@ -22,6 +23,7 @@ import empty from 'callbag-empty';
  * Internal dependencies.
  */
 import required from './required';
+import { ComplexValidationContext } from '../../fields/complex/validation';
 
 export function getFieldValidationError( field, value ) {
 	const hook = `carbon-fields.${ field.type }.validate`;
@@ -60,17 +62,14 @@ function aperture( component, props ) {
 		),
 
 		pipe(
-			value$,
+			props.complexValidation ? combine( value$, visible$ ) : value$,
 			dropUntil( mount$ ),
 			distinctUntilChanged(),
 			debounce( 250 ),
-			map( ( value ) => ( {
-				type: 'VALIDATE',
-				payload: {
-					value,
-					transient: false
-				}
-			} ) )
+			map( ( input ) => {
+				const [ value, visible ] = props.complexValidation ? input : [ input, true ];
+				return { type: 'VALIDATE', payload: { value, visible, transient: false } };
+			} )
 		),
 
 		pipe(
@@ -96,35 +95,38 @@ function handler( props ) {
 			markAsInvalid,
 			markAsValid,
 			lockSaving,
-			unlockSaving
+			unlockSaving,
+			complexValidation
 		} = props;
 
 		switch ( effect.type ) {
 			case 'VALIDATE':
-				const { value, transient } = effect.payload;
+				const { value, transient, visible = true } = effect.payload;
 
-				const error = getFieldValidationError( field, value );
+				const error = visible && getFieldValidationError( field, value );
+				complexValidation?.report( id, error ? { id, error, label: field.label, groups: complexValidation.groups } : null );
 
 				if ( error ) {
 					if ( ! transient ) {
 						markAsInvalid( id, error );
 					}
 
-					lockSaving( id );
+					lockSaving?.( id );
 				} else {
 					if ( ! transient ) {
 						markAsValid( id );
 					}
 
-					unlockSaving( id );
+					unlockSaving?.( id );
 				}
 
 				break;
 
 			case 'RESET':
+				complexValidation?.report( id, null );
 				markAsValid( id );
 
-				unlockSaving( id );
+				unlockSaving?.( id );
 
 				break;
 		}
@@ -132,6 +134,11 @@ function handler( props ) {
 }
 
 const applyWithEffects = withEffects( aperture, { handler } );
+
+const withComplexValidation = ( OriginalComponent ) => ( props ) => {
+	const complexValidation = useContext( ComplexValidationContext );
+	return <OriginalComponent { ...props } complexValidation={ complexValidation } />;
+};
 
 const applyWithDispatch = withDispatch( ( dispatch ) => {
 	const { markAsValid, markAsInvalid } = dispatch( 'carbon-fields/core' );
@@ -143,6 +150,7 @@ const applyWithDispatch = withDispatch( ( dispatch ) => {
 } );
 
 export default compose(
+	withComplexValidation,
 	applyWithDispatch,
 	applyWithEffects
 );

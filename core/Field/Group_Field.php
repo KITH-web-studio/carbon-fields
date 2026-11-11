@@ -49,6 +49,13 @@ class Group_Field {
 	protected $fields = array();
 
 	/**
+	 * Tab definitions for this group.
+	 *
+	 * @var array
+	 */
+	protected $tabs = array();
+
+	/**
 	 * List of registered unique field names
 	 *
 	 * @see register_field_name()
@@ -101,6 +108,39 @@ class Group_Field {
 	}
 
 	/**
+	 * Configure tabs without changing the fields or their storage.
+	 *
+	 * @param array $tabs
+	 */
+	public function set_tabs( array $tabs ) {
+		$available = array();
+		foreach ( $this->fields as $field ) {
+			$available[ $field->get_base_name() ] = true;
+		}
+
+		$definitions = array();
+		foreach ( $tabs as $label => $fields ) {
+			if ( trim( (string) $label ) === '' || ! is_array( $fields ) || ! $fields ) {
+				Incorrect_Syntax_Exception::raise( 'Each complex group tab needs a label and at least one field.' );
+				return;
+			}
+			foreach ( $fields as $name ) {
+				if ( ! is_string( $name ) || ! isset( $available[ $name ] ) ) {
+					Incorrect_Syntax_Exception::raise( 'Complex group tabs can only reference existing fields by base name, once per field.' );
+					return;
+				}
+				unset( $available[ $name ] );
+			}
+			$definitions[] = array(
+				'label' => (string) $label,
+				'fields' => array_values( $fields ),
+			);
+		}
+
+		$this->tabs = $definitions;
+	}
+
+	/**
 	 * Return the names of all fields.
 	 *
 	 * @return array
@@ -135,6 +175,10 @@ class Group_Field {
 			'label_template' => $this->get_label_template(),
 			'fields' => $fields_data,
 		);
+
+		if ( $this->tabs ) {
+			$group_data['tabs'] = $this->tabs;
+		}
 
 		return $group_data;
 	}

@@ -42,6 +42,30 @@ add_action( 'carbon_fields_register_fields', function () {
 
 Layouts are `grid`, `tabbed-horizontal`, and `tabbed-vertical`. `set_min()` and `set_max()` control how many rows an editor can save. Use `set_collapsed()` to start rows collapsed in layouts that support it, and `set_duplicate_groups_allowed( false )` to remove the duplicate action.
 
+## Tabs inside a row
+
+Call `set_group_tabs()` after `add_fields()` to organize that row type. Use tab labels as keys and list the field names from `Field::make()` in each tab. Unassigned fields appear above the tabs. Row types without this setting show their fields together. The setting applies to all three layouts and preserves the saved row structure.
+
+```php
+Field::make( 'complex', 'sections', 'Sections' )
+    ->add_fields( 'article', 'Article', array(
+        Field::make( 'text', 'heading', 'Heading' ),
+        Field::make( 'rich_text', 'body', 'Body' )->set_required( true ),
+        Field::make( 'image', 'cover', 'Cover image' ),
+    ) )
+    ->set_group_tabs( array(
+        'Content' => array( 'body' ),
+        'Media' => array( 'cover' ),
+    ) )
+    ->add_fields( 'link', 'Link', array(
+        Field::make( 'text', 'url', 'URL' ),
+    ) );
+```
+
+Use the arrow keys to switch inner tabs. If a required field is missing, **Show field** opens its row and any enclosing tabs.
+
+## Edit rows
+
 Keep the field names and named row type identifiers stable after saving content. `value` and `_type` are reserved for internal row structure.
 
 After removing a row, click **Undo removal** to return it to its place with all nested values, including unsaved edits. Each open complex field offers undo for its most recent removal until the editor reloads.

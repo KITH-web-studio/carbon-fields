@@ -52,6 +52,8 @@ function Field( {
 	return (
 		<div
 			className={ cx( classes ) }
+			data-cf-field-id={ id }
+			tabIndex={ -1 }
 			style={ styles }
 			hidden={ hidden }
 		>

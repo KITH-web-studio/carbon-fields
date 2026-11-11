@@ -298,6 +298,24 @@ class Complex_Field extends Field {
 	}
 
 	/**
+	 * Organize the most recently added group's fields into tabs.
+	 *
+	 * @param array $tabs Tab labels mapped to lists of field base names.
+	 * @return self
+	 */
+	public function set_group_tabs( array $tabs ) {
+		$groups = array_values( $this->groups );
+		$group = end( $groups );
+		if ( ! $group ) {
+			Incorrect_Syntax_Exception::raise( 'Call add_fields() before set_group_tabs().' );
+			return $this;
+		}
+
+		$group->set_tabs( $tabs );
+		return $this;
+	}
+
+	/**
 	 * Set the field labels.
 	 * Currently supported values:
 	 *  - singular_name - the singular entry label

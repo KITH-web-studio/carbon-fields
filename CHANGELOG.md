@@ -2,6 +2,10 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.15
+
+- Add optional tabs per complex row type and reveal the row and tabs containing a required field error.
+
 ## 3.6.11.14
 
 - Move a row before or after a search result in vertical complex tabs and undo the last move.

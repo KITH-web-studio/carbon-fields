@@ -498,7 +498,8 @@
 /* ==========================================================================
    Complex
    ========================================================================== */
-.cf-complex__undo.notice {
+.cf-complex__undo.notice,
+.cf-complex__validation.notice {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -594,6 +595,55 @@
   background-color: #fff;
 }
 .cf-complex__group-body[hidden] {
+  display: none;
+}
+
+.cf-complex__inner-tabs {
+  display: flex;
+  flex: 0 0 100%;
+  flex-wrap: wrap;
+  grid-gap: 4px;
+  gap: 4px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border-right: 1px solid #e2e4e7;
+  border-bottom: 1px solid #e2e4e7;
+  background: #fbfbfc;
+}
+.cf-complex__inner-tabs > button {
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  color: #23282d;
+  font: inherit;
+  cursor: pointer;
+}
+.cf-complex__inner-tabs > button:hover, .cf-complex__inner-tabs > button[aria-selected=true] {
+  border-color: #e2e4e7;
+  background: #fff;
+}
+.cf-complex__inner-tabs > button[aria-selected=true] {
+  box-shadow: inset 0 -2px 0 currentColor;
+}
+.cf-complex__inner-tabs > button.focus-visible {
+  outline: 2px solid #3858e9;
+  outline: 2px solid var(--wp-admin-theme-color, #3858e9);
+  outline-offset: 1px;
+}
+.cf-complex__inner-tabs > button:focus-visible {
+  outline: 2px solid #3858e9;
+  outline: 2px solid var(--wp-admin-theme-color, #3858e9);
+  outline-offset: 1px;
+}
+
+.cf-complex__inner-panel {
+  display: flex;
+  flex: 0 0 100%;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.cf-complex__inner-panel[hidden] {
   display: none;
 }
 

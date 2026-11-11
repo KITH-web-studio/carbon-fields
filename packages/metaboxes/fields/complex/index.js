@@ -46,6 +46,7 @@ class ComplexField extends Component {
 		// Create a copy of the group to prevent
 		// incidentally modifications.
 		group = cloneDeep( group );
+		delete group.tabs;
 
 		// Get a flat list of all fields for this group.
 		const fields = [];

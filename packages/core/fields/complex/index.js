@@ -5,7 +5,8 @@ import { addFilter } from '@wordpress/hooks';
 import {
 	Component,
 	Fragment,
-	createRef
+	createRef,
+	useContext
 } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import {
@@ -13,6 +14,7 @@ import {
 	find,
 	isEmpty,
 	isString,
+	keyBy,
 	memoize,
 	template
 } from 'lodash';
@@ -28,9 +30,13 @@ import ComplexTabMove from './tab-move';
 import ComplexInserter from './inserter';
 import ComplexGroup from './group';
 import ComplexPlaceholder from './placeholder';
+import { ComplexValidation, ComplexValidationContext } from './validation';
 
 const lazyTabSelections = new Map();
 const compileLabelTemplate = memoize( template );
+const hasGroupTabs = ( { groups } ) => groups.some( ( group ) =>
+	group.tabs?.length || group.fields.some( ( field ) => field.type === 'complex' && hasGroupTabs( field ) )
+);
 
 class ComplexField extends Component {
 	/**
@@ -67,14 +73,22 @@ class ComplexField extends Component {
 
 	getInitialTab() {
 		const { id, groupIdKey, lazy, reveal, value } = this.props;
-		const selected = lazy && ( ( reveal && reveal[ id ] ) || lazyTabSelections.get( id ) );
+		const selected = reveal?.groups[ id ] || ( lazy && lazyTabSelections.get( id ) );
 		return selected && this.findGroup( selected ) ? selected : get( value, `0.${ groupIdKey }`, null );
 	}
 
 	componentDidUpdate( previous ) {
-		const { id, lazy, reveal } = this.props;
-		if ( lazy && reveal && reveal !== previous.reveal && reveal[ id ] ) {
-			this.handleTabsChange( reveal[ id ] );
+		const { id, reveal, onGroupSetup, onToggleGroup } = this.props;
+		const groupId = reveal?.groups[ id ];
+		if ( groupId && reveal !== previous.reveal ) {
+			if ( this.isTabbed ) {
+				this.handleTabsChange( groupId );
+			} else {
+				const group = this.findGroup( groupId );
+				if ( group && onGroupSetup( group, {} ).collapsed ) {
+					onToggleGroup( groupId );
+				}
+			}
 		}
 
 		if ( this.focusGroupId !== null ) {
@@ -454,6 +468,8 @@ class ComplexField extends Component {
 			value,
 			field,
 			lazy,
+			reveal,
+			validation,
 			groupIdKey,
 			groupFilterKey,
 			allGroupsAreCollapsed,
@@ -465,6 +481,7 @@ class ComplexField extends Component {
 		const availableGroups = this.getAvailableGroups( groupFilterKey );
 		const groupLabels = this.getGroupLabels();
 		const isVertical = field.layout === 'tabbed-vertical';
+		const groupDefinitions = keyBy( field.groups, 'name' );
 
 		// TODO: Move this to a memoized function.
 		const tabs = value.map( ( group, index ) => {
@@ -572,6 +589,7 @@ class ComplexField extends Component {
 								if ( lazy && hidden ) {
 									return null;
 								}
+								const groupTabs = groupDefinitions[ group[ groupFilterKey ] ]?.tabs;
 								return (
 									<ComplexGroup key={ groupId } { ...onGroupSetup( group, {
 										index,
@@ -579,6 +597,10 @@ class ComplexField extends Component {
 										dragged: groupId === currentDraggedGroup,
 										tabbed: this.isTabbed,
 										hidden,
+										tabs: groupTabs,
+										reveal,
+										validation,
+										complexId: id,
 										allowClone: field.duplicate_groups_allowed && ! this.isMaximumReached,
 										onFieldSetup: onGroupFieldSetup,
 										onClone: this.handleCloneGroup,
@@ -646,4 +668,14 @@ addFilter( 'carbon-fields.complex.validate', 'carbon-fields/core', ( field, valu
 	return null;
 } );
 
-export default ComplexField;
+export default function ComplexFieldWithValidation( props ) {
+	const validation = useContext( ComplexValidationContext );
+	if ( validation || props.lazy || ! hasGroupTabs( props.field ) ) {
+		return <ComplexField { ...props } reveal={ props.reveal || validation?.reveal } validation={ validation } />;
+	}
+	return (
+		<ComplexValidation>
+			{ ( scope ) => <ComplexField { ...props } reveal={ scope.reveal } validation={ scope } /> }
+		</ComplexValidation>
+	);
+}

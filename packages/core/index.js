@@ -27,6 +27,7 @@ export { default as withValidation, getFieldValidationError } from './hocs/with-
 export { default as withConditionalLogic } from './hocs/with-conditional-logic';
 export { default as uniqueId } from './utils/unique-id';
 export { default as fromSelector } from './utils/from-selector';
+export { focusComplexField } from './fields/complex/validation';
 
 /**
  * Triggers the initialization of Carbon Fields.
