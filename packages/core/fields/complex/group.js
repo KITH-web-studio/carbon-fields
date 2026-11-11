@@ -72,7 +72,8 @@ class ComplexGroup extends Component {
 			allowClone,
 			fields,
 			context,
-			onFieldSetup
+			onFieldSetup,
+			onMove
 		} = this.props;
 
 		const groupClasses = cx(
@@ -147,6 +148,11 @@ class ComplexGroup extends Component {
 				) }
 
 				<div className={ actionsClasses }>
+					{ onMove && (
+						<button type="button" className="button button-small cf-complex__move-button" onClick={ ( event ) => onMove( id, event.currentTarget ) }>
+							{ __( 'Move row', 'carbon-fields-ui' ) }
+						</button>
+					) }
 					{ allowClone && (
 						<button type="button" title={ __( 'Duplicate', 'carbon-fields-ui' ) } className="cf-complex__group-action" onClick={ this.handleCloneClick }>
 							<span className="dashicons-before dashicons-admin-page cf-complex__group-action-icon"></span>

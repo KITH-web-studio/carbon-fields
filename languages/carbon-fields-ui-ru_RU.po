@@ -253,3 +253,79 @@ msgstr "Показано %1$d из %2$d результатов."
 #: packages/core/fields/complex/tab-search.js:110
 msgid "Results: %d"
 msgstr "Найдено: %d"
+
+#: packages/core/fields/complex/group.js:153
+msgid "Move row"
+msgstr "Переместить строку"
+
+#: packages/core/fields/complex/index.js:493
+msgid "Row moved."
+msgstr "Строка перемещена."
+
+#: packages/core/fields/complex/index.js:495
+msgid "Undo move"
+msgstr "Отменить перемещение"
+
+#: packages/core/fields/complex/tab-move.js:30
+msgid "Destination for row #%d"
+msgstr "Куда переместить строку №%d"
+
+#: packages/core/fields/complex/tab-move.js:42
+msgid "Move before"
+msgstr "Переместить перед"
+
+#: packages/core/fields/complex/tab-move.js:45
+msgid "Move after"
+msgstr "Переместить после"
+
+#: packages/core/fields/complex/tab-move.js:35
+msgid "Cancel"
+msgstr "Отмена"
+
+#: packages/blocks/components/server-side-render/index.js:129
+msgid "Error loading block: %s"
+msgstr "Не удалось загрузить блок. %s"
+
+#: packages/blocks/components/server-side-render/index.js:135
+msgid "No results found."
+msgstr "Ничего не найдено."
+
+#: packages/core/fields/association/index.js:283
+msgid "Thumbnail"
+msgstr "Миниатюра"
+
+#: packages/core/fields/association/index.js:305
+msgid "Edit"
+msgstr "Редактировать"
+
+#: packages/core/fields/association/index.js:313
+msgid "Add"
+msgstr "Добавить"
+
+#: packages/core/fields/color/index.js:155
+msgid "Clear"
+msgstr "Очистить"
+
+#: packages/core/fields/complex/index.js:543
+msgid "There are no entries yet."
+msgstr "Строк пока нет."
+
+#: packages/core/fields/rich-text/index.js:246
+msgid "Click to edit"
+msgstr "Нажмите, чтобы редактировать"
+
+#: packages/core/fields/rich-text/index.js:254
+msgid "Close"
+msgstr "Закрыть"
+
+#: packages/core/fields/set/index.js:110
+msgid "Show All Options"
+msgstr "Показать все варианты"
+
+#: packages/core/fields/set/index.js:111
+msgid "Show Less Options"
+msgstr "Свернуть список вариантов"
+
+#: packages/metaboxes/components/container/index.js:195
+msgid "Show field"
+msgstr "Показать поле"

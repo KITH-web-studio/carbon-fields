@@ -20,17 +20,6 @@ const KEY_ENTER = 13;
 
 class SearchInput extends Component {
 	/**
-	 * Default properties.
-	 *
-	 * TODO: Use `@wordpress/i18n` for translations.
-	 *
-	 * @type {Object}
-	 */
-	static defaultProps = {
-		placeholder: __( 'Search...', 'carbon-fields-ui' )
-	};
-
-	/**
 	 * Handles change event of input.
 	 *
 	 * @param  {Object} e
@@ -63,6 +52,7 @@ class SearchInput extends Component {
 		const {
 			value,
 			className,
+			placeholder = __( 'Search...', 'carbon-fields-ui' ),
 			...props
 		} = this.props;
 
@@ -73,6 +63,7 @@ class SearchInput extends Component {
 					autoComplete="off"
 					className="cf-search-input__inner"
 					defaultValue={ value }
+					placeholder={ placeholder }
 					onChange={ this.handleChange }
 					onKeyDown={ this.handleKeyDown }
 					{ ...omit( props, [

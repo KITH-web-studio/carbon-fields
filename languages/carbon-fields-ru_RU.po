@@ -144,3 +144,63 @@ msgstr "Не удалось проверить язык настроек. Пер
 #: core/Container/Theme_Options_Container.php core/REST_API/Router.php
 msgid "Unknown settings language."
 msgstr "Неизвестный язык настроек."
+
+#: core/Plugin_Updates.php:157
+msgid "Could not prepare the plugin update directory."
+msgstr "Не удалось подготовить каталог для обновления плагина."
+
+#: core/Container/Post_Meta_Container.php:126
+msgid "Carbon Fields could not save a field. Please try again."
+msgstr "Плагину Carbon Fields не удалось сохранить поле. Повторите попытку."
+
+#: core/Container/Post_Meta_Container.php:201
+msgid "Carbon Fields received an incomplete form. The custom fields in this box were not saved. Reload the editor and try again."
+msgstr "Carbon Fields получил неполную форму. Пользовательские поля в этом блоке не сохранены. Перезагрузите редактор и повторите попытку."
+
+#: core/Helper/Helper.php:634
+msgid "Attachment not found."
+msgstr "Вложение не найдено."
+
+#: core/REST_API/Router.php:445
+msgid "Association field not found."
+msgstr "Поле связей не найдено."
+
+#: core/REST_API/Router.php:452
+msgid "Invalid association request."
+msgstr "Некорректный запрос к полю связей."
+
+#: core/REST_API/Router.php:472
+msgid "Invalid attachment reference."
+msgstr "Некорректная ссылка на вложение."
+
+#: core/REST_API/Router.php:537
+msgid "Sorry, you are not allowed to read blocks of this post."
+msgstr "У вас нет прав на чтение блоков этой записи."
+
+#: core/REST_API/Router.php:547
+msgid "Sorry, you are not allowed to read blocks as this user."
+msgstr "У вас нет прав на чтение блоков от имени этого пользователя."
+
+#: core/REST_API/Router.php:569
+msgid "The requested type: ID or URL."
+msgstr "Запрашиваемый тип — идентификатор или URL."
+
+#: core/REST_API/Router.php:574
+msgid "The ID / URL of the attachment"
+msgstr "Идентификатор или URL вложения"
+
+#: core/REST_API/Router.php:591
+msgid "The name of the block."
+msgstr "Имя блока."
+
+#: core/REST_API/Router.php:596
+msgid "The content of the block."
+msgstr "Содержимое блока."
+
+#: core/REST_API/Router.php:600
+msgid "ID of the post context."
+msgstr "Идентификатор записи, в контексте которой используется блок."
+
+#: core/Service/Revisions_Service.php:295
+msgid "Carbon Fields could not restore the field values. Please try again."
+msgstr "Плагину Carbon Fields не удалось восстановить значения полей. Повторите попытку."

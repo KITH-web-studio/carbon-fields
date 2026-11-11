@@ -48,6 +48,8 @@ After removing a row, click **Undo removal** to return it to its place with all 
 
 In a vertical complex, use **Find a row** to jump to a row by its current title or position. Type part of a title, a number, or a position such as `#42`. Use the arrow keys and Enter to open a result. Press Escape to clear the search.
 
+To reorder a vertical complex, open the row and click **Move row**. Find the destination by title or number, then choose **Move before** or **Move after**. Press Escape or click **Cancel** to close the picker. **Undo move** returns the last moved row to its previous position and keeps edits made since the move.
+
 ## Render the rows
 
 Read the whole complex with the same field getter as a regular field. Each named row includes its `_type`, its own field values, and any nested row arrays.

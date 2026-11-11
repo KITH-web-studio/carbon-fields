@@ -4,7 +4,7 @@ import sanitizePreviewHtml from '../../utils/sanitize-preview-html';
 
 const resultLimit = 10;
 
-function getTitle( label ) {
+export function getTitle( label ) {
 	if ( ! label ) {
 		return '';
 	}
@@ -40,7 +40,7 @@ function getMatches( rows, query ) {
 	return matches;
 }
 
-export default function ComplexTabSearch( { id, items, onSelect } ) {
+export default function ComplexTabSearch( { id, items, onSelect, label, excludeId, autoFocus } ) {
 	const [ query, setQuery ] = useState( '' );
 	const [ focused, setFocused ] = useState( false );
 	const [ activeIndex, setActiveIndex ] = useState( -1 );
@@ -50,7 +50,10 @@ export default function ComplexTabSearch( { id, items, onSelect } ) {
 		const title = getTitle( label );
 		return { id, title, number: index + 1, searchTitle: normalize( title ) };
 	} ) : [], [ items, searching ] );
-	const matches = useMemo( () => getMatches( rows, term ), [ rows, term ] );
+	const matches = useMemo( () => {
+		const matches = getMatches( rows, term );
+		return excludeId === undefined ? matches : matches.filter( ( row ) => row.id !== excludeId );
+	}, [ rows, term, excludeId ] );
 	const results = matches.slice( 0, resultLimit );
 	const expanded = searching && !! results.length;
 	const active = results[ activeIndex ];
@@ -113,7 +116,7 @@ export default function ComplexTabSearch( { id, items, onSelect } ) {
 
 	return (
 		<div className="cf-complex__search">
-			<label htmlFor={ id }>{ __( 'Find a row', 'carbon-fields-ui' ) }</label>
+			<label htmlFor={ id }>{ label || __( 'Find a row', 'carbon-fields-ui' ) }</label>
 			<input
 				className="cf-complex__search-input"
 				id={ id }
@@ -124,6 +127,7 @@ export default function ComplexTabSearch( { id, items, onSelect } ) {
 				aria-controls={ expanded ? resultsId : undefined }
 				aria-activedescendant={ expanded && active ? `${ resultsId }-${ active.number }` : undefined }
 				autoComplete="off"
+				autoFocus={ autoFocus }
 				placeholder={ __( 'Title or row number', 'carbon-fields-ui' ) }
 				value={ query }
 				onFocus={ () => setFocused( true ) }

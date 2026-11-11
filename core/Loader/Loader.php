@@ -76,7 +76,7 @@ class Loader {
 		$dir = \Carbon_Fields\DIR . '/languages/';
 		$domain = 'carbon-fields';
 		$domain_ui = 'carbon-fields-ui';
-		$locale = get_locale();
+		$locale = determine_locale();
 		$path = $dir . $domain . '-' . $locale . '.mo';
 		$path_ui = $dir . $domain_ui . '-' . $locale . '.mo';
 		load_textdomain( $domain, $path );
@@ -87,22 +87,24 @@ class Loader {
 	 * Load the ui textdomain
 	 */
 	public function get_ui_translations() {
-		$domain ='carbon-fields-ui';
+		$domain = 'carbon-fields-ui';
 		$translations = get_translations_for_domain( $domain );
+		$headers = array_change_key_case( $translations->headers, CASE_LOWER );
 
 		$locale = array(
 			'' => array(
 				'domain' => $domain,
-				'lang'   => is_admin() ? get_user_locale() : get_locale(),
+				'lang'   => determine_locale(),
 			),
 		);
 
-		if ( ! empty( $translations->headers['Plural-Forms'] ) ) {
-			$locale['']['plural_forms'] = $translations->headers['Plural-Forms'];
+		if ( ! empty( $headers['plural-forms'] ) ) {
+			$locale['']['plural_forms'] = $headers['plural-forms'];
 		}
 
-		foreach ( $translations->entries as $msgid => $entry ) {
-			$locale[ $msgid ] = $entry->translations;
+		// WordPress 6.5+ returns a list of entries rather than an array keyed by message.
+		foreach ( $translations->entries as $entry ) {
+			$locale[ $entry->key() ] = $entry->translations;
 		}
 
 		return $locale;

@@ -24,6 +24,7 @@ import './style.scss';
 import Sortable from '../../components/sortable';
 import ComplexTabs from './tabs';
 import ComplexTabSearch from './tab-search';
+import ComplexTabMove from './tab-move';
 import ComplexInserter from './inserter';
 import ComplexGroup from './group';
 import ComplexPlaceholder from './placeholder';
@@ -49,6 +50,7 @@ class ComplexField extends Component {
 	undoButton = createRef();
 
 	focusGroupId = null;
+	moveTrigger = null;
 
 	/**
 	 * Local state.
@@ -58,7 +60,9 @@ class ComplexField extends Component {
 	state = {
 		currentDraggedGroup: null,
 		currentTab: this.getInitialTab(),
-		removedGroup: null
+		removedGroup: null,
+		movingGroupId: null,
+		movedGroup: null
 	};
 
 	getInitialTab() {
@@ -124,6 +128,25 @@ class ComplexField extends Component {
 		const { value, groupIdKey } = this.props;
 
 		return find( value, [ groupIdKey, groupId ] );
+	}
+
+	getGroupPosition( index ) {
+		const { value, groupIdKey } = this.props;
+		return {
+			index,
+			previousId: value[ index - 1 ]?.[ groupIdKey ],
+			nextId: value[ index + 1 ]?.[ groupIdKey ]
+		};
+	}
+
+	getGroupInsertionIndex( groups, { index, previousId, nextId } ) {
+		const { groupIdKey } = this.props;
+		const next = groups.findIndex( ( group ) => group[ groupIdKey ] === nextId );
+		if ( next >= 0 ) {
+			return next;
+		}
+		const previous = groups.findIndex( ( group ) => group[ groupIdKey ] === previousId );
+		return previous >= 0 ? previous + 1 : Math.min( index, groups.length );
 	}
 
 	/**
@@ -239,6 +262,7 @@ class ComplexField extends Component {
 		}
 
 		const index = value.indexOf( group );
+		const position = this.getGroupPosition( index );
 		if ( this.isTabbed && this.state.currentTab === groupId ) {
 			const nextIndex = index > 0 ? index - 1 : 1;
 			this.handleTabsChange( get( value, `${ nextIndex }.${ groupIdKey }`, null ) );
@@ -249,9 +273,7 @@ class ComplexField extends Component {
 				removedGroup: {
 					id: groupId,
 					name: group[ groupFilterKey ],
-					index,
-					previousId: value[ index - 1 ]?.[ groupIdKey ],
-					nextId: value[ index + 1 ]?.[ groupIdKey ],
+					...position,
 					restore
 				}
 			}, () => this.undoButton.current?.focus() );
@@ -270,12 +292,9 @@ class ComplexField extends Component {
 			return;
 		}
 		const { removedGroup } = this.state;
-		const { value, groupIdKey } = this.props;
-		const { id, index, previousId, nextId, restore } = removedGroup;
-		const next = value.findIndex( ( group ) => group[ groupIdKey ] === nextId );
-		const previous = value.findIndex( ( group ) => group[ groupIdKey ] === previousId );
-		// Follow a surviving neighbor if rows have moved since the removal.
-		const position = next >= 0 ? next : ( previous >= 0 ? previous + 1 : Math.min( index, value.length ) );
+		const { value } = this.props;
+		const { id, restore } = removedGroup;
+		const position = this.getGroupInsertionIndex( value, removedGroup );
 
 		this.focusGroupId = String( id );
 		restore( position );
@@ -283,6 +302,68 @@ class ComplexField extends Component {
 			this.handleTabsChange( id );
 		}
 		this.setState( { removedGroup: null } );
+	}
+
+	handleStartMove = ( groupId, trigger ) => {
+		this.moveTrigger = trigger;
+		this.setState( { movingGroupId: groupId } );
+	}
+
+	handleCancelMove = () => {
+		const trigger = this.moveTrigger;
+		this.moveTrigger = null;
+		this.setState( { movingGroupId: null }, () => trigger?.focus() );
+	}
+
+	handleMoveGroup = ( targetId, after ) => {
+		const { value } = this.props;
+		const { movingGroupId } = this.state;
+		const source = this.findGroup( movingGroupId );
+		const from = value.indexOf( source );
+		const target = value.indexOf( this.findGroup( targetId ) );
+		if ( from < 0 || target < 0 || from === target ) {
+			this.handleCancelMove();
+			return;
+		}
+
+		const destination = target - Number( from < target ) + Number( after );
+		if ( from === destination ) {
+			this.handleCancelMove();
+			return;
+		}
+
+		const groups = value.slice();
+		groups.splice( from, 1 );
+		groups.splice( destination, 0, source );
+
+		const movedGroup = { id: movingGroupId, ...this.getGroupPosition( from ) };
+		this.moveTrigger = null;
+		this.focusGroupId = String( movingGroupId );
+		this.handleGroupsSortUpdate( groups );
+		this.setState( { movingGroupId: null, movedGroup } );
+	}
+
+	handleUndoMove = () => {
+		const { value } = this.props;
+		const { movedGroup } = this.state;
+		const group = this.findGroup( movedGroup.id );
+		const from = value.indexOf( group );
+		if ( from < 0 ) {
+			return;
+		}
+
+		const groups = value.slice();
+		groups.splice( from, 1 );
+		const destination = this.getGroupInsertionIndex( groups, movedGroup );
+		groups.splice( destination, 0, group );
+
+		this.focusGroupId = String( movedGroup.id );
+		if ( from !== destination ) {
+			this.handleGroupsSortUpdate( groups );
+		}
+		this.handleTabsChange( movedGroup.id );
+		this.moveTrigger = null;
+		this.setState( { movingGroupId: null, movedGroup: null } );
 	}
 
 	/**
@@ -346,9 +427,13 @@ class ComplexField extends Component {
 		if ( this.props.lazy ) {
 			lazyTabSelections.set( this.props.id, groupId );
 		}
-		this.setState( {
-			currentTab: groupId
-		} );
+		if ( this.state.movingGroupId !== groupId ) {
+			this.moveTrigger = null;
+		}
+		this.setState( ( { movingGroupId } ) => ( {
+			currentTab: groupId,
+			movingGroupId: movingGroupId === groupId ? movingGroupId : null
+		} ) );
 	}
 
 	handleSearchSelect = ( groupId ) => {
@@ -362,7 +447,7 @@ class ComplexField extends Component {
 	 * @return {Object}
 	 */
 	render() {
-		const { currentDraggedGroup, currentTab } = this.state;
+		const { currentDraggedGroup, currentTab, movingGroupId, movedGroup } = this.state;
 
 		const {
 			id,
@@ -379,6 +464,7 @@ class ComplexField extends Component {
 
 		const availableGroups = this.getAvailableGroups( groupFilterKey );
 		const groupLabels = this.getGroupLabels();
+		const isVertical = field.layout === 'tabbed-vertical';
 
 		// TODO: Move this to a memoized function.
 		const tabs = value.map( ( group, index ) => {
@@ -390,6 +476,7 @@ class ComplexField extends Component {
 				label
 			};
 		} );
+		const sourceIndex = movingGroupId === null ? -1 : tabs.findIndex( ( tab ) => tab.id === movingGroupId );
 
 		return (
 			<Fragment>
@@ -401,8 +488,27 @@ class ComplexField extends Component {
 						</button>
 					</div>
 				) }
-				{ field.layout === 'tabbed-vertical' && !! tabs.length && (
-					<ComplexTabSearch id={ `${ id }-row-search` } items={ tabs } onSelect={ this.handleSearchSelect } />
+				{ movedGroup && this.findGroup( movedGroup.id ) && (
+					<div className="notice notice-info inline cf-complex__undo">
+						<span role="status">{ __( 'Row moved.', 'carbon-fields-ui' ) }</span>
+						<button type="button" className="button button-small" onClick={ this.handleUndoMove }>
+							{ __( 'Undo move', 'carbon-fields-ui' ) }
+						</button>
+					</div>
+				) }
+				{ isVertical && !! tabs.length && (
+					sourceIndex >= 0 && tabs.length > 1 ? (
+						<ComplexTabMove
+							key={ movingGroupId }
+							id={ `${ id }-row-destination` }
+							items={ tabs }
+							sourceIndex={ sourceIndex }
+							onMove={ this.handleMoveGroup }
+							onCancel={ this.handleCancelMove }
+						/>
+					) : (
+						<ComplexTabSearch id={ `${ id }-row-search` } items={ tabs } onSelect={ this.handleSearchSelect } />
+					)
 				) }
 				{ this.isTabbed && !! value.length && (
 					<Sortable
@@ -477,6 +583,7 @@ class ComplexField extends Component {
 										onFieldSetup: onGroupFieldSetup,
 										onClone: this.handleCloneGroup,
 										onRemove: this.handleRemoveGroup,
+										onMove: isVertical && value.length > 1 ? this.handleStartMove : undefined,
 										onToggle: onToggleGroup
 									} ) } />
 								);

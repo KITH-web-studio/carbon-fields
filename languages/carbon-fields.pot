@@ -145,3 +145,63 @@ msgstr ""
 #: core/REST_API/Router.php
 msgid "Unknown settings language."
 msgstr ""
+
+#: core/Plugin_Updates.php:157
+msgid "Could not prepare the plugin update directory."
+msgstr ""
+
+#: core/Container/Post_Meta_Container.php:126
+msgid "Carbon Fields could not save a field. Please try again."
+msgstr ""
+
+#: core/Container/Post_Meta_Container.php:201
+msgid "Carbon Fields received an incomplete form. The custom fields in this box were not saved. Reload the editor and try again."
+msgstr ""
+
+#: core/Helper/Helper.php:634
+msgid "Attachment not found."
+msgstr ""
+
+#: core/REST_API/Router.php:445
+msgid "Association field not found."
+msgstr ""
+
+#: core/REST_API/Router.php:452
+msgid "Invalid association request."
+msgstr ""
+
+#: core/REST_API/Router.php:472
+msgid "Invalid attachment reference."
+msgstr ""
+
+#: core/REST_API/Router.php:537
+msgid "Sorry, you are not allowed to read blocks of this post."
+msgstr ""
+
+#: core/REST_API/Router.php:547
+msgid "Sorry, you are not allowed to read blocks as this user."
+msgstr ""
+
+#: core/REST_API/Router.php:569
+msgid "The requested type: ID or URL."
+msgstr ""
+
+#: core/REST_API/Router.php:574
+msgid "The ID / URL of the attachment"
+msgstr ""
+
+#: core/REST_API/Router.php:591
+msgid "The name of the block."
+msgstr ""
+
+#: core/REST_API/Router.php:596
+msgid "The content of the block."
+msgstr ""
+
+#: core/REST_API/Router.php:600
+msgid "ID of the post context."
+msgstr ""
+
+#: core/Service/Revisions_Service.php:295
+msgid "Carbon Fields could not restore the field values. Please try again."
+msgstr ""

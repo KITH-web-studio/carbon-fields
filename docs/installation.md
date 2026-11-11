@@ -10,6 +10,10 @@
 
 KITH and the original Carbon Fields share the same PHP namespace. If a theme or another plugin already boots Carbon Fields, configure the site to load a single copy before relying on KITH-specific methods such as `set_translation()`.
 
+## Editor language
+
+KITH Carbon Fields includes Russian and Ukrainian translations. In WordPress, open **Users → Profile → Language** and select **Русский** or **Українська**. When the profile uses the site default, the plugin follows **Settings → General → Site Language**.
+
 ## Register your first field
 
 Add this to your theme's `functions.php` or a site plugin. Omit the opening PHP tag when adding it to an existing PHP block. The standalone plugin boots Carbon Fields, and the hook registers the field before the editor loads.

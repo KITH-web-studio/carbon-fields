@@ -282,3 +282,51 @@ msgstr "Показано %1$d з %2$d результатів."
 #: packages/core/fields/complex/tab-search.js:110
 msgid "Results: %d"
 msgstr "Знайдено: %d"
+
+#: packages/core/fields/complex/group.js:153
+msgid "Move row"
+msgstr "Перемістити рядок"
+
+#: packages/core/fields/complex/index.js:493
+msgid "Row moved."
+msgstr "Рядок переміщено."
+
+#: packages/core/fields/complex/index.js:495
+msgid "Undo move"
+msgstr "Скасувати переміщення"
+
+#: packages/core/fields/complex/tab-move.js:30
+msgid "Destination for row #%d"
+msgstr "Куди перемістити рядок №%d"
+
+#: packages/core/fields/complex/tab-move.js:42
+msgid "Move before"
+msgstr "Перемістити перед"
+
+#: packages/core/fields/complex/tab-move.js:45
+msgid "Move after"
+msgstr "Перемістити після"
+
+#: packages/core/fields/complex/tab-move.js:35
+msgid "Cancel"
+msgstr "Скасувати"
+
+#: packages/core/fields/rich-text/index.js:246
+msgid "Click to edit"
+msgstr "Натисніть, щоб редагувати"
+
+#: packages/core/fields/rich-text/index.js:254
+msgid "Close"
+msgstr "Закрити"
+
+#: packages/core/fields/set/index.js:110
+msgid "Show All Options"
+msgstr "Показати всі варіанти"
+
+#: packages/core/fields/set/index.js:111
+msgid "Show Less Options"
+msgstr "Згорнути список варіантів"
+
+#: packages/metaboxes/components/container/index.js:195
+msgid "Show field"
+msgstr "Показати поле"

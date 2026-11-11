@@ -2,6 +2,11 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.14
+
+- Move a row before or after a search result in vertical complex tabs and undo the last move.
+- Load Russian and Ukrainian translations in the editor according to the WordPress profile language and translate the remaining interface messages.
+
 ## 3.6.11.13
 
 - Search vertical complex tabs by row title or position and open a result with the keyboard.

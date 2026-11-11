@@ -326,6 +326,39 @@
 	font-weight: 600;
 }
 
+.cf-complex__move {
+	box-sizing: border-box;
+	flex: 0 0 100%;
+	min-width: 0;
+	margin-bottom: 12px;
+}
+
+.cf-complex__move-search {
+	display: flex;
+	align-items: flex-end;
+	gap: 8px;
+
+	.cf-complex__search {
+		flex: 1;
+		max-width: 320px;
+		margin: 0;
+	}
+}
+
+.cf-complex__move-actions {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 8px;
+	overflow-wrap: anywhere;
+}
+
+.cf-complex__move-button.button,
+.cf-complex__move .button {
+	@include cf-button-chrome;
+}
+
 .cf-complex__tabs {
 	position: relative;
 	z-index: 1;
