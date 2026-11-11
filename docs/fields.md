@@ -65,6 +65,32 @@ add_action( 'carbon_fields_register_fields', function () {
 
 `set_options()` can also take a callback that returns the options. See [containers](containers.md) for conditions that apply to a whole box.
 
+### Dependent select lists
+
+Use `set_dependent_options( $source, $choices )` on a `select` to change its options when another select changes. Pass the source field's base name and an array of option lists keyed by the source values. The source is a regular select in the same container or complex row. You can place the two fields on different tabs.
+
+```php
+Field::make( 'complex', 'offices', 'Offices' )
+    ->add_fields( array(
+        Field::make( 'select', 'country', 'Country' )->set_options( array(
+            'ua' => 'Ukraine',
+            'pl' => 'Poland',
+        ) ),
+        Field::make( 'select', 'city', 'City' )
+            ->set_dependent_options( 'country', array(
+                'ua' => array( 'kyiv' => 'Kyiv', 'lviv' => 'Lviv' ),
+                'pl' => array( 'warsaw' => 'Warsaw' ),
+            ) )
+            ->set_required( true ),
+    ) )
+    ->set_group_tabs( array(
+        'Country' => array( 'country' ),
+        'City' => array( 'city' ),
+    ) );
+```
+
+When the source changes, the editor keeps the current selection if its key is still available. Otherwise it clears the selection. Use a non-empty key for each choice. The editor uses the empty value for an unselected option. Each row stores its own selection using the regular select value format.
+
 ## Add media and links
 
 This example uses an attachment ID for the cover, a URL for the video, a list of IDs for the gallery, and a list of associations for related pages. An association entry includes `id`, `type`, and `subtype`. The configuration here limits entries to pages, so the template can use `get_post()`.

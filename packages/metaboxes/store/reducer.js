@@ -16,7 +16,7 @@ import {
 /**
  * Carbon Fields dependencies.
  */
-import { uniqueId } from '@carbon-fields/core';
+import { getDependentValue, getSelectSourceValue, uniqueId } from '@carbon-fields/core';
 
 /**
  * The reducer that keeps track of the containers.
@@ -59,10 +59,11 @@ export function containers( state = {}, action ) {
  * @param  {Object[]} accumulator
  * @return {Object[]}
  */
-function cloneField( originId, cloneId, fields, accumulator ) {
+function cloneField( originId, cloneId, fields, accumulator, clonedIds ) {
 	const field = cloneDeep( fields[ originId ] );
 
 	field.id = cloneId;
+	clonedIds.set( originId, cloneId );
 
 	if ( field.type === 'complex' ) {
 		field.value.forEach( ( group ) => {
@@ -74,7 +75,7 @@ function cloneField( originId, cloneId, fields, accumulator ) {
 
 				groupField.id = cloneGroupFieldId;
 
-				return cloneField( originGroupFieldId, cloneGroupFieldId, fields, groupAccumulator );
+				return cloneField( originGroupFieldId, cloneGroupFieldId, fields, groupAccumulator, clonedIds );
 			}, accumulator );
 		} );
 	}
@@ -132,7 +133,19 @@ export function fields( state = {}, action ) {
 					fieldsToRestore = []
 				} = action.payload;
 
-				draft[ fieldId ].value = value;
+				const field = draft[ fieldId ];
+				if ( field.dependentSelectIds?.length ) {
+					const sourceValue = getSelectSourceValue( field, value );
+					if ( sourceValue !== getSelectSourceValue( field, field.value ) ) {
+						for ( const dependentId of field.dependentSelectIds ) {
+							const dependent = draft[ dependentId ];
+							if ( dependent ) {
+								dependent.value = getDependentValue( dependent, sourceValue, dependent.value );
+							}
+						}
+					}
+				}
+				field.value = value;
 
 				const fieldIdsToRemove = fieldsToRemove.reduce( ( accumulator, fieldIdToRemove ) => {
 					return getFieldIdsByRootId( fieldIdToRemove, state, accumulator );
@@ -156,11 +169,20 @@ export function fields( state = {}, action ) {
 		case 'CLONE_FIELDS':
 			return produce( state, ( draft ) => {
 				const { originFieldIds, cloneFieldIds } = action.payload;
+				const clonedIds = new Map();
 
 				const clonedFields = originFieldIds.reduce( ( accumulator, originFieldId, index ) => {
-					return cloneField( originFieldId, cloneFieldIds[ index ], draft, accumulator );
+					return cloneField( originFieldId, cloneFieldIds[ index ], draft, accumulator, clonedIds );
 				}, [] );
 
+				for ( const field of clonedFields ) {
+					if ( field.optionsSourceId ) {
+						field.optionsSourceId = clonedIds.get( field.optionsSourceId );
+					}
+					if ( field.dependentSelectIds ) {
+						field.dependentSelectIds = field.dependentSelectIds.map( ( id ) => clonedIds.get( id ) ).filter( Boolean );
+					}
+				}
 				assign( draft, keyBy( clonedFields, 'id' ) );
 			} );
 

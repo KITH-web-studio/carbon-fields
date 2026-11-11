@@ -114,3 +114,7 @@ msgstr ""
 #: packages/core/fields/set/index.js:111
 msgid "Show Less Options"
 msgstr ""
+
+#: packages/core/fields/select/index.js:55
+msgid "Select an option"
+msgstr ""

@@ -6,7 +6,7 @@ import { assign, endsWith } from 'lodash';
 /**
  * Internal dependencies.
  */
-import flattenField from '../utils/flatten-field';
+import flattenFields from '../utils/flatten-field';
 import { canRenderLazily, supportsPackedPostMeta } from '../utils/lazy-complex';
 
 /**
@@ -21,10 +21,9 @@ export function normalizePreloadedState( state ) {
 		.filter( ( { id } ) => ! endsWith( id, '__i__' ) )
 		.map( ( container ) => {
 			return assign( {}, container, {
-				fields: container.fields.map( ( field ) => {
-					const lazy = supportsPackedPostMeta && container.type === 'post_meta' && field.type === 'complex' && canRenderLazily( field );
-					return flattenField( field, container.id, fields, lazy );
-				} )
+				fields: flattenFields( container.fields, container.id, fields, ( field ) =>
+					supportsPackedPostMeta && container.type === 'post_meta' && field.type === 'complex' && canRenderLazily( field )
+				)
 			} );
 		} );
 

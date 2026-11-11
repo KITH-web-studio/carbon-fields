@@ -4,6 +4,9 @@
 import { withSelect, withDispatch } from '@wordpress/data';
 import { compose, createHigherOrderComponent } from '@wordpress/compose';
 
+import { getDependentValue } from '@carbon-fields/core';
+import { getOptionsSourceValue } from '../../utils/dependent-select';
+
 /**
  * Creates a high-order component which adds connection
  * to the store.
@@ -14,10 +17,12 @@ import { compose, createHigherOrderComponent } from '@wordpress/compose';
 export default createHigherOrderComponent( ( Component ) => {
 	const applyWithSelect = withSelect( ( select, props ) => {
 		const { compactInput, compactInputKey } = window.cf.config;
-		const field = select( 'carbon-fields/metaboxes' ).getFieldById( props.id );
-		const value = field && field.value;
+		const { getFieldById } = select( 'carbon-fields/metaboxes' );
+		const field = getFieldById( props.id );
+		const optionsSourceValue = getOptionsSourceValue( field, getFieldById );
+		const value = field?.dependent_options ? getDependentValue( field, optionsSourceValue, field.value ) : field?.value;
 
-		let name = props.name || field.name;
+		let name = props.name || field?.name;
 
 		/**
 		 * Wrap top-level field names in compact input key.
@@ -25,14 +30,15 @@ export default createHigherOrderComponent( ( Component ) => {
 		 * The fields in widgets don't need this prefix because
 		 * their input is already compacted by the `widget` namespace.
 		 */
-		if ( compactInput && ! props.name && name.indexOf( 'widget-carbon_fields' ) === -1 ) {
+		if ( compactInput && ! props.name && name && name.indexOf( 'widget-carbon_fields' ) === -1 ) {
 			name = `${ compactInputKey }[${ name }]`;
 		}
 
 		return {
 			field,
 			name,
-			value
+			value,
+			optionsSourceValue
 		};
 	} );
 

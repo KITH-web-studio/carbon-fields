@@ -2,6 +2,10 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.16
+
+- Define dependent select options in PHP and update the choices independently within each complex row.
+
 ## 3.6.11.15
 
 - Add optional tabs per complex row type and reveal the row and tabs containing a required field error.

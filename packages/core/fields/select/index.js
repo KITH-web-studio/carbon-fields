@@ -2,13 +2,14 @@
  * External dependencies.
  */
 import { Component } from '@wordpress/element';
-import { get } from 'lodash';
+import { __ } from '@wordpress/i18n';
 
 /**
  * The internal dependencies.
  */
 import './style.scss';
 import NoOptions from '../../components/no-options';
+import { getDependentOptions, getSelectSourceValue, getSelectValue } from '../../utils/dependent-select';
 
 export class SelectField extends Component {
 	/**
@@ -23,10 +24,6 @@ export class SelectField extends Component {
 		onChange( id, e.target.value );
 	}
 
-	componentMount() {
-		onChange( id, value );
-	}
-
 	/**
 	 * Renders the component.
 	 *
@@ -37,13 +34,15 @@ export class SelectField extends Component {
 			id,
 			name,
 			field,
-			onChange
+			optionsSourceValue
 		} = this.props;
 
-		const value = this.props.value || get( field.options, '[0].value', '' );
+		const dependent = !! field.dependent_options;
+		const options = dependent ? getDependentOptions( field, optionsSourceValue ) : field.options;
+		const value = dependent ? getSelectValue( options, this.props.value ) : getSelectSourceValue( field, this.props.value );
 
 		return (
-			field.options.length > 0
+			dependent || options.length > 0
 				? (
 					<select
 						id={ id }
@@ -52,7 +51,10 @@ export class SelectField extends Component {
 						className="cf-select__input"
 						onChange={ this.handleChange }
 					>
-						{ field.options.map( ( option ) => (
+						{ dependent && (
+							<option value="">{ options.length ? __( 'Select an option', 'carbon-fields-ui' ) : __( 'No options.', 'carbon-fields-ui' ) }</option>
+						) }
+						{ options.map( ( option ) => (
 							<option key={ option.value } value={ option.value }>
 								{ option.label }
 							</option>

@@ -28,6 +28,7 @@ import { getFieldType } from '@carbon-fields/core';
 import './style.scss';
 import Field from '../field';
 import ServerSideRender from '../server-side-render';
+import { clearInvalidDependentValues, getSelectProps } from '../../utils/dependent-select';
 
 class BlockEdit extends Component {
 	/**
@@ -50,16 +51,13 @@ class BlockEdit extends Component {
 	 * @return {void}
 	 */
 	handleFieldChange = ( fieldId, value ) => {
-		const { attributes, setAttributes } = this.props;
+		const { attributes, fields, setAttributes } = this.props;
 
 		const fieldName = fieldId.replace( /^.+__(.+)?$/, '$1' );
-
-		setAttributes( {
-			data: {
-				...attributes.data,
-				[ fieldName ]: value
-			}
-		} );
+		const data = { ...attributes.data };
+		clearInvalidDependentValues( fields, data, fieldName, value );
+		data[ fieldName ] = value;
+		setAttributes( { data } );
 	}
 
 	/**
@@ -114,6 +112,7 @@ class BlockEdit extends Component {
 		const {
 			clientId,
 			container,
+			fields,
 			attributes
 		} = this.props;
 
@@ -136,7 +135,7 @@ class BlockEdit extends Component {
 					id={ id }
 					containerId={ container.id }
 					blockId={ clientId }
-					value={ value }
+					{ ...getSelectProps( field, fields, attributes.data, value ) }
 					field={ field }
 					name={ field.base_name }
 					onChange={ this.handleFieldChange }

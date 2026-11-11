@@ -6,7 +6,7 @@ import { pick, cloneDeep } from 'lodash';
 /**
  * Carbon Fields dependencies.
  */
-import { uniqueId } from '@carbon-fields/core';
+import { isSelectSource, uniqueId } from '@carbon-fields/core';
 
 /**
  * Flattens a field.
@@ -17,7 +17,7 @@ import { uniqueId } from '@carbon-fields/core';
  * @param  {boolean}  lazy
  * @return {Object}
  */
-export default function flattenField( field, containerId, accumulator, lazy = false ) {
+function flattenField( field, containerId, accumulator, lazy ) {
 	field = cloneDeep( field );
 
 	// Replace the id of the field.
@@ -35,16 +35,27 @@ export default function flattenField( field, containerId, accumulator, lazy = fa
 		field.value.forEach( ( group ) => {
 			group.id = uniqueId();
 			group.container_id = containerId;
-			group.fields = group.fields.map( ( groupField ) => flattenField( groupField, containerId, accumulator, lazy ) );
+			group.fields = flattenFields( group.fields, containerId, accumulator, () => lazy );
 		} );
 	}
 
 	accumulator.push( field );
 
-	return pick( field, [
-		'id',
-		'type',
-		'name',
-		'base_name'
-	] );
+	return field;
+}
+
+export default function flattenFields( fields, containerId, accumulator, isLazy = () => false ) {
+	const flat = fields.map( ( field ) => flattenField( field, containerId, accumulator, isLazy( field ) ) );
+	if ( flat.some( ( field ) => field.dependent_options ) ) {
+		const sources = new Map( flat.filter( isSelectSource ).map( ( field ) => [ field.base_name, field ] ) );
+		for ( const field of flat ) {
+			const source = sources.get( field.dependent_options?.source );
+			if ( source ) {
+				field.optionsSourceId = source.id;
+				source.dependentSelectIds = source.dependentSelectIds || [];
+				source.dependentSelectIds.push( field.id );
+			}
+		}
+	}
+	return flat.map( ( field ) => pick( field, [ 'id', 'type', 'name', 'base_name' ] ) );
 }

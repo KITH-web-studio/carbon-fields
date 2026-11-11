@@ -329,3 +329,7 @@ msgstr "Свернуть список вариантов"
 #: packages/metaboxes/components/container/index.js:195
 msgid "Show field"
 msgstr "Показать поле"
+
+#: packages/core/fields/select/index.js:55
+msgid "Select an option"
+msgstr "Выберите вариант"

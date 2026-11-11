@@ -26,6 +26,7 @@ import { uniqueId } from '@carbon-fields/core';
  */
 import './style.scss';
 import Field from '../../components/field';
+import { clearInvalidDependentValues, getSelectProps } from '../../utils/dependent-select';
 
 class ComplexField extends Component {
 	/**
@@ -218,7 +219,7 @@ class ComplexField extends Component {
 	handleGroupFieldSetup = ( field, props, groupProps ) => {
 		const { blockId } = this.props;
 		const id = `${ this.props.id }__${ groupProps.id }__${ field.base_name }`;
-		const value = get( groupProps, `values.${ field.base_name }` );
+		const value = get( groupProps, `values.${ field.base_name }`, field.default_value );
 
 		return [ Field, assign( {}, props, {
 			key: id,
@@ -227,7 +228,7 @@ class ComplexField extends Component {
 			containerId: this.props.containerId,
 			blockId,
 			field,
-			value,
+			...getSelectProps( field, groupProps.fields, groupProps.values, value ),
 			onChange: this.handleGroupFieldChange
 		} ) ];
 	}
@@ -242,6 +243,7 @@ class ComplexField extends Component {
 	handleGroupFieldChange = ( fieldId, fieldValue ) => {
 		const {
 			id,
+			field,
 			value,
 			onChange
 		} = this.props;
@@ -250,7 +252,9 @@ class ComplexField extends Component {
 			const path = fieldId.split( '__' );
 			const fieldName = path.pop();
 			const group = find( draft, [ '_id', path.pop() ] );
+			const fields = get( find( field.groups, [ 'name', group._type ] ), 'fields', [] );
 
+			clearInvalidDependentValues( fields, group, fieldName, fieldValue );
 			set( group, fieldName, fieldValue );
 		} ) );
 	}

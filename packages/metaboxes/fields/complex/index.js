@@ -23,7 +23,7 @@ import { uniqueId } from '@carbon-fields/core';
  */
 import './style.scss';
 import Field from '../../components/field';
-import flattenField from '../../utils/flatten-field';
+import flattenFields from '../../utils/flatten-field';
 import { ComplexRevealContext } from '../../utils/lazy-complex';
 
 class ComplexField extends Component {
@@ -53,7 +53,7 @@ class ComplexField extends Component {
 
 		group.id = uniqueId();
 		group.container_id = field.container_id;
-		group.fields = group.fields.map( ( groupField ) => flattenField( groupField, field.container_id, fields, field.lazyComplex ) );
+		group.fields = flattenFields( group.fields, field.container_id, fields, () => field.lazyComplex );
 
 		// Make sure that the group is expanded even
 		// `set_collapsed(true)` is used.

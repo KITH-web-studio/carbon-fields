@@ -16,7 +16,7 @@ import {
  * Internal dependencies.
  */
 import urldecode from '../../utils/urldecode';
-import flattenField from '../../utils/flatten-field';
+import flattenFields from '../../utils/flatten-field';
 import fromEventPattern from '../../utils/from-event-pattern';
 import { renderContainer } from '../../containers';
 import {
@@ -121,7 +121,7 @@ function handler() {
 
 				const fields = [];
 
-				container.fields = container.fields.map( ( field ) => flattenField( field, container, fields ) );
+				container.fields = flattenFields( container.fields, container.id, fields );
 
 				addFields( fields );
 				addContainer( container );

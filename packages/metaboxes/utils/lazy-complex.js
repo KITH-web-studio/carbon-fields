@@ -1,5 +1,6 @@
 import { createContext } from '@wordpress/element';
-import { getFieldValidationError } from '@carbon-fields/core';
+import { getDependentValue, getFieldValidationError, getSelectSourceValue } from '@carbon-fields/core';
+import { getOptionsSourceValue } from './dependent-select';
 
 export const ComplexRevealContext = createContext( null );
 
@@ -35,9 +36,9 @@ export function getComplexInput( field, fields ) {
 			} else if ( type === 'checkbox' ) {
 				input[ name ] = value ? String( child.option_value ) : '';
 			} else if ( type === 'select' ) {
-				const selected = value && child.options.find( ( option ) => String( option.value ) === String( value ) );
-				const option = selected || child.options[ 0 ];
-				input[ name ] = option ? String( option.value ) : '';
+				input[ name ] = child.dependent_options
+					? getDependentValue( child, getOptionsSourceValue( child, ( id ) => fields[ id ] ), value )
+					: getSelectSourceValue( child, value );
 			} else if ( Array.isArray( value ) ) {
 				input[ name ] = value.map( String );
 			} else {
@@ -50,9 +51,14 @@ export function getComplexInput( field, fields ) {
 
 export function findLazyFieldError( container, fields ) {
 	function findError( field, path ) {
-		const error = field.required && getFieldValidationError( field, field.value );
-		if ( error ) {
-			return { field, error, path };
+		if ( field.required ) {
+			const value = field.dependent_options
+				? getDependentValue( field, getOptionsSourceValue( field, ( id ) => fields[ id ] ), field.value )
+				: field.value;
+			const error = getFieldValidationError( field, value );
+			if ( error ) {
+				return { field, error, path };
+			}
 		}
 		if ( field.type === 'complex' ) {
 			for ( const group of field.value ) {
