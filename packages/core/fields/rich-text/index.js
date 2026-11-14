@@ -1,7 +1,7 @@
 /**
  * External dependencies.
  */
-import { createRef, createPortal, Component } from '@wordpress/element';
+import { createRef, Component } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import {
 	isString,
@@ -14,6 +14,7 @@ import cx from 'classnames';
  * Internal dependencies.
  */
 import './style.scss';
+import Dialog from '../../components/dialog';
 import sanitizePreviewHtml from '../../utils/sanitize-preview-html';
 
 class RichTextField extends Component {
@@ -139,19 +140,7 @@ class RichTextField extends Component {
 
 		this.destroyEditor();
 
-		this.setState( { modalOpen: false, editorReady: false } );
-	}
-
-	/**
-	 * Closes the modal editor when the `Escape` key is pressed.
-	 *
-	 * @param  {Object} event
-	 * @return {void}
-	 */
-	handleModalKeyDown = ( event ) => {
-		if ( event.key === 'Escape' ) {
-			this.closeModal();
-		}
+		this.setState( { modalOpen: false, editorReady: false }, () => this.previewButton?.focus() );
 	}
 
 	/**
@@ -239,7 +228,7 @@ class RichTextField extends Component {
 
 		return (
 			<div className="cf-rich-text__preview-wrap">
-				<button type="button" className="cf-rich-text__preview" onClick={ this.openModal }>
+				<button type="button" className="cf-rich-text__preview" ref={ ( node ) => this.previewButton = node } onClick={ this.openModal }>
 					{ value ? (
 						<span className="cf-rich-text__preview-content" dangerouslySetInnerHTML={ { __html: sanitizePreviewHtml( value ) } } />
 					) : (
@@ -247,17 +236,10 @@ class RichTextField extends Component {
 					) }
 				</button>
 
-				{ this.state.modalOpen && createPortal(
-					<div className="cf-rich-text__modal-backdrop" onKeyDown={ this.handleModalKeyDown }>
-						<div className="cf-rich-text__modal">
-							<button type="button" className="cf-rich-text__modal-close" onClick={ this.closeModal }>
-								{ __( 'Close', 'carbon-fields-ui' ) }
-							</button>
-
-							{ editor }
-						</div>
-					</div>,
-					document.body
+				{ this.state.modalOpen && (
+					<Dialog title={ field.label } titleId={ id + '-dialog-title' } onClose={ this.closeModal }>
+						{ editor }
+					</Dialog>
 				) }
 			</div>
 		);

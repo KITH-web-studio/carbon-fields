@@ -3,6 +3,7 @@
 namespace Carbon_Fields\Helper;
 
 use Carbon_Fields\Field\Association_Field;
+use Carbon_Fields\Field\Button_Group_Field;
 use Carbon_Fields\Field\Complex_Field;
 use Carbon_Fields\Field\Field;
 use Carbon_Fields\Field\File_Field;
@@ -131,7 +132,7 @@ class Field_Validation {
 		if ( $field instanceof Media_Gallery_Field ) {
 			return $field->is_valid_form_value( array_map( 'strval', $stored ) ) ? $value : $invalid;
 		}
-		if ( $field instanceof File_Field || $field instanceof Icon_Field ) {
+		if ( $field instanceof File_Field || $field instanceof Icon_Field || $field instanceof Button_Group_Field ) {
 			return $field->is_valid_form_value( (string) $stored ) ? $stored : $invalid;
 		}
 		if ( $field instanceof Link_Field || $field instanceof Typography_Field || $field instanceof Number_With_Unit_Field ) {

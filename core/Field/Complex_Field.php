@@ -316,6 +316,19 @@ class Complex_Field extends Field {
 	}
 
 	/**
+	 * Show the most recently added type in the visual row picker.
+	 */
+	public function set_group_preview( $description = '', $image_url = '' ) {
+		$group = end( $this->groups );
+		if ( ! $group ) {
+			Incorrect_Syntax_Exception::raise( 'Call add_fields() before set_group_preview().' );
+			return $this;
+		}
+		$group->set_preview( $description, $image_url );
+		return $this;
+	}
+
+	/**
 	 * Set the field labels.
 	 * Currently supported values:
 	 *  - singular_name - the singular entry label

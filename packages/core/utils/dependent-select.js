@@ -14,7 +14,7 @@ export function getDependentValue( field, sourceValue, value ) {
 }
 
 export function isSelectSource( field ) {
-	return field?.type === 'select' && ! field.dependent_options;
+	return [ 'select', 'button_group' ].includes( field?.type ) && ! field.dependent_options;
 }
 
 export function getSelectSourceValue( field, value ) {

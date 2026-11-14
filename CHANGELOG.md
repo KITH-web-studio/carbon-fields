@@ -2,6 +2,12 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.23
+
+- Add a visual row picker for complex fields with searchable labels and descriptions, optional thumbnails, and an icon-only close control.
+- Add the button group and range fields for single-choice settings and precise numeric input.
+- Add opt-in bidirectional relationships between posts with permission checks, transactional writes, and revision support.
+
 ## 3.6.11.22
 
 - Restore REST writes using legacy PHP field values, including numeric media IDs, structured associations, map coordinates, and complex rows with the legacy group key.

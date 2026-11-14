@@ -68,6 +68,9 @@ final class Polylang_Post_Meta {
 		$copy_roots = array();
 		foreach ( $fields as $root => $entry ) {
 			list( $field, $container ) = $entry;
+			if ( $field instanceof \Carbon_Fields\Field\Association_Field && $field->get_bidirectional() ) {
+				continue;
+			}
 			if ( 'independent' !== $field->get_translation() && ! isset( $occupied[ $root ] ) &&
 				$container->is_valid_attach_for_object( $from ) && $container->is_valid_attach_for_object( $to ) ) {
 				$copy_roots[ $root ] = true;

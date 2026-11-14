@@ -55,6 +55,8 @@ class Group_Field {
 	 */
 	protected $tabs = array();
 
+	protected $preview = array();
+
 	/**
 	 * List of registered unique field names
 	 *
@@ -105,6 +107,13 @@ class Group_Field {
 	 */
 	public function get_fields() {
 		return $this->fields;
+	}
+
+	public function set_preview( $description, $image_url ) {
+		$this->preview = array(
+			'description' => sanitize_text_field( $description ),
+			'image' => Helper::sanitize_media_url( $image_url ),
+		);
 	}
 
 	/**
@@ -178,6 +187,9 @@ class Group_Field {
 
 		if ( $this->tabs ) {
 			$group_data['tabs'] = $this->tabs;
+		}
+		if ( $this->preview ) {
+			$group_data['preview'] = $this->preview;
 		}
 
 		return $group_data;

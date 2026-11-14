@@ -313,7 +313,8 @@ class Revisions_Service extends Service {
 		foreach ( $containers as $container ) {
 			$allowed = $container->is_valid_attach_for_object( $post_id );
 			foreach ( $container->get_fields() as $field ) {
-				if ( ! $allowed ) {
+				if ( ! $allowed && ( ! $field instanceof \Carbon_Fields\Field\Association_Field ||
+					! $field->get_bidirectional() || $container->matches_post_scope( $post_id ) ) ) {
 					$denied[ $field->get_name() ] = true;
 				}
 				if ( ! $allowed || $container->get_revisions_disabled() ) {
@@ -351,7 +352,7 @@ class Revisions_Service extends Service {
 
 	protected function copy_meta( $from_id, $targets, $restoring ) {
 		$from_id = (int) $from_id;
-		$patterns = $this->get_snapshot_patterns();
+		$patterns = $this->get_snapshot_patterns( null, $restoring ? $targets[0] : $from_id );
 		if ( $restoring && is_user_logged_in() ) {
 			$patterns = array_intersect_key( $patterns, $this->get_revisioned_fields( $targets[0] ) );
 		}
@@ -364,7 +365,12 @@ class Revisions_Service extends Service {
 			return false;
 		}
 		$post_ids = array_merge( array( $from_id ), $targets, array_keys( $translation_targets ) );
-		return Post_Meta_Transaction::run( $post_ids, function() use ( $from_id, $targets, $restoring, $post_ids, $patterns, $translation_targets ) {
+		$association_plan = $restoring ? \Carbon_Fields\Integration\Bidirectional_Associations::revision_plan( $targets[0], $from_id, array_keys( $patterns ) ) : array();
+		$locked_ids = $post_ids;
+		foreach ( $association_plan as $association ) {
+			$locked_ids = array_merge( $locked_ids, $association[2] );
+		}
+		return Post_Meta_Transaction::run( $locked_ids, function() use ( $from_id, $targets, $restoring, $post_ids, $patterns, $translation_targets, $association_plan ) {
 			$meta = $this->read_snapshot_rows( $post_ids, $patterns );
 			if ( false === $meta ) {
 				return false;
@@ -375,6 +381,12 @@ class Revisions_Service extends Service {
 			$scope = array_intersect( $scope, array_keys( $patterns ) );
 			if ( empty( $scope ) ) {
 				return true;
+			}
+			if ( $association_plan ) {
+				Post_Meta_Datastore::invalidate_storage_cache();
+				if ( ! \Carbon_Fields\Integration\Bidirectional_Associations::restore_locked( $targets[0], $association_plan, $scope ) ) {
+					return false;
+				}
 			}
 
 			foreach ( $targets as $index => $target ) {
@@ -411,7 +423,7 @@ class Revisions_Service extends Service {
 	/**
 	 * Scope revisions to storage keys of registered, revision-enabled post fields.
 	 */
-	private function get_snapshot_patterns( $container = null ) {
+	private function get_snapshot_patterns( $container = null, $post_id = 0 ) {
 		$repository = Carbon_Fields::resolve( 'container_repository' );
 		$key_toolset = Carbon_Fields::resolve( 'key_toolset' );
 		$scopes = array();
@@ -422,6 +434,10 @@ class Revisions_Service extends Service {
 			}
 			foreach ( $container->get_fields() as $field ) {
 				if ( ! ( $field->get_datastore() instanceof Post_Meta_Datastore ) ) {
+					continue;
+				}
+				if ( $post_id && $field instanceof \Carbon_Fields\Field\Association_Field && $field->get_bidirectional() &&
+					! $container->matches_post_scope( $post_id ) ) {
 					continue;
 				}
 				$base = $field->get_base_name();

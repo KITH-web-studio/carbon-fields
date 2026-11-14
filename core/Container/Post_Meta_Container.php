@@ -387,6 +387,12 @@ class Post_Meta_Container extends Container {
 		return $this->all_conditions_pass( intval( $post->ID ) );
 	}
 
+	public function matches_post_scope( $post_id ) {
+		return $this->condition_collection->evaluate( array(
+			'current_user_id', 'current_user_role', 'current_user_capability',
+		), true )->is_fulfilled( $this->get_environment_for_object( $post_id ) );
+	}
+
 	/**
 	 * Add meta box for each of the container post types
 	 */

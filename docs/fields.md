@@ -11,6 +11,7 @@ Create a field with `Field::make( $type, $name, $label )`. Use the same stable n
 | `text`, `textarea`, `rich_text` | Single line, multiline, and formatted text. Use `set_rows()` for a textarea and `set_settings()` for the rich text editor. |
 | `checkbox` | Boolean in PHP. Set a custom checked value with `set_option_value()`. |
 | `select`, `radio`, `radio_image` | Choose one option. `set_options()` takes value-to-label pairs, or value-to-image URLs for `radio_image`. |
+| `button_group`, `range` | Select an option with a group of buttons or enter a number with a slider. |
 | `set`, `multiselect` | Choose multiple options. Getters return a list of selected values. |
 | `date`, `time`, `date_time` | Date and time pickers. Use `set_storage_format()` and `set_input_format( $php_format, $js_format )` for formatting where supported. |
 | `color` | Color picker. Use `set_palette()` and `set_alpha_enabled()` to configure choices and transparency. |
@@ -242,6 +243,35 @@ Field::make( 'association', 'kith_related_pages', 'Related pages' )
     ->set_types( array( array( 'type' => 'post', 'post_type' => 'page' ) ) )
     ->set_max( 5 );
 ```
+
+## Button groups and sliders
+
+```php
+Field::make( 'button_group', 'color_scheme', 'Color scheme' )
+    ->set_options( array( 'light' => 'Light', 'dark' => 'Dark', 'auto' => 'System' ) );
+Field::make( 'range', 'image_opacity', 'Image opacity' )
+    ->set_range( 0, 1, 0.05 )->set_default_value( '0.5' );
+```
+
+A button group stores the selected option key. A range stores a number as a string and offers both a slider and a numeric input.
+
+## Bidirectional post relationships
+
+Declare both fields as top-level association fields in post meta containers that apply to the related posts. Each side declares the other's field name.
+
+```php
+// In the clinic post meta container.
+Field::make( 'association', 'clinic_doctors', 'Doctors' )
+    ->set_types( array( array( 'type' => 'post', 'post_type' => 'doctor' ) ) )
+    ->set_bidirectional( 'doctor_clinics' );
+
+// In the doctor post meta container.
+Field::make( 'association', 'doctor_clinics', 'Clinics' )
+    ->set_types( array( array( 'type' => 'post', 'post_type' => 'clinic' ) ) )
+    ->set_bidirectional( 'clinic_doctors' );
+```
+
+The editor needs permission to edit the source post and each changed target, including access to their containers. The save uses the standard InnoDB post meta datastore and honors min and max limits on both sides. To establish reverse references for existing links, save after removing each link, then add it again. Relationships are maintained separately for each Polylang translation. Use this feature with per-language fields.
 
 ## Edit code snippets
 

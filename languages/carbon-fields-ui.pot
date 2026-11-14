@@ -231,3 +231,12 @@ msgstr ""
 msgid ""
 "The fields changed during validation. Save again to check the new values."
 msgstr ""
+
+msgid "Find a row type"
+msgstr ""
+
+msgid "Slider"
+msgstr ""
+
+msgid "Enter a number within the allowed range."
+msgstr ""

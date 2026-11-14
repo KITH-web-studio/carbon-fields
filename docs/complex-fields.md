@@ -74,6 +74,18 @@ In a vertical complex, use **Find a row** to jump to a row by its current title 
 
 To reorder a vertical complex, open the row and click **Move row**. Find the destination by title or number, then choose **Move before** or **Move after**. Press Escape or click **Cancel** to close the picker. **Undo move** returns the last moved row to its previous position and keeps edits made since the move.
 
+## Visual row picker
+
+Call `set_group_preview()` after adding a group. The add button opens a picker with the group label, description, and optional thumbnail. Editors can search by label or description.
+
+```php
+Field::make( 'complex', 'page_sections', 'Page sections' )
+    ->add_fields( 'banner', 'Banner', array( Field::make( 'text', 'heading', 'Heading' ) ) )
+    ->set_group_preview( 'A heading with a lead image', get_theme_file_uri( '/assets/banner-preview.png' ) )
+    ->add_fields( 'quote', 'Quote', array( Field::make( 'textarea', 'copy', 'Text' ) ) )
+    ->set_group_preview( 'A short customer testimonial' );
+```
+
 ## Render the rows
 
 Read the whole complex with the same field getter as a regular field. Each named row includes its `_type`, its own field values, and any nested row arrays.

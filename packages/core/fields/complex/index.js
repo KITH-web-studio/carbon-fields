@@ -235,6 +235,10 @@ class ComplexField extends Component {
 			if ( this.isTabbed ) {
 				this.handleTabsChange( group[ groupIdKey ] );
 			}
+			if ( selection.preview || this.props.field.groups.some( ( type ) => type.preview ) ) {
+				this.focusGroupId = group[ groupIdKey ];
+				this.forceUpdate();
+			}
 		} );
 	}
 
@@ -479,6 +483,13 @@ class ComplexField extends Component {
 		} = this.props;
 
 		const availableGroups = this.getAvailableGroups( groupFilterKey );
+		const inserterProps = {
+			id,
+			groups: availableGroups,
+			onSelect: this.handleAddGroup,
+			title: this.inserterButtonText,
+			visual: field.groups.some( ( group ) => group.preview )
+		};
 		const groupLabels = this.getGroupLabels();
 		const isVertical = field.layout === 'tabbed-vertical';
 		const groupDefinitions = keyBy( field.groups, 'name' );
@@ -547,9 +558,8 @@ class ComplexField extends Component {
 						>
 							{ !! availableGroups.length && ! this.isMaximumReached && (
 								<ComplexInserter
+									{ ...inserterProps }
 									buttonText="+"
-									groups={ availableGroups }
-									onSelect={ this.handleAddGroup }
 								/>
 							) }
 						</ComplexTabs>
@@ -559,9 +569,8 @@ class ComplexField extends Component {
 				{ ! value.length && (
 					<ComplexPlaceholder label={ __( 'There are no entries yet.', 'carbon-fields-ui' ) }>
 						<ComplexInserter
+							{ ...inserterProps }
 							buttonText={ this.inserterButtonText }
-							groups={ availableGroups }
-							onSelect={ this.handleAddGroup }
 						/>
 					</ComplexPlaceholder>
 				) }
@@ -618,9 +627,8 @@ class ComplexField extends Component {
 					<div className="cf-complex__actions">
 						{ !! availableGroups.length && ! this.isMaximumReached && (
 							<ComplexInserter
+								{ ...inserterProps }
 								buttonText={ this.inserterButtonText }
-								groups={ availableGroups }
-								onSelect={ this.handleAddGroup }
 							/>
 						) }
 

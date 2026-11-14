@@ -2,6 +2,7 @@
  * External dependencies.
  */
 import { createRef, Component } from '@wordpress/element';
+import LayoutPicker from './layout-picker';
 
 class ComplexInserter extends Component {
 	/**
@@ -21,7 +22,8 @@ class ComplexInserter extends Component {
 	 * @type {Object}
 	 */
 	state = {
-		menuVisible: false
+		menuVisible: false,
+		pickerVisible: false
 	};
 
 	/**
@@ -68,9 +70,11 @@ class ComplexInserter extends Component {
 	 * @return {void}
 	 */
 	handleAddClick = () => {
-		const { groups, onSelect } = this.props;
+		const { groups, onSelect, visual } = this.props;
 
-		if ( groups.length > 1 ) {
+		if ( visual ) {
+			this.setState( { pickerVisible: true } );
+		} else if ( groups.length > 1 ) {
 			this.setState( ( { menuVisible } ) => ( {
 				menuVisible: ! menuVisible
 			} ) );
@@ -87,10 +91,15 @@ class ComplexInserter extends Component {
 	 */
 	handleItemClick = ( group ) => {
 		this.setState( {
-			menuVisible: false
+			menuVisible: false,
+			pickerVisible: false
 		} );
 
 		this.props.onSelect( group );
+	}
+
+	closePicker = () => {
+		this.setState( { pickerVisible: false }, () => this.node.current?.querySelector( 'button' )?.focus() );
 	}
 
 	/**
@@ -99,15 +108,22 @@ class ComplexInserter extends Component {
 	 * @return {Object}
 	 */
 	render() {
-		const { buttonText, groups } = this.props;
+		const { buttonText, groups, visual, title, id } = this.props;
 
 		return (
 			<div className="cf-complex__inserter" ref={ this.node }>
-				<button type="button" className="button cf-complex__inserter-button" onClick={ this.handleAddClick }>
+				<button type="button" className="button cf-complex__inserter-button" onClick={ this.handleAddClick } disabled={ ! groups.length }
+					aria-label={ title } aria-haspopup={ visual ? 'dialog' : undefined }
+					aria-expanded={ visual ? this.state.pickerVisible : groups.length > 1 ? this.state.menuVisible : undefined }>
 					{ buttonText }
 				</button>
 
-				{ groups.length > 1 && (
+				{ visual && this.state.pickerVisible && (
+					<LayoutPicker groups={ groups } onSelect={ this.handleItemClick } onClose={ this.closePicker }
+						title={ title } titleId={ id + '-picker-title' } />
+				) }
+
+				{ ! visual && groups.length > 1 && (
 					<ul className="cf-complex__inserter-menu" hidden={ ! this.state.menuVisible }>
 						{ groups.map( ( group, index ) => (
 							<li

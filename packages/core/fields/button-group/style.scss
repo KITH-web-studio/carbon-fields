@@ -1,0 +1,41 @@
+.cf-button-group {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: $size-base;
+}
+
+.cf-button-group__option {
+	position: relative;
+	margin: 0;
+
+	> input[type="radio"] {
+		position: absolute;
+		opacity: 0;
+		width: 1px;
+		height: 1px;
+		margin: 0;
+	}
+
+	> span {
+		display: block;
+		@include cf-button-chrome;
+		border-color: $wp-color-gray-light-500;
+		color: inherit;
+	}
+
+	> input:checked + span {
+		border-color: $wp-admin-theme-color;
+		background: $wp-admin-theme-color;
+		color: $color-white;
+	}
+
+	> input:focus-visible + span {
+		outline: 2px solid $wp-admin-theme-color;
+		outline-offset: 2px;
+	}
+
+	> input:disabled + span {
+		opacity: .65;
+		cursor: default;
+	}
+}

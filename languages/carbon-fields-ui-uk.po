@@ -458,3 +458,12 @@ msgid ""
 msgstr ""
 "Поля змінилися під час перевірки. Натисніть «Зберегти» ще раз, щоб "
 "перевірити нові значення."
+
+msgid "Find a row type"
+msgstr "Знайти тип рядка"
+
+msgid "Slider"
+msgstr "Повзунок"
+
+msgid "Enter a number within the allowed range."
+msgstr "Введіть число в допустимому діапазоні."

@@ -6,6 +6,8 @@ namespace Carbon_Fields\Datastore;
 
 use Carbon_Fields\Field\Complex_Field;
 use Carbon_Fields\Field\Field;
+use Carbon_Fields\Field\Association_Field;
+use Carbon_Fields\Integration\Bidirectional_Associations;
 
 /**
  * Post meta (custom fields) datastore class.
@@ -47,10 +49,15 @@ class Post_Meta_Datastore extends Meta_Datastore {
 	public function save_changes( Field $root_field, $fields ) {
 		global $wpdb;
 		$sync = 'sync' === $root_field->get_translation() && \Carbon_Fields\Integration\Polylang::active();
+		$bidirectional = $root_field instanceof Association_Field && $root_field->get_bidirectional();
 
 		$post_id = (int) $this->get_object_id();
 		if ( get_class( $this ) !== __CLASS__ || $post_id < 1 || $this->has_save_filters() ) {
-			return $sync ? false : null;
+			return ( $sync || $bidirectional ) ? false : null;
+		}
+		// A preview writes only to the revision, without changing real relationships.
+		if ( $bidirectional && ! wp_is_post_revision( $post_id ) ) {
+			return ! $sync && Bidirectional_Associations::save( $this, $post_id, $root_field );
 		}
 
 		$subtype = get_object_subtype( 'post', $post_id );
@@ -58,7 +65,8 @@ class Post_Meta_Datastore extends Meta_Datastore {
 		foreach ( $fields as $field ) {
 			$save_method = new \ReflectionMethod( $field, 'save' );
 			$delete_method = new \ReflectionMethod( $field, 'delete' );
-			$save_class = $field instanceof Complex_Field ? Complex_Field::class : Field::class;
+			$save_class = $field instanceof Complex_Field ? Complex_Field::class :
+				( $field instanceof Association_Field ? Association_Field::class : Field::class );
 			if ( $field->get_datastore() !== $this || $save_method->getDeclaringClass()->getName() !== $save_class ||
 				$delete_method->getDeclaringClass()->getName() !== Field::class ) {
 				return $sync ? false : null;
@@ -109,6 +117,30 @@ class Post_Meta_Datastore extends Meta_Datastore {
 			}
 			return true;
 		} );
+	}
+
+	/**
+	 * Save a prevalidated association while its post row is already locked.
+	 */
+	public function write_locked_association( $post_id, Association_Field $field ) {
+		global $wpdb;
+		if ( ! Post_Meta_Transaction::is_active() || $this->has_save_filters() ) {
+			return false;
+		}
+		$subtype = get_object_subtype( 'post', $post_id );
+		$desired = array();
+		foreach ( $this->get_storage_pairs( $field ) as $key => $value ) {
+			if ( ! is_scalar( $value ) || has_filter( "sanitize_post_meta_{$key}" ) ||
+				( $subtype && has_filter( "sanitize_post_meta_{$key}_for_{$subtype}" ) ) ) {
+				return false;
+			}
+			$desired[ $key ] = $value;
+		}
+		$patterns = $this->key_toolset->get_storage_key_deleter_patterns( false, false, array( $field->get_base_name() ), array() );
+		$where = $this->key_toolset->storage_key_patterns_to_sql( 'meta_key', $patterns );
+		$rows = $this->read_current_rows( "SELECT meta_id, meta_key, meta_value FROM {$wpdb->postmeta}
+			WHERE post_id = " . (int) $post_id . " AND {$where} FOR UPDATE" );
+		return is_array( $rows ) && $this->apply_changes( $post_id, $rows, $desired );
 	}
 
 	private function matches_desired( $current, $desired ) {

@@ -10,6 +10,7 @@ import { addFilter } from '@wordpress/hooks';
 import withFilters from '../hocs/with-filters';
 import { registerFieldType } from '../registry/fields';
 import AssociationField from './association';
+import ButtonGroupField from './button-group';
 import CheckboxField from './checkbox';
 import CodeField from './code';
 import ColorField from './color';
@@ -28,6 +29,7 @@ import NumberWithUnitField from './number-with-unit';
 import OembedField from './oembed';
 import RadioField from './radio';
 import RadioImageField from './radio-image';
+import RangeField from './range';
 import RichTextField from './rich-text';
 import SelectField from './select';
 import SeparatorField from './separator';
@@ -54,6 +56,7 @@ addFilter( 'carbon-fields.register-field-type', 'carbon-fields/core', ( type, co
  */
 [
 	[ 'association', AssociationField ],
+	[ 'button_group', ButtonGroupField ],
 	[ 'checkbox', CheckboxField ],
 	[ 'code', CodeField ],
 	[ 'color', ColorField ],
@@ -76,6 +79,7 @@ addFilter( 'carbon-fields.register-field-type', 'carbon-fields/core', ( type, co
 	[ 'oembed', OembedField ],
 	[ 'radio', RadioField ],
 	[ 'radio_image', RadioImageField ],
+	[ 'range', RangeField ],
 	[ 'rich_text', RichTextField ],
 	[ 'select', SelectField ],
 	[ 'separator', SeparatorField ],

@@ -3,6 +3,9 @@
 namespace Carbon_Fields\Field;
 
 use Carbon_Fields\Value_Set\Value_Set;
+use Carbon_Fields\Exception\Incorrect_Syntax_Exception;
+use Carbon_Fields\Helper\Helper;
+use Carbon_Fields\Datastore\Post_Meta_Datastore;
 use WP_Query;
 use WP_Term_Query;
 use WP_User_Query;
@@ -51,6 +54,8 @@ class Association_Field extends Field {
 	 * @var boolean
 	 */
 	protected $duplicates_allowed = false;
+
+	protected $bidirectional = '';
 
 	/**
 	 * Default field value
@@ -104,6 +109,39 @@ class Association_Field extends Field {
 	public function set_value( $value ) {
 		$value = $this->value_string_array_to_value_set( $value );
 		return parent::set_value( $value );
+	}
+
+	/**
+	 * Maintain the reciprocal association in another root post meta field.
+	 */
+	public function set_bidirectional( $field_name ) {
+		if ( ! is_string( $field_name ) || ( '' !== $field_name && ! Helper::is_valid_entity_id( $field_name ) ) ) {
+			Incorrect_Syntax_Exception::raise( 'A bidirectional association requires a field base name.' );
+			return $this;
+		}
+		$this->bidirectional = $field_name;
+		return $this;
+	}
+
+	public function get_bidirectional() {
+		return $this->bidirectional;
+	}
+
+	public function save() {
+		if ( $this->bidirectional && ( $this->get_hierarchy() || ! ( $this->get_datastore() instanceof Post_Meta_Datastore ) ||
+			get_class( $this->get_datastore() ) !== Post_Meta_Datastore::class ) ) {
+			return false;
+		}
+		return parent::save();
+	}
+
+	public function supports_post_type( $post_type ) {
+		foreach ( $this->types as $type ) {
+			if ( 'post' === $type['type'] && $post_type === $type['post_type'] ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**

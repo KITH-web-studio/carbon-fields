@@ -1,0 +1,78 @@
+.cf-dialog__backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 100000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: $size-base * 3;
+	background-color: rgba($color-black, .6);
+}
+
+.cf-dialog__panel {
+	--cf-dialog-surface: #{$color-white};
+	--cf-dialog-text: #{$wp-color-dark-gray};
+	--cf-dialog-muted: #{$gb-dark-gray-600};
+	--cf-dialog-border: #{$wp-color-gray-light-500};
+	--cf-dialog-tint: #{$wp-color-gray-light-100};
+	--cf-dialog-hover: #{$wp-color-gray-light-200};
+	position: relative;
+	width: 100%;
+	max-width: 700px;
+	max-height: 80vh;
+	padding: $size-base * 10 $size-base * 4 $size-base * 4;
+	overflow-y: auto;
+	box-sizing: border-box;
+	border-radius: 4px;
+	background-color: var(--cf-dialog-surface);
+	color: var(--cf-dialog-text);
+	box-shadow: 0 4px 20px rgba($color-black, .3);
+
+	@media (prefers-color-scheme: dark) {
+		--cf-dialog-surface: #{$wp-color-dark-gray};
+		--cf-dialog-text: #{$color-white};
+		--cf-dialog-muted: #{$wp-color-gray-light-500};
+		--cf-dialog-border: #{$gb-dark-gray-500};
+		--cf-dialog-tint: #{$wp-color-ultra-dark-gray};
+		--cf-dialog-hover: #{$gb-dark-gray-600};
+		color-scheme: dark;
+	}
+}
+
+.cf-dialog__close {
+	position: absolute;
+	z-index: 1;
+	top: $size-base * 2;
+	right: $size-base * 2;
+	display: grid;
+	place-items: center;
+	width: $size-base * 8;
+	height: $size-base * 8;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--cf-dialog-muted);
+	cursor: pointer;
+
+	&:hover {
+		color: var(--cf-dialog-text);
+	}
+
+	&:focus-visible {
+		outline: 2px solid $wp-admin-theme-color;
+		outline-offset: 2px;
+	}
+
+	@media (pointer: coarse) {
+		width: $size-base * 11;
+		height: $size-base * 11;
+	}
+}
+
+.cf-dialog__title {
+	margin: 0 0 $size-base * 3;
+	padding-inline-end: $size-base * 10;
+	color: inherit;
+	font-size: 18px;
+	line-height: 1.35;
+}

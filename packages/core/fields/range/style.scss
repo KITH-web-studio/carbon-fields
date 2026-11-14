@@ -1,0 +1,17 @@
+.cf-range {
+	display: flex;
+	align-items: center;
+	gap: $size-base * 3;
+	max-width: 420px;
+}
+
+.cf-range__slider {
+	flex: 1;
+	min-width: 0;
+	accent-color: $wp-admin-theme-color;
+}
+
+.cf-range input.cf-range__value {
+	width: 90px;
+	@include cf-input-chrome;
+}
