@@ -250,7 +250,8 @@ class Theme_Options_Container extends Container {
 	 */
 	public function get_restricted_option_names() {
 		$sections = $this->settings['panel_sections'] ?? array();
-		if ( ! $this->page_capability && ! $sections ) {
+		$allow_scripts = current_user_can( 'unfiltered_html' );
+		if ( ! $this->page_capability && ! $sections && $allow_scripts ) {
 			return array();
 		}
 		if ( $this->page_capability && ! current_user_can( $this->page_capability ) ) {
@@ -265,7 +266,6 @@ class Theme_Options_Container extends Container {
 			}
 		}
 		$names = array();
-		$allow_scripts = ! $this->page_capability || current_user_can( 'unfiltered_html' );
 		foreach ( $this->fields as $field ) {
 			if ( isset( $denied[ $field->get_name() ] ) || ( ! $allow_scripts && $this->contains_scripts( $field ) ) ) {
 				$names[] = $field->get_base_name();
@@ -549,6 +549,16 @@ class Theme_Options_Container extends Container {
 		$fields = $this->get_editable_fields( $this->restricted_option_names() );
 		$sections = $this->uses_settings_panel() ? $this->editable_sections( $this->editor_field_names( $fields ) ) : array();
 		return Field_Validation::validate( $fields, $input, $sections );
+	}
+
+	public function prepare_rest_options( array $changes, array $denied ) {
+		$fields = $this->get_editable_fields( $denied );
+		$changes = array_intersect_key( $changes, array_flip( $this->field_base_names( $fields ) ) );
+		if ( ! $changes ) {
+			return array();
+		}
+		$sections = $this->uses_settings_panel() ? $this->editable_sections( $this->editor_field_names( $fields ) ) : array();
+		return Field_Validation::validate_rest( $fields, $changes, $sections );
 	}
 
 	/**

@@ -30,7 +30,7 @@ module.exports = [
 			'@wordpress/i18n': [ 'wp', 'i18n' ],
 			'@wordpress/date': [ 'wp', 'date' ],
 			'@carbon-fields/core': 'cf.core',
-			'lodash': [ 'lodash' ]
+			'lodash': [ 'cf', 'vendor', 'lodash' ]
 		} )
 	} )
 ];

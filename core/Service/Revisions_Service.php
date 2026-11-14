@@ -192,14 +192,15 @@ class Revisions_Service extends Service {
 			return $fields;
 		}
 
-		if ( $post && ! empty( $post['ID'] ) ) {
-			$post_id = $post['ID'];
-		} else {
-			global $post;
-			$post_id = $post->ID;
+		$post = get_post( is_array( $post ) ? (int) ( $post['ID'] ?? 0 ) : $post );
+		if ( ! $post ) {
+			return $fields;
 		}
-
-		$revisioned_fields = $this->get_revisioned_fields();
+		$post_id = wp_is_post_revision( $post ) ?: $post->ID;
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return $fields;
+		}
+		$revisioned_fields = $this->get_revisioned_fields( $post_id );
 		$fields = array_merge( $fields, $revisioned_fields );
 		// this hook is used when displaying the field values
 		foreach ( $revisioned_fields as $name => $label ) {
@@ -222,6 +223,10 @@ class Revisions_Service extends Service {
 			return $value;
 		}
 
+		$post_id = wp_is_post_revision( $post ) ?: $post->ID;
+		if ( ! current_user_can( 'edit_post', $post_id ) || ! array_key_exists( $field_name, $this->get_revisioned_fields( $post_id ) ) ) {
+			return '';
+		}
 		$value = carbon_get_post_meta( $post->ID, substr( $field_name, 1 ) );
 		if ( is_array( $value ) ) {
 			$value = count( $value );
@@ -244,7 +249,6 @@ class Revisions_Service extends Service {
 		$source_id = $this->get_restoring_revision_id();
 		if ( $source_id && (int) wp_is_post_revision( $source_id ) === $post_id ) {
 			$this->revisions_created_during_restore[ $source_id ] = (int) $revision_id;
-			return;
 		}
 
 		unset( $this->pending_revisions[ $post_id ] );
@@ -281,6 +285,10 @@ class Revisions_Service extends Service {
 	}
 
 	public function restore_post_revision( $post_id, $revision_id ) {
+		if ( (int) wp_is_post_revision( $revision_id ) !== (int) $post_id ||
+			( is_user_logged_in() && ! current_user_can( 'edit_post', $post_id ) ) ) {
+			return false;
+		}
 		$targets = array( (int) $post_id );
 		if ( isset( $this->revisions_created_during_restore[ $revision_id ] ) ) {
 			$created_id = $this->revisions_created_during_restore[ $revision_id ];
@@ -297,22 +305,25 @@ class Revisions_Service extends Service {
 		return $restored;
 	}
 
-	protected function get_revisioned_fields() {
+	protected function get_revisioned_fields( $post_id ) {
 		$repository = Carbon_Fields::resolve( 'container_repository' );
 		$containers = $repository->get_containers( 'post_meta' );
-		$containers = array_filter( $containers, function( $container ) {
-			/** @var \Carbon_Fields\Container\Post_Meta_Container $container */
-			return !$container->get_revisions_disabled();
-		} );
 		$fields = array();
+		$denied = array();
 		foreach ( $containers as $container ) {
-			/** @var \Carbon_Fields\Container\Post_Meta_Container $container */
+			$allowed = $container->is_valid_attach_for_object( $post_id );
 			foreach ( $container->get_fields() as $field ) {
+				if ( ! $allowed ) {
+					$denied[ $field->get_name() ] = true;
+				}
+				if ( ! $allowed || $container->get_revisions_disabled() ) {
+					continue;
+				}
 				$fields[ $field->get_name() ] = $field->get_label();
 			}
 		}
 
-		return $fields;
+		return array_diff_key( $fields, $denied );
 	}
 
 	protected function get_latest_post_revision( $post_id ) {
@@ -341,6 +352,9 @@ class Revisions_Service extends Service {
 	protected function copy_meta( $from_id, $targets, $restoring ) {
 		$from_id = (int) $from_id;
 		$patterns = $this->get_snapshot_patterns();
+		if ( $restoring && is_user_logged_in() ) {
+			$patterns = array_intersect_key( $patterns, $this->get_revisioned_fields( $targets[0] ) );
+		}
 		if ( empty( $patterns ) ) {
 			return true;
 		}

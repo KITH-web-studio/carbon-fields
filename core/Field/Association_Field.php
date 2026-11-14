@@ -205,6 +205,9 @@ class Association_Field extends Field {
 		$sql_queries = array();
 
 		foreach ( $this->types as $type ) {
+			if ( 'user' === $type['type'] && ! current_user_can( 'list_users' ) ) {
+				continue;
+			}
 			$type_args = array_merge( $type, array(
 				'term' => $args['term'],
 			) );
@@ -216,21 +219,36 @@ class Association_Field extends Field {
 			$sql_queries[] = $sql_statement;
 		}
 
-		$sql_queries = implode( " UNION ", $sql_queries );
+		if ( ! $sql_queries ) {
+			return array( 'total_options' => 0, 'options' => array() );
+		}
+		$sql_queries = implode( " UNION ", $sql_queries ) . ' ORDER BY title ASC, ID ASC';
 
-		$per_page = $this->get_items_per_page();
-		$offset   = ($args['page'] - 1) * $per_page;
-
-		$sql_queries .= " ORDER BY `title` ASC LIMIT {$per_page} OFFSET {$offset}";
-
-		$results = $wpdb->get_results( $sql_queries );
-
+		$per_page = max( 1, $this->get_items_per_page() );
+		$offset = ( $args['page'] - 1 ) * $per_page;
 		$options = array();
+		$visible = 0;
+		$batch = max( 50, $per_page + 1 );
 
-		foreach ( $results as $result ) {
-			$callback = "format_{$result->type}_option";
-
-			$options[] = $this->$callback( $result );
+		// Count and paginate only candidates the current user can read.
+		for ( $start = 0; ; $start += $batch ) {
+			$results = $wpdb->get_results( $sql_queries . " LIMIT {$batch} OFFSET {$start}" );
+			foreach ( (array) $results as $result ) {
+				if ( ! $this->can_read_option( (int) $result->ID, $result->type, $result->subtype ) ) {
+					continue;
+				}
+				$visible++;
+				if ( $visible > $offset + $per_page ) {
+					break 2;
+				}
+				if ( $visible > $offset ) {
+					$callback = "format_{$result->type}_option";
+					$options[] = $this->$callback( $result );
+				}
+			}
+			if ( count( (array) $results ) < $batch ) {
+				break;
+			}
 		}
 
 		/**
@@ -242,7 +260,7 @@ class Association_Field extends Field {
 		$options = apply_filters( 'carbon_fields_association_field_options', $options, $this->get_base_name() );
 
 		return array(
-			'total_options' => $wpdb->get_var( "SELECT COUNT(*) FROM (" . preg_replace( '~(LIMIT .*)$~', '', $sql_queries ) . ") as t" ),
+			'total_options' => $visible,
 			'options'       => $options,
 		);
 	}
@@ -256,6 +274,18 @@ class Association_Field extends Field {
 	 */
 	public function get_types() {
 		return $this->types;
+	}
+
+	public function can_read_option( $id, $type, $subtype ) {
+		foreach ( $this->types as $definition ) {
+			if ( $type !== $definition['type'] ||
+				( 'post' === $type && $subtype !== $definition['post_type'] ) ||
+				( 'term' === $type && $subtype !== $definition['taxonomy'] ) ) {
+				continue;
+			}
+			return \Carbon_Fields\REST_API\Access::association_item( $id, $type, $subtype );
+		}
+		return false;
 	}
 
 	/**
@@ -378,13 +408,14 @@ class Association_Field extends Field {
 		$value_set = $this->get_value();
 		$value = array();
 		foreach ( $value_set as $entry ) {
+			$readable = $this->can_read_option( $entry['id'], $entry['type'], $entry['subtype'] );
 			$item = array(
 				'type' => $entry['type'],
 				'subtype' => $entry['subtype'],
 				'id' => intval( $entry['id'] ),
-				'title' => $this->get_title_by_type( $entry['id'], $entry['type'], $entry['subtype'] ),
-				'label' => $this->get_item_label( $entry['id'], $entry['type'], $entry['subtype'] ),
-				'is_trashed' => ( $entry['type'] == 'post' && get_post_status( $entry['id'] ) === 'trash' ),
+				'title' => $readable ? $this->get_title_by_type( $entry['id'], $entry['type'], $entry['subtype'] ) : '—',
+				'label' => $readable ? $this->get_item_label( $entry['id'], $entry['type'], $entry['subtype'] ) : '',
+				'is_trashed' => ( $readable && $entry['type'] == 'post' && get_post_status( $entry['id'] ) === 'trash' ),
 			);
 			$value[] = $item;
 		}

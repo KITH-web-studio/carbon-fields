@@ -12,36 +12,15 @@ class OembedPreview extends Component {
 			height: 0
 		};
 
-		this.renderIframe = this.renderIframe.bind( this );
 		this.checkMessageForResize = this.checkMessageForResize.bind( this );
 	}
 
-	isFrameAccessible() {
-		try {
-			return !! this.iframe.contentDocument.body;
-		} catch ( e ) {
-			return false;
-		}
-	}
-
-	/**
-	 * Lifecycle hook.
-	 *
-	 * @return {void}
-	 */
 	componentDidMount() {
 		window.addEventListener( 'message', this.checkMessageForResize, false );
-
-		this.renderIframe();
 	}
 
-	/**
-	 * Lifecycle Hook.
-	 *
-	 * @return {void}
-	 */
-	componentDidUpdate() {
-		this.renderIframe();
+	componentWillUnmount() {
+		window.removeEventListener( 'message', this.checkMessageForResize, false );
 	}
 
 	checkMessageForResize( event ) {
@@ -51,8 +30,10 @@ class OembedPreview extends Component {
 		let data = event.data || {};
 		if ( 'string' === typeof data ) {
 			try {
-				data = JSON.parse( data );
-			} catch ( e ) {} // eslint-disable-line no-empty
+				data = JSON.parse( data ) || {};
+			} catch ( e ) {
+				return;
+			}
 		}
 
 		// Verify that the mounted element is the source of the message
@@ -62,10 +43,13 @@ class OembedPreview extends Component {
 
 		// Update the state only if the message is formatted as we expect, i.e.
 		// as an object with a 'resize' action, width, and height
-		const { action, width, height } = data;
-		const { width: oldWidth, height: oldHeight } = this.state;
-
-		if ( 'resize' === action && ( oldWidth !== width || oldHeight !== height ) ) {
+		if ( 'resize' !== data.action || ! Number.isFinite( data.width ) ||
+			! Number.isFinite( data.height ) || data.width < 0 || data.height < 0 ) {
+			return;
+		}
+		const width = Math.min( Math.ceil( data.width ), 600 );
+		const height = Math.min( Math.ceil( data.height ), 2400 );
+		if ( this.state.width !== width || this.state.height !== height ) {
 			this.setState( { width, height } );
 		}
 	}
@@ -81,23 +65,16 @@ class OembedPreview extends Component {
 				ref={ ( node ) => this.iframe = node }
 				scrolling="no"
 				className="cf-oembed__frame"
-				onLoad={ this.renderIframe }
-				width={ Math.ceil( this.state.width ) }
-				height={ Math.ceil( this.state.height ) }
+				sandbox="allow-scripts"
+				referrerPolicy="no-referrer"
+				srcDoc={ this.getFrameDocument() }
+				width={ this.state.width }
+				height={ this.state.height }
 			/>
 		</div>;
 	}
 
-	renderIframe() {
-		if ( ! this.isFrameAccessible() ) {
-			return;
-		}
-
-		const body = this.iframe.contentDocument.body;
-		if ( null !== body.getAttribute( 'data-resizable-iframe-connected' ) ) {
-			return;
-		}
-
+	getFrameDocument() {
 		const heightCalculation = 'video' === this.props.type ? 'clientBoundingRect.width / 16 * 9' : 'clientBoundingRect.height';
 
 		const observeAndResizeJS = `
@@ -144,9 +121,16 @@ class OembedPreview extends Component {
 
 				Array.prototype.forEach.call( document.querySelectorAll( '[style]' ), removeViewportStyles );
 				Array.prototype.forEach.call( document.styleSheets, function( stylesheet ) {
-					Array.prototype.forEach.call( stylesheet.cssRules || stylesheet.rules, removeViewportStyles );
+					try {
+						Array.prototype.forEach.call( stylesheet.cssRules || stylesheet.rules, function( rule ) {
+							if ( rule.style ) {
+								removeViewportStyles( rule );
+							}
+						} );
+					} catch ( error ) {
+						// Cross-origin stylesheets are inaccessible.
+					}
 				} );
-				document.body.setAttribute( 'data-resizable-iframe-connected', '' );
 				sendResize();
 		} )();`;
 
@@ -172,16 +156,14 @@ class OembedPreview extends Component {
 					<style dangerouslySetInnerHTML={ { __html: style } } />
 				</head>
 
-				<body data-resizable-iframe-connected="data-resizable-iframe-connected" className={ this.props.type + ' ' + this.props.provider }>
+				<body className={ this.props.type + ' ' + this.props.provider }>
 					<div dangerouslySetInnerHTML={ { __html: this.props.html } } />
 					<script type="text/javascript" dangerouslySetInnerHTML={ { __html: observeAndResizeJS } } />
 				</body>
 			</html>
 		);
 
-		this.iframe.contentWindow.document.open();
-		this.iframe.contentWindow.document.write( '<!DOCTYPE html>' + renderToString( htmlDoc ) );
-		this.iframe.contentWindow.document.close();
+		return '<!DOCTYPE html>' + renderToString( htmlDoc );
 	}
 }
 

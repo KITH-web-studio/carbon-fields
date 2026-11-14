@@ -147,6 +147,19 @@ class Repository {
 		return false !== $segment && isset( $restricted[ substr( $segment, 0, strcspn( $segment, '[:' ) ) ] );
 	}
 
+	public function allows_rest_field( Container $owner, $object_id, $name ) {
+		if ( ! $owner->is_valid_attach_for_object( $object_id ) ) {
+			return false;
+		}
+		foreach ( $this->get_containers( $owner->type ) as $container ) {
+			// Multiple declarations can use the same storage key.
+			if ( $container !== $owner && $container->get_root_field_by_name( $name ) && ! $container->editor_user_access() ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	/**
 	 * Look up a field on behalf of an editor. PHP template lookup is independent
 	 * of who happens to be viewing the page.
@@ -155,6 +168,9 @@ class Repository {
 		foreach ( $this->get_containers() as $container ) {
 			if ( $container->get_id() !== $container_id ) {
 				continue;
+			}
+			if ( ! $container->editor_user_access() ) {
+				return null;
 			}
 			if ( 'theme_options' === $container->type &&
 				$this->is_theme_option_restricted( $field_name, $this->get_restricted_theme_options() ) ) {

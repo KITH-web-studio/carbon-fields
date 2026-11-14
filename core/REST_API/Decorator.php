@@ -3,6 +3,7 @@
 namespace Carbon_Fields\REST_API;
 
 use Carbon_Fields\Helper\Helper;
+use Carbon_Fields\Helper\Field_Validation;
 use Carbon_Fields\Container\Repository as ContainerRepository;
 
 /**
@@ -58,7 +59,11 @@ class Decorator {
 				$getter = function( $object, $field_name ) use ( $container ) {
 					$object_id = self::get_object_id( $object, $container->type );
 
-					$value = Helper::get_value( $object_id, $container->type, '', $field_name );
+					if ( ! Access::metadata( $container->type, $object_id ) ||
+						! $this->container_repository->allows_rest_field( $container, $object_id, $field_name ) ) {
+						return null;
+					}
+					$value = Helper::get_value( $object_id, $container->type, $container->id, $field_name );
 					$field = Helper::get_field( $container->type, $container->id, $field_name );
 
 					if ( apply_filters( 'carbon_fields_rest_api_return_attachments_as_urls', false, $value, $field, $object_id ) ) {
@@ -76,9 +81,30 @@ class Decorator {
 					return $value;
 				};
 
-				$setter = function( $value, $object, $field_name ) use ( $container ) {
+				$setter = function( $value, $object, $field_name, $request ) use ( $container ) {
 					$object_id = self::get_object_id( $object, $container->type );
-					Helper::set_value( $object_id, $container->type, '', $field_name, $value );
+					if ( ! Access::metadata( $container->type, $object_id, true ) ||
+						! $this->container_repository->allows_rest_field( $container, $object_id, $field_name ) ) {
+						return new \WP_Error( 'rest_forbidden', __( 'Sorry, you are not allowed to edit this item.' ), array( 'status' => 403 ) );
+					}
+					$fields = array();
+					$changes = array( $field_name => $value );
+					$params = $request->get_params();
+					foreach ( $container->get_fields() as $field ) {
+						$name = $field->get_base_name();
+						$fields[] = Helper::get_field_clone( $object_id, $container->type, $container->id, $name );
+						if ( $field->get_visible_in_rest_api() && array_key_exists( $name, $params ) ) {
+							$changes[ $name ] = $params[ $name ];
+						}
+					}
+					$prepared = Field_Validation::validate_rest( $fields, $changes );
+					if ( is_wp_error( $prepared ) ) {
+						return $prepared;
+					}
+					if ( false === $prepared[ $field_name ]->save() ) {
+						return new \WP_Error( 'carbon_fields_save_failed', __( 'Could not save the field.', 'carbon-fields' ), array( 'status' => 500 ) );
+					}
+					return true;
 				};
 
 				register_rest_field( $types,

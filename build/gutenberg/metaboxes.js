@@ -1006,6 +1006,16 @@ module.exports = (function() { return this["cf"]["vendor"]["immer"]; }());
 
 /***/ }),
 
+/***/ "lodash":
+/*!*****************************************!*\
+  !*** external ["cf","vendor","lodash"] ***!
+  \*****************************************/
+/***/ ((module) => {
+
+module.exports = (function() { return this["cf"]["vendor"]["lodash"]; }());
+
+/***/ }),
+
 /***/ "refract-callbag":
 /*!**************************************************!*\
   !*** external ["cf","vendor","refract-callbag"] ***!
@@ -1013,16 +1023,6 @@ module.exports = (function() { return this["cf"]["vendor"]["immer"]; }());
 /***/ ((module) => {
 
 module.exports = (function() { return this["cf"]["vendor"]["refract-callbag"]; }());
-
-/***/ }),
-
-/***/ "lodash":
-/*!***************************!*\
-  !*** external ["lodash"] ***!
-  \***************************/
-/***/ ((module) => {
-
-module.exports = (function() { return this["lodash"]; }());
 
 /***/ }),
 

@@ -2,6 +2,13 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.21
+
+- Enforce container permissions and validation for Carbon Fields REST requests, including fields registered on WordPress core routes.
+- Restrict relationship lookups and revision comparisons and restores to data the current user can access.
+- Require the WordPress permission to save unfiltered HTML for script settings and isolate oEmbed previews from the editor.
+- Restrict the block preview route to matching Carbon Fields blocks and update the bundled Lodash to 4.18.1.
+
 ## 3.6.11.20
 
 - Set WordPress capabilities for theme settings pages and individual sections, including inherited access for subsections.

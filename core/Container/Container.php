@@ -466,6 +466,12 @@ abstract class Container implements Datastore_Holder_Interface {
 		return $this->condition_collection->is_fulfilled( $environment );
 	}
 
+	public function editor_user_access() {
+		return $this->condition_collection->filter( array(
+			'current_user_id', 'current_user_role', 'current_user_capability'
+		) )->is_fulfilled( array() );
+	}
+
 	/**
 	 * Whether this container is currently viewed.
 	 */

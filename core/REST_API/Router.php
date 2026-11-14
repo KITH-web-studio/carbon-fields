@@ -3,6 +3,7 @@
 namespace Carbon_Fields\REST_API;
 
 use Carbon_Fields\Helper\Helper;
+use Carbon_Fields\Container\Block_Container;
 use Carbon_Fields\Container\Repository as ContainerRepository;
 use Carbon_Fields\Field\Link_Field;
 use Carbon_Fields\Integration\Polylang;
@@ -186,43 +187,26 @@ class Router {
 
 	public function post_meta_permission( $request ) {
 		$id = (int) $request['id'];
-		return $id > 0 && $this->can_read_post( get_post( $id ) );
+		return $id > 0 && Access::post( get_post( $id ) );
 	}
 
 	public function term_meta_permission( $request ) {
-		$term = get_term( (int) $request['id'] );
-		if ( ! $term || is_wp_error( $term ) ) {
-			return false;
-		}
-		$taxonomy = get_taxonomy( $term->taxonomy );
-		return $taxonomy && ( $taxonomy->publicly_queryable || current_user_can( $taxonomy->cap->manage_terms ) );
+		return Access::term( get_term( (int) $request['id'] ) );
 	}
 
 	public function user_meta_permission( $request ) {
 		$id = (int) $request['id'];
-		return $id > 0 && ( get_current_user_id() === $id || current_user_can( 'edit_user', $id ) );
+		return Access::metadata( 'user_meta', $id );
 	}
 
 	public function comment_meta_permission( $request ) {
 		$id = (int) $request['id'];
 		$comment = $id > 0 ? get_comment( $id ) : null;
-		return $comment && $comment->comment_post_ID && $this->can_read_post( get_post( $comment->comment_post_ID ) ) &&
-			( '1' === (string) $comment->comment_approved || current_user_can( 'edit_comment', $comment->comment_ID ) );
+		return Access::comment( $comment );
 	}
 
 	public function association_permission() {
 		return is_user_logged_in();
-	}
-
-	private function can_read_post( $post ) {
-		if ( ! $post || ( $post->post_password !== '' && ! current_user_can( 'edit_post', $post->ID ) ) ) {
-			return false;
-		}
-
-		$type = get_post_type_object( $post->post_type );
-		$status = get_post_status_object( get_post_status( $post ) );
-		return ( $type && is_post_type_viewable( $type ) && $status && $status->public ) ||
-			current_user_can( 'read_post', $post->ID );
 	}
 
 
@@ -289,32 +273,34 @@ class Router {
 
 		$containers = $this->container_repository->get_containers( $container_type );
 		$restricted = 'theme_options' === $container_type ? $this->container_repository->get_restricted_theme_options() : array();
-		$fields = array();
-		foreach ( $containers as $container ) {
-			$fields = array_merge( $fields, $container->get_fields() );
-		}
-
 		$values = array();
-		foreach ( $fields as $field ) {
-			if ( isset( $restricted[ $field->get_base_name() ] ) || ! $field->get_visible_in_rest_api() ) {
+		foreach ( $containers as $container ) {
+			if ( ! $container->is_valid_attach_for_object( $object_id ) ) {
 				continue;
 			}
-
-			$value = Helper::get_value( $object_id, $container_type, '', $field->get_base_name() );
-
-			if ( apply_filters( 'carbon_fields_rest_api_return_attachments_as_urls', false, $value, $field, $object_id ) ) {
-				$attachments_class = [
-					"Carbon_Fields\Field\Media_Gallery_Field",
-					"Carbon_Fields\Field\File_Field",
-					"Carbon_Fields\Field\Image_Field"
-				];
-
-				if ( in_array( get_class( $field ), $attachments_class ) ) {
-					$value = Helper::get_attachments_urls($value);
+			foreach ( $container->get_fields() as $field ) {
+				$name = $field->get_base_name();
+				if ( isset( $restricted[ $name ] ) || ! $field->get_visible_in_rest_api() ||
+					! $this->container_repository->allows_rest_field( $container, $object_id, $name ) ) {
+					continue;
 				}
-			}
 
-			$values[ $field->get_base_name() ] = $value;
+				$value = Helper::get_value( $object_id, $container_type, $container->get_id(), $name );
+
+				if ( apply_filters( 'carbon_fields_rest_api_return_attachments_as_urls', false, $value, $field, $object_id ) ) {
+					$attachments_class = array(
+						\Carbon_Fields\Field\Media_Gallery_Field::class,
+						\Carbon_Fields\Field\File_Field::class,
+						\Carbon_Fields\Field\Image_Field::class,
+					);
+
+					if ( in_array( get_class( $field ), $attachments_class, true ) ) {
+						$value = Helper::get_attachments_urls( $value );
+					}
+				}
+
+				$values[ $name ] = $value;
+			}
 		}
 
 		return $values;
@@ -381,7 +367,7 @@ class Router {
 		if ( null === $options || '' === $options ) {
 			return array();
 		}
-		if ( ! is_string( $options ) ) {
+		if ( ! is_string( $options ) || strlen( $options ) > 65536 ) {
 			return $this->invalid_association_request();
 		}
 
@@ -400,7 +386,7 @@ class Router {
 				( 'term' === $type && ! get_taxonomy( $subtype ) ) ) {
 				return $this->invalid_association_request();
 			}
-			if ( 'post' === $type && ( $post = get_post( $id ) ) && ! $this->can_read_post( $post ) ) {
+			if ( ! $field->can_read_option( $id, $type, $subtype ) ) {
 				continue;
 			}
 
@@ -429,9 +415,9 @@ class Router {
 
 		$page = $request->get_param( 'page' );
 		$term = $request->get_param( 'term' );
-		if ( ( null !== $term && ! is_string( $term ) ) ||
+		if ( ( null !== $term && ( ! is_string( $term ) || strlen( $term ) > 240 ) ) ||
 			( null !== $page && ( ( ! is_int( $page ) && ! is_string( $page ) ) ||
-				! ctype_digit( (string) $page ) || (int) $page < 1 || (int) $page > 1000000 ) ) ) {
+				! ctype_digit( (string) $page ) || (int) $page < 1 || (int) $page > 1000 ) ) ) {
 			return $this->invalid_association_request();
 		}
 
@@ -529,10 +515,7 @@ class Router {
 			return new \WP_Error( 'carbon_fields_invalid_attachment', __( 'Invalid attachment reference.', 'carbon-fields' ), array( 'status' => 400 ) );
 		}
 
-		return Helper::get_attachment_metadata( $value, $type, function( $attachment ) {
-			return $this->can_read_post( $attachment ) &&
-				( ! $attachment->post_parent || $this->can_read_post( get_post( $attachment->post_parent ) ) );
-		} );
+		return Helper::get_attachment_metadata( $value, $type, array( Access::class, 'post' ) );
 	}
 
 	/**
@@ -553,6 +536,7 @@ class Router {
 	 */
 	protected function set_options( $request ) {
 		$options = $request->get_params();
+		unset( $options['_locale'], $options['_wpnonce'], $options['_fields'], $options['_envelope'], $options['_method'] );
 		if ( \Carbon_Fields\Integration\Polylang::active() ) {
 			unset( $options['lang'] );
 		}
@@ -567,11 +551,25 @@ class Router {
 				return new \WP_Error( 'carbon_fields_forbidden_settings', __( 'You are not allowed to edit some of these settings.', 'carbon-fields' ), array( 'status' => 403 ) );
 			}
 		}
-		foreach ( $options as $key => $value ) {
-			try {
-				Helper::set_value( null, 'Theme_Options', '', $key, $value );
-			} catch ( \Exception $e ) {
-				return new \WP_REST_Response( wp_strip_all_tags( $e->getMessage() ) );
+		$prepared = array();
+		$remaining = $options;
+		foreach ( $this->container_repository->get_containers( 'theme_options' ) as $container ) {
+			if ( ! $container instanceof \Carbon_Fields\Container\Theme_Options_Container || ! $container->is_valid_attach_for_object( null ) ) {
+				continue;
+			}
+			$updates = $container->prepare_rest_options( $remaining, $restricted );
+			if ( is_wp_error( $updates ) ) {
+				return $updates;
+			}
+			$prepared += $updates;
+			$remaining = array_diff_key( $remaining, $updates );
+		}
+		if ( $remaining ) {
+			return new \WP_Error( 'carbon_fields_invalid_options', __( 'Check the form and try saving again.', 'carbon-fields' ), array( 'status' => 400 ) );
+		}
+		foreach ( $prepared as $field ) {
+			if ( false === $field->save() ) {
+				return new \WP_Error( 'carbon_fields_save_failed', __( 'Could not save the field.', 'carbon-fields' ), array( 'status' => 500 ) );
 			}
 		}
 
@@ -688,7 +686,7 @@ class Router {
 		$registry = \WP_Block_Type_Registry::get_instance();
 		$block    = $registry->get_registered( $request['name'] );
 
-		if ( null === $block ) {
+		if ( ! $block || ! is_array( $block->render_callback ) || ! ( $block->render_callback[0] instanceof Block_Container ) ) {
 			return new \WP_Error(
 				'block_invalid',
 				__( 'Invalid block.' ),
@@ -698,8 +696,13 @@ class Router {
 			);
 		}
 
+		$parsed = parse_blocks( trim( $request['content'] ) );
+		if ( 1 !== count( $parsed ) || $request['name'] !== $parsed[0]['blockName'] ||
+			( $parsed[0]['innerBlocks'] && empty( $block->render_callback[0]->settings['inner_blocks']['enabled'] ) ) ) {
+			return new \WP_Error( 'block_invalid', __( 'Invalid block.' ), array( 'status' => 400 ) );
+		}
 		$data = array(
-			'rendered' => do_blocks( $request['content'] ),
+			'rendered' => render_block( $parsed[0] ),
 		);
 
 		return rest_ensure_response( $data );

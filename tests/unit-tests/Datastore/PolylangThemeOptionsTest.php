@@ -274,6 +274,7 @@ class PolylangThemeOptionsTest extends WP_UnitTestCase {
 
 	public function test_rest_language_is_validated_before_writing_and_does_not_change_other_languages() {
 		$this->put( 'text', 'Shared', 'all' );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 		$router = new \Carbon_Fields\REST_API\Router( \Carbon_Fields\Carbon_Fields::resolve( 'container_repository' ) );
 		$this->container->get_fields()[0]->set_visible_in_rest_api( true );
 		$request = new WP_REST_Request( 'POST', '/carbon-fields/v1/options/' );
@@ -291,6 +292,7 @@ class PolylangThemeOptionsTest extends WP_UnitTestCase {
 			$this->assertWPError( $error );
 			$this->assertSame( 400, $error->get_error_data()['status'] );
 		}
+		wp_set_current_user( 0 );
 		$this->assertFalse( $router->options_permission( $request ) );
 		$this->assertSame( 'uk', Polylang::current_language() );
 	}

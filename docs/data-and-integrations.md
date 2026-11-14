@@ -88,6 +88,8 @@ Query the route for the page ID, for example `GET /wp-json/carbon-fields/v1/post
 | `GET /comments/{id}` | Read opted-in comment fields subject to comment and parent post access. |
 | `GET /options/` and `POST /options/` | Read or update theme options with `manage_options`. See the [language-aware REST example](polylang.md#read-and-write-theme-options-over-rest). |
 
+REST reads also enforce the container's conditions. Updates on WordPress core routes require permission to edit the object, must satisfy the container's conditions, and run declared field validation.
+
 The association, attachment, and block-renderer endpoints serve the editor and have their own access checks.
 
 ## Integrate with save hooks

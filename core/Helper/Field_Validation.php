@@ -4,6 +4,7 @@ namespace Carbon_Fields\Helper;
 
 use Carbon_Fields\Field\Complex_Field;
 use Carbon_Fields\Field\Field;
+use Carbon_Fields\Field\Group_Field;
 
 /**
  * Validate normalized editor input before the container writes any fields.
@@ -37,7 +38,76 @@ class Field_Validation {
 		return self::validate_scope( $submitted, array(), array(), $sections );
 	}
 
-	private static function validate_scope( array $fields, array $path, array $ancestors, array $sections = array() ) {
+	/**
+	 * REST values use the PHP API representation. Validate submitted fields
+	 * against the same scope, using stored values for omitted siblings.
+	 */
+	public static function validate_rest( array $fields, array $changes, array $sections = array() ) {
+		$prepared = array();
+		$submitted = array();
+		foreach ( $fields as $field ) {
+			$field = clone $field;
+			$name = $field->get_base_name();
+			if ( array_key_exists( $name, $changes ) ) {
+				$value = self::rest_value( $field, $changes[ $name ] );
+				if ( is_wp_error( $value ) ) {
+					return $value;
+				}
+				$field->set_value( $value );
+				$prepared[ $name ] = $field;
+			} else {
+				$field->load();
+			}
+			$submitted[] = $field;
+		}
+		$error = self::validate_scope( $submitted, array(), array(), $sections, array_fill_keys( array_keys( $prepared ), true ) );
+		return $error ?: $prepared;
+	}
+
+	private static function rest_value( Field $field, $value ) {
+		$invalid = new \WP_Error( 'carbon_fields_invalid_form', __( 'Check the form and try saving again.', 'carbon-fields' ), array( 'status' => 400 ) );
+		if ( $field instanceof Complex_Field ) {
+			if ( ! is_array( $value ) || array_values( $value ) !== $value ) {
+				return $invalid;
+			}
+			$rows = array();
+			foreach ( $value as $row ) {
+				$type = $row[ Complex_Field::TYPE_PROPERTY ] ?? Group_Field::DEFAULT_GROUP_NAME;
+				$group = is_array( $row ) && is_string( $type ) ? $field->get_group_by_name( $type ) : null;
+				if ( ! $group ) {
+					return $invalid;
+				}
+				$clean = array( Complex_Field::TYPE_PROPERTY => $type );
+				foreach ( $group->get_fields() as $child ) {
+					$name = $child->get_base_name();
+					if ( array_key_exists( $name, $row ) ) {
+						$clean[ $name ] = self::rest_value( $child, $row[ $name ] );
+						if ( is_wp_error( $clean[ $name ] ) ) {
+							return $clean[ $name ];
+						}
+					}
+				}
+				$rows[] = $clean;
+			}
+			return $rows;
+		}
+		if ( $field instanceof \Carbon_Fields\Field\Rich_Text_Field && is_string( $value ) && ! current_user_can( 'unfiltered_html' ) ) {
+			return wp_kses_post( $value );
+		}
+		if ( $field instanceof \Carbon_Fields\Field\Scripts_Field && ! current_user_can( 'unfiltered_html' ) ) {
+			return new \WP_Error( 'carbon_fields_forbidden_settings', __( 'You are not allowed to edit some of these settings.', 'carbon-fields' ), array( 'status' => 403 ) );
+		}
+		$input = $value;
+		if ( $field instanceof \Carbon_Fields\Field\Link_Field || $field instanceof \Carbon_Fields\Field\Typography_Field ||
+			$field instanceof \Carbon_Fields\Field\Number_With_Unit_Field ) {
+			$input = is_array( $value ) ? wp_json_encode( $value ) : $value;
+		} elseif ( is_scalar( $input ) ) {
+			$input = (string) $input;
+		}
+		return $field->is_valid_form_value( $input ) ? $value : $invalid;
+	}
+
+	private static function validate_scope( array $fields, array $path, array $ancestors, array $sections = array(), $changed = null ) {
 		$values = array();
 		foreach ( $fields as $field ) {
 			$values[ $field->get_base_name() ] = $field->get_formatted_value();
@@ -64,7 +134,10 @@ class Field_Validation {
 
 		foreach ( $fields as $field ) {
 			$name = $field->get_name();
-			if ( isset( $hidden[ $name ] ) || ! self::matches( $field->get_conditional_logic(), $sources ) ) {
+			if ( null !== $changed && ! isset( $changed[ $field->get_base_name() ] ) ) {
+				continue;
+			}
+			if ( null === $changed && ( isset( $hidden[ $name ] ) || ! self::matches( $field->get_conditional_logic(), $sources ) ) ) {
 				continue;
 			}
 			$location = array_merge( $path, array( $name ) );
@@ -72,15 +145,19 @@ class Field_Validation {
 				$result = $field->validate_editor_value( $values[ $field->get_base_name() ], $values );
 				if ( true !== $result ) {
 					$message = is_string( $result ) && '' !== trim( $result ) ? $result : __( 'Check this field and try again.', 'carbon-fields' );
-					return new \WP_Error( 'carbon_fields_validation_failed', $message, array( 'path' => $location ) );
+					return new \WP_Error( 'carbon_fields_validation_failed', $message, array( 'path' => $location, 'status' => 422 ) );
 				}
 			}
 			if ( $field instanceof Complex_Field && self::has_rules( $field->get_fields() ) ) {
 				$parents = array_merge( array( $values ), $ancestors );
 				foreach ( $field->get_populated_groups() as $index => $row ) {
-					$error = self::validate_scope( array_filter( $row, function( $child ) {
+					$children = array_filter( $row, function( $child ) {
 						return $child instanceof Field;
-					} ), array_merge( $location, array( $index ) ), $parents );
+					} );
+					$child_changes = null === $changed ? null : array_fill_keys( array_map( function( $child ) {
+						return $child->get_base_name();
+					}, $children ), true );
+					$error = self::validate_scope( $children, array_merge( $location, array( $index ) ), $parents, array(), $child_changes );
 					if ( $error ) {
 						return $error;
 					}

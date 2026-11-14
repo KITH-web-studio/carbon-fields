@@ -86,6 +86,54 @@ class RouterTest extends WP_UnitTestCase {
 		$this->assertSame( $post, $response->get_data()[0]['id'] );
 		$this->assertSame( 'Association fixture', $response->get_data()[0]['title'] );
 		$this->assertSame( 200, $this->request( '/association/options', $params + array( 'term' => 'Association' ) )->get_status() );
+
+		$open = Container::make( 'post_meta', 'REST public association fixture' )->add_fields( array(
+			Field::make( 'association', 'crb_rest_association' ),
+		) );
+		$params['container_id'] = $open->get_id();
+		$protected = self::factory()->post->create( array( 'post_title' => 'Unlisted REST target', 'post_status' => 'publish', 'post_password' => 'fixture' ) );
+		$user_id = get_current_user_id();
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+		$response = $this->request( '/association', $params + array(
+			'options' => "$post:post:post;$protected:post:post;$user_id:user:user",
+		) );
+		$this->assertSame( array( $post ), array_column( $response->get_data(), 'id' ) );
+		$response = $this->request( '/association/options', $params + array( 'term' => 'Unlisted REST target' ) );
+		$this->assertSame( array(), $response->get_data()['options'] );
+	}
+
+	public function testWordPressRestHonorsContainerPermissionsAndValidation() {
+		$container = Container::make( 'post_meta', 'REST protected post field' )
+			->where( 'post_type', '=', 'post' )
+			->where( 'current_user_capability', '=', 'manage_options' )
+			->add_fields( array(
+				Field::make( 'text', 'crb_rest_restricted' )->set_visible_in_rest_api()
+					->set_validation_callback( function( $value ) { return 'allowed' === $value; } ),
+			) );
+		$decorator = new \Carbon_Fields\REST_API\Decorator( Carbon_Fields::resolve( 'container_repository' ) );
+		$decorator->register_fields();
+		$editor = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$post = self::factory()->post->create( array( 'post_status' => 'publish', 'post_author' => $editor ) );
+		update_post_meta( $post, '_crb_rest_restricted', 'original' );
+		$path = '/wp/v2/posts/' . $post;
+
+		wp_set_current_user( 0 );
+		$this->assertArrayNotHasKey( 'crb_rest_restricted', $this->request( '/posts/' . $post )->get_data()['carbon_fields'] );
+		$this->assertNull( rest_do_request( new WP_REST_Request( 'GET', $path ) )->get_data()['crb_rest_restricted'] );
+
+		$update = new WP_REST_Request( 'POST', $path );
+		$update->set_body_params( array( 'crb_rest_restricted' => 'bad' ) );
+		wp_set_current_user( $editor );
+		$this->assertTrue( current_user_can( 'edit_post', $post ) );
+		$this->assertFalse( $container->is_valid_attach_for_object( $post ) );
+		$this->assertSame( 403, rest_do_request( $update )->get_status() );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$this->assertSame( 422, rest_do_request( $update )->get_status() );
+		$this->assertSame( 'original', get_post_meta( $post, '_crb_rest_restricted', true ) );
+		$update->set_body_params( array( 'crb_rest_restricted' => 'allowed' ) );
+		$this->assertSame( 200, rest_do_request( $update )->get_status() );
+		$this->assertSame( 'allowed', get_post_meta( $post, '_crb_rest_restricted', true ) );
 	}
 
 	public function testThemeOptionRestrictionsApplyToNestedRestPathsAndDuplicateDeclarations() {

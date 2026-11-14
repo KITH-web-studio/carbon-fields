@@ -837,13 +837,13 @@ module.exports = cf.vendor.immer;
 /***/ }),
 
 /***/ "lodash":
-/*!***************************!*\
-  !*** external ["lodash"] ***!
-  \***************************/
+/*!*****************************************!*\
+  !*** external ["cf","vendor","lodash"] ***!
+  \*****************************************/
 /***/ ((module) => {
 
 "use strict";
-module.exports = lodash;
+module.exports = cf.vendor.lodash;
 
 /***/ }),
 

@@ -209,7 +209,7 @@ class Post_Meta_Container extends Container {
 			return new \WP_Error( 'carbon_fields_invalid_form', __( 'Check the form and try saving again.', 'carbon-fields' ) );
 		}
 		$this->set_post_id( $post_id );
-		if ( ! $this->static_conditions_pass() ) {
+		if ( ! $this->is_valid_attach_for_object( $post_id ) ) {
 			return new \WP_Error( 'carbon_fields_invalid_form', __( 'Check the form and try saving again.', 'carbon-fields' ) );
 		}
 		$input = $this->get_save_input();

@@ -35,7 +35,7 @@ module.exports = [
 			path: paths.gutenbergBuildPath
 		},
 		externals: Object.assign( {}, wpPackages.externals, {
-			'lodash': [ 'lodash' ],
+			'lodash': [ 'cf', 'vendor', 'lodash' ],
 			'@wordpress/components': [ 'wp', 'components' ]
 		} )
 	} ),

@@ -228,7 +228,7 @@ class Loader {
 			$core_deps[] = 'wp-components';
 		}
 
-		$this->enqueue_script( 'vendor', array( 'wp-polyfill', 'jquery', 'lodash', 'wp-api-request' ) );
+		$this->enqueue_script( 'vendor', array( 'wp-polyfill', 'jquery', 'wp-api-request' ) );
 		$this->enqueue_script( 'core', $core_deps );
 		$this->enqueue_script( 'metaboxes', array( 'carbon-fields-vendor', 'carbon-fields-core' ) );
 
@@ -394,8 +394,11 @@ class Loader {
 	 * @return array
 	 */
 	public function fetch_association_options() {
-		$page = isset( $_GET['page'] ) ? absint( $_GET['page'] )              : 1;
-		$term = isset( $_GET['term'] ) ? sanitize_text_field( $_GET['term'] ) : '';
+		$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? absint( $_GET['page'] ) : 1;
+		$term = isset( $_GET['term'] ) && is_string( $_GET['term'] ) ? sanitize_text_field( wp_unslash( $_GET['term'] ) ) : '';
+		if ( $page < 1 || $page > 1000 || strlen( $term ) > 240 ) {
+			wp_send_json_error( __( 'Invalid association request.', 'carbon-fields' ), 400 );
+		}
 
 		$container_id = isset( $_GET['container_id'] ) && is_string( $_GET['container_id'] ) ? wp_unslash( $_GET['container_id'] ) : '';
 		$field_name = isset( $_GET['field_name'] ) && is_string( $_GET['field_name'] ) ? wp_unslash( $_GET['field_name'] ) : '';
