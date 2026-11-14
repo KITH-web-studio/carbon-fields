@@ -2,9 +2,19 @@
 
 namespace Carbon_Fields\Helper;
 
+use Carbon_Fields\Field\Association_Field;
 use Carbon_Fields\Field\Complex_Field;
 use Carbon_Fields\Field\Field;
+use Carbon_Fields\Field\File_Field;
 use Carbon_Fields\Field\Group_Field;
+use Carbon_Fields\Field\Icon_Field;
+use Carbon_Fields\Field\Link_Field;
+use Carbon_Fields\Field\Media_Gallery_Field;
+use Carbon_Fields\Field\Number_With_Unit_Field;
+use Carbon_Fields\Field\Rich_Text_Field;
+use Carbon_Fields\Field\Scripts_Field;
+use Carbon_Fields\Field\Typography_Field;
+use Carbon_Fields\Value_Set\Value_Set;
 
 /**
  * Validate normalized editor input before the container writes any fields.
@@ -67,12 +77,12 @@ class Field_Validation {
 	private static function rest_value( Field $field, $value ) {
 		$invalid = new \WP_Error( 'carbon_fields_invalid_form', __( 'Check the form and try saving again.', 'carbon-fields' ), array( 'status' => 400 ) );
 		if ( $field instanceof Complex_Field ) {
-			if ( ! is_array( $value ) || array_values( $value ) !== $value ) {
+			if ( ! is_array( $value ) ) {
 				return $invalid;
 			}
 			$rows = array();
 			foreach ( $value as $row ) {
-				$type = $row[ Complex_Field::TYPE_PROPERTY ] ?? Group_Field::DEFAULT_GROUP_NAME;
+				$type = $row[ Complex_Field::TYPE_PROPERTY ] ?? $row[ Value_Set::VALUE_PROPERTY ] ?? Group_Field::DEFAULT_GROUP_NAME;
 				$group = is_array( $row ) && is_string( $type ) ? $field->get_group_by_name( $type ) : null;
 				if ( ! $group ) {
 					return $invalid;
@@ -91,20 +101,60 @@ class Field_Validation {
 			}
 			return $rows;
 		}
-		if ( $field instanceof \Carbon_Fields\Field\Rich_Text_Field && is_string( $value ) && ! current_user_can( 'unfiltered_html' ) ) {
-			return wp_kses_post( $value );
-		}
-		if ( $field instanceof \Carbon_Fields\Field\Scripts_Field && ! current_user_can( 'unfiltered_html' ) ) {
+		if ( $field instanceof Scripts_Field && ! current_user_can( 'unfiltered_html' ) ) {
 			return new \WP_Error( 'carbon_fields_forbidden_settings', __( 'You are not allowed to edit some of these settings.', 'carbon-fields' ), array( 'status' => 403 ) );
 		}
-		$input = $value;
-		if ( $field instanceof \Carbon_Fields\Field\Link_Field || $field instanceof \Carbon_Fields\Field\Typography_Field ||
-			$field instanceof \Carbon_Fields\Field\Number_With_Unit_Field ) {
-			$input = is_array( $value ) ? wp_json_encode( $value ) : $value;
-		} elseif ( is_scalar( $input ) ) {
-			$input = (string) $input;
+		if ( $field instanceof Association_Field && ! self::valid_rest_association( $value ) ) {
+			return $invalid;
 		}
-		return $field->is_valid_form_value( $input ) ? $value : $invalid;
+		if ( 0 !== strpos( get_class( $field ), 'Carbon_Fields\\Field\\' ) &&
+			! ( $field instanceof Rich_Text_Field ) && ! ( $field instanceof Scripts_Field ) ) {
+			$input = is_scalar( $value ) ? (string) $value : $value;
+			return $field->is_valid_form_value( $input ) ? $value : $invalid;
+		}
+
+		// Interpret the request through the PHP setter, which also accepts legacy value sets.
+		$normalized = clone $field;
+		$normalized->set_value( $value );
+		foreach ( $normalized->get_full_value() as $item ) {
+			foreach ( $item as $property ) {
+				if ( ! is_scalar( $property ) ) {
+					return $invalid;
+				}
+			}
+		}
+
+		$stored = $normalized->get_value();
+		if ( $field instanceof Rich_Text_Field && is_string( $stored ) && ! current_user_can( 'unfiltered_html' ) ) {
+			return wp_kses_post( $stored );
+		}
+		if ( $field instanceof Media_Gallery_Field ) {
+			return $field->is_valid_form_value( array_map( 'strval', $stored ) ) ? $value : $invalid;
+		}
+		if ( $field instanceof File_Field || $field instanceof Icon_Field ) {
+			return $field->is_valid_form_value( (string) $stored ) ? $stored : $invalid;
+		}
+		if ( $field instanceof Link_Field || $field instanceof Typography_Field || $field instanceof Number_With_Unit_Field ) {
+			return $field->is_valid_form_value( $stored ) ? $stored : $invalid;
+		}
+		return $value;
+	}
+
+	private static function valid_rest_association( $value ) {
+		if ( ! is_array( $value ) ) {
+			return false;
+		}
+		foreach ( $value as $entry ) {
+			if ( is_array( $entry ) ) {
+				if ( isset( $entry['type'] ) || is_scalar( $entry[ Value_Set::VALUE_PROPERTY ] ?? null ) ) {
+					continue;
+				}
+			} elseif ( is_scalar( $entry ) ) {
+				continue;
+			}
+			return false;
+		}
+		return true;
 	}
 
 	private static function validate_scope( array $fields, array $path, array $ancestors, array $sections = array(), $changed = null ) {

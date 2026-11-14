@@ -2,6 +2,11 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.22
+
+- Restore REST writes using legacy PHP field values, including numeric media IDs, structured associations, map coordinates, and complex rows with the legacy group key.
+- Keep WordPress and container permissions, content filtering, and declared field validation in force for these requests.
+
 ## 3.6.11.21
 
 - Enforce container permissions and validation for Carbon Fields REST requests, including fields registered on WordPress core routes.

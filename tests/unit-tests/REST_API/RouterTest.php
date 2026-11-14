@@ -103,6 +103,12 @@ class RouterTest extends WP_UnitTestCase {
 	}
 
 	public function testWordPressRestHonorsContainerPermissionsAndValidation() {
+		Container::make( 'post_meta', 'REST shared key fixture' )
+			->where( 'post_type', '=', 'post' )
+			->add_fields( array(
+				Field::make( 'text', 'crb_rest_editable' )->set_visible_in_rest_api(),
+				Field::make( 'text', 'crb_rest_restricted' )->set_visible_in_rest_api(),
+			) );
 		$container = Container::make( 'post_meta', 'REST protected post field' )
 			->where( 'post_type', '=', 'post' )
 			->where( 'current_user_capability', '=', 'manage_options' )
@@ -127,8 +133,16 @@ class RouterTest extends WP_UnitTestCase {
 		$this->assertTrue( current_user_can( 'edit_post', $post ) );
 		$this->assertFalse( $container->is_valid_attach_for_object( $post ) );
 		$this->assertSame( 403, rest_do_request( $update )->get_status() );
+		$update->set_body_params( array(
+			'crb_rest_editable' => array( 'value' => 'also submitted' ),
+			'crb_rest_restricted' => array( 'value' => 'allowed' ),
+		) );
+		$this->assertSame( 403, rest_do_request( $update )->get_status() );
+		$this->assertSame( 'original', get_post_meta( $post, '_crb_rest_restricted', true ) );
+		$this->assertSame( '', carbon_get_post_meta( $post, 'crb_rest_editable' ) );
 
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$update->set_body_params( array( 'crb_rest_restricted' => 'bad' ) );
 		$this->assertSame( 422, rest_do_request( $update )->get_status() );
 		$this->assertSame( 'original', get_post_meta( $post, '_crb_rest_restricted', true ) );
 		$update->set_body_params( array( 'crb_rest_restricted' => 'allowed' ) );
@@ -136,11 +150,120 @@ class RouterTest extends WP_UnitTestCase {
 		$this->assertSame( 'allowed', get_post_meta( $post, '_crb_rest_restricted', true ) );
 	}
 
+	public function testWordPressRestAcceptsLegacyPhpFieldValues() {
+		$target = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$expected_map = array( 'value' => '50.45,30.52', 'lat' => '50.45', 'lng' => '30.52', 'zoom' => '11', 'address' => 'Kyiv' );
+		$seen_gallery = array();
+		Container::make( 'post_meta', 'REST legacy values fixture' )
+			->where( 'post_type', '=', 'post' )
+			->add_fields( array(
+				Field::make( 'image', 'rest_legacy_cover' )->set_visible_in_rest_api(),
+				Field::make( 'file', 'rest_legacy_url' )->set_value_type( 'url' )->set_visible_in_rest_api(),
+				Field::make( 'media_gallery', 'rest_legacy_gallery' )->set_visible_in_rest_api()
+					->set_validation_callback( function( $ids ) use ( &$seen_gallery ) {
+						$seen_gallery = $ids;
+						return count( $ids ) > 1;
+					} ),
+				Field::make( 'set', 'rest_legacy_selection' )->set_visible_in_rest_api()->set_options( array( 2 => 'Two' ) ),
+				Field::make( 'association', 'rest_legacy_relation' )->set_visible_in_rest_api(),
+				Field::make( 'map', 'rest_legacy_map' )->set_visible_in_rest_api(),
+				Field::make( 'complex', 'rest_legacy_rows' )->set_visible_in_rest_api()
+					->add_fields( 'row', array(
+						Field::make( 'map', 'location' ),
+						Field::make( 'complex', 'children' )->add_fields( 'child', array(
+							Field::make( 'text', 'title' )->set_validation_callback( function( $value ) {
+								return 'Saved child' === $value;
+							} ),
+						) ),
+					) ),
+			) );
+		$decorator = new \Carbon_Fields\REST_API\Decorator( Carbon_Fields::resolve( 'container_repository' ) );
+		$decorator->register_fields();
+		$editor = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$post = self::factory()->post->create( array( 'post_author' => $editor ) );
+		$update = new WP_REST_Request( 'POST', '/wp/v2/posts/' . $post );
+		$relation = array( 'value' => "post:post:$target", 'type' => 'post', 'subtype' => 'post', 'id' => $target );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+		$update->set_body_params( array( 'rest_legacy_cover' => $target ) );
+		$this->assertSame( 403, rest_do_request( $update )->get_status() );
+		$this->assertSame( '', carbon_get_post_meta( $post, 'rest_legacy_cover' ) );
+
+		wp_set_current_user( $editor );
+		$update->set_body_params( array(
+			'rest_legacy_cover' => $target,
+			'rest_legacy_gallery' => array( $target, $target + 1 ),
+			'rest_legacy_selection' => 2,
+			'rest_legacy_relation' => array( $relation ),
+			'rest_legacy_map' => $expected_map,
+			'rest_legacy_rows' => array( array(
+				'value' => 'row',
+				'location' => $expected_map,
+				'children' => array( array( 'value' => 'child', 'title' => array( 'value' => 'Saved child' ) ) ),
+			) ),
+		) );
+		$response = rest_do_request( $update );
+		$this->assertSame( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+		$this->assertSame( (string) $target, (string) carbon_get_post_meta( $post, 'rest_legacy_cover' ) );
+		$this->assertSame( array( $target, $target + 1 ), array_map( 'intval', $seen_gallery ) );
+		$this->assertSame( array( $target, $target + 1 ), array_map( 'intval', carbon_get_post_meta( $post, 'rest_legacy_gallery' ) ) );
+		$this->assertSame( array( 2 ), carbon_get_post_meta( $post, 'rest_legacy_selection' ) );
+		$this->assertSame( $target, (int) carbon_get_post_meta( $post, 'rest_legacy_relation' )[0]['id'] );
+		$this->assertSame( $expected_map, carbon_get_post_meta( $post, 'rest_legacy_map' ) );
+		$rows = carbon_get_post_meta( $post, 'rest_legacy_rows' );
+		$this->assertSame( $expected_map, $rows[0]['location'] );
+		$this->assertSame( 'Saved child', $rows[0]['children'][0]['title'] );
+
+		$update->set_body_params( array( 'rest_legacy_cover' => (string) ( $target + 1 ) ) );
+		$this->assertSame( 200, rest_do_request( $update )->get_status() );
+		$this->assertSame( (string) ( $target + 1 ), (string) carbon_get_post_meta( $post, 'rest_legacy_cover' ) );
+		$update->set_body_params( array( 'rest_legacy_relation' => array( $target ) ) );
+		$this->assertSame( 200, rest_do_request( $update )->get_status() );
+		$this->assertSame( $target, (int) carbon_get_post_meta( $post, 'rest_legacy_relation' )[0]['id'] );
+		$update->set_body_params( array( 'rest_legacy_url' => array( 'value' => 'https://example.test/a.mp4' ) ) );
+		$this->assertSame( 200, rest_do_request( $update )->get_status() );
+		$update->set_body_params( array( 'rest_legacy_url' => array( 'value' => 'javascript:alert(1)' ) ) );
+		$this->assertSame( 400, rest_do_request( $update )->get_status() );
+		$this->assertSame( 'https://example.test/a.mp4', carbon_get_post_meta( $post, 'rest_legacy_url' ) );
+		$update->set_body_params( array( 'rest_legacy_gallery' => array( $target ) ) );
+		$this->assertSame( 422, rest_do_request( $update )->get_status() );
+		$this->assertSame( array( $target, $target + 1 ), array_map( 'intval', carbon_get_post_meta( $post, 'rest_legacy_gallery' ) ) );
+		$update->set_body_params( array( 'rest_legacy_gallery' => array( array( 'value' => $target + 1 ), array( 'value' => $target ) ) ) );
+		$this->assertSame( 200, rest_do_request( $update )->get_status() );
+		$this->assertSame( array( $target + 1, $target ), array_map( 'intval', carbon_get_post_meta( $post, 'rest_legacy_gallery' ) ) );
+
+		$update->set_body_params( array( 'rest_legacy_rows' => array( array(
+			'value' => 'row',
+			'children' => array( array( 'value' => 'child', 'title' => array( 'value' => 'Rejected child' ) ) ),
+		) ) ) );
+		$this->assertSame( 422, rest_do_request( $update )->get_status() );
+		$this->assertSame( $rows, carbon_get_post_meta( $post, 'rest_legacy_rows' ) );
+	}
+
+	public function testLegacyRichTextValuesStillRequireFiltering() {
+		Container::make( 'post_meta', 'REST legacy rich text fixture' )
+			->where( 'post_type', '=', 'post' )
+			->add_fields( array( Field::make( 'rich_text', 'rest_legacy_html' )->set_visible_in_rest_api() ) );
+		$decorator = new \Carbon_Fields\REST_API\Decorator( Carbon_Fields::resolve( 'container_repository' ) );
+		$decorator->register_fields();
+		$author = self::factory()->user->create( array( 'role' => 'author' ) );
+		wp_set_current_user( $author );
+		$post = self::factory()->post->create( array( 'post_author' => $author ) );
+		$request = new WP_REST_Request( 'POST', '/wp/v2/posts/' . $post );
+		$request->set_body_params( array( 'rest_legacy_html' => array( 'value' => '<b>Allowed</b><img src="https://example.test/image.png" onerror="alert(1)">' ) ) );
+		$this->assertFalse( current_user_can( 'unfiltered_html' ) );
+		$this->assertSame( 200, rest_do_request( $request )->get_status() );
+		$stored = carbon_get_post_meta( $post, 'rest_legacy_html' );
+		$this->assertStringContainsString( '<b>Allowed</b>', $stored );
+		$this->assertStringNotContainsString( 'onerror', $stored );
+	}
+
 	public function testThemeOptionRestrictionsApplyToNestedRestPathsAndDuplicateDeclarations() {
 		$container = Container::make( 'theme_options', 'REST section permissions fixture' )
 			->set_page_capability( 'manage_options' )
 			->add_fields( array(
 				Field::make( 'text', 'rest_acl_public' )->set_visible_in_rest_api(),
+				Field::make( 'media_gallery', 'rest_acl_gallery' )->set_visible_in_rest_api(),
 				Field::make( 'select', 'rest_acl_dependent' )->set_visible_in_rest_api()
 					->set_dependent_options( 'rest_acl_source', array( 'type' => array( 'item' => 'Item' ) ) ),
 			) )
@@ -174,6 +297,13 @@ class RouterTest extends WP_UnitTestCase {
 		$this->assertSame( 403, rest_do_request( $request )->get_status() );
 		$this->assertSame( 'original', get_option( '_rest_acl_public' ) );
 		$this->assertSame( 'protected', get_option( '_rest_acl_secret' ) );
+
+		$request->set_body_params( array( 'rest_acl_gallery' => array( 12, 34 ), 'rest_acl_secret' => array( 'value' => 'tampered' ) ) );
+		$this->assertSame( 403, rest_do_request( $request )->get_status() );
+		$this->assertSame( array(), carbon_get_theme_option( 'rest_acl_gallery' ) );
+		$request->set_body_params( array( 'rest_acl_gallery' => array( 12, 34 ) ) );
+		$this->assertSame( 200, rest_do_request( $request )->get_status() );
+		$this->assertSame( array( 12, 34 ), array_map( 'intval', carbon_get_theme_option( 'rest_acl_gallery' ) ) );
 
 		$admin->add_cap( 'rest_acl_manage_private' );
 		wp_set_current_user( 0 );

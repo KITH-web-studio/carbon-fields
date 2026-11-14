@@ -83,9 +83,10 @@ class Decorator {
 
 				$setter = function( $value, $object, $field_name, $request ) use ( $container ) {
 					$object_id = self::get_object_id( $object, $container->type );
+					$forbidden = new \WP_Error( 'rest_forbidden', __( 'Sorry, you are not allowed to edit this item.' ), array( 'status' => 403 ) );
 					if ( ! Access::metadata( $container->type, $object_id, true ) ||
 						! $this->container_repository->allows_rest_field( $container, $object_id, $field_name ) ) {
-						return new \WP_Error( 'rest_forbidden', __( 'Sorry, you are not allowed to edit this item.' ), array( 'status' => 403 ) );
+						return $forbidden;
 					}
 					$fields = array();
 					$changes = array( $field_name => $value );
@@ -93,7 +94,10 @@ class Decorator {
 					foreach ( $container->get_fields() as $field ) {
 						$name = $field->get_base_name();
 						$fields[] = Helper::get_field_clone( $object_id, $container->type, $container->id, $name );
-						if ( $field->get_visible_in_rest_api() && array_key_exists( $name, $params ) ) {
+						if ( $field->get_visible_in_rest_api() && isset( $params[ $name ] ) ) {
+							if ( $name !== $field_name && ! $this->container_repository->allows_rest_field( $container, $object_id, $name ) ) {
+								return $forbidden;
+							}
 							$changes[ $name ] = $params[ $name ];
 						}
 					}
