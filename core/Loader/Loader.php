@@ -52,6 +52,7 @@ class Loader {
 		add_action( 'edit_form_after_title', array( $this, 'add_carbon_fields_meta_box_contexts' ) );
 		add_action( 'wp_ajax_carbon_fields_fetch_association_options', array( $this, 'fetch_association_options' ) );
 		add_action( 'wp_ajax_carbon_fields_validate_fields', array( $this, 'validate_fields' ) );
+		add_action( 'load-edit.php', array( new \Carbon_Fields\Admin\Post_List( $this->container_repository ), 'attach' ) );
 
 		# Enable the legacy storage service
 		\Carbon_Fields\Carbon_Fields::service( 'legacy_storage' )->enable();

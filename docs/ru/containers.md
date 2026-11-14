@@ -194,6 +194,26 @@ add_action( 'carbon_fields_register_fields', function () {
 
 Опция `network` относится к сети. Чтобы прочитать значение конкретной сети, вызовите `carbon_get_network_option( $network_id, $name )`. Остальные функции чтения и записи приведены в [руководстве по данным](data-and-integrations.md).
 
+## Колонки и фильтры списка записей
+
+После объявления полей вызовите `add_admin_column()` с именем поля верхнего уровня. По умолчанию колонка использует подпись поля. Укажите `label`, если в таблице нужна другая подпись.
+
+```php
+Container::make( 'post_meta', 'Каталог' )
+    ->where( 'post_type', '=', 'product' )
+    ->add_fields( array(
+        Field::make( 'text', 'catalog_price', 'Цена' )
+            ->set_attribute( 'type', 'number' )
+            ->set_attribute( 'step', '0.01' ),
+        Field::make( 'select', 'catalog_stock', 'Наличие' )
+            ->set_options( array( 'in_stock' => 'В наличии', 'sold' => 'Продано' ) ),
+    ) )
+    ->add_admin_column( 'catalog_price', array( 'sortable' => 'numeric' ) )
+    ->add_admin_column( 'catalog_stock', array( 'filter' => true ) );
+```
+
+Колонки поддерживают текстовые поля, поля выбора одного значения и ползунки. Для сортировки можно указать `'numeric'` или `'text'`. Фильтр поддерживает `select` с независимым набором вариантов. Сортировка и фильтрация работают по сохранённым значениям стандартного хранилища `postmeta`. Если условия контейнера зависят от отдельной записи, доступные значения видны в её строке таблицы, а сортировка и фильтр для такой колонки недоступны.
+
 ## Условия показа
 
 Связывайте вызовы `where()`, когда должны выполняться все условия. `or_where()` добавляет альтернативную группу. Для записей часто используют `post_type`, `post_id`, `post_template`, `post_parent_id` и `post_term`. Условие `term_taxonomy` ограничивает показ по таксономии, а `user_role` проверяет роль редактируемого пользователя. `current_user_role` и `current_user_capability` проверяют текущего редактора.

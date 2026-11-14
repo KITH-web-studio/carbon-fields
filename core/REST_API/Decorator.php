@@ -5,6 +5,7 @@ namespace Carbon_Fields\REST_API;
 use Carbon_Fields\Helper\Helper;
 use Carbon_Fields\Helper\Field_Validation;
 use Carbon_Fields\Container\Repository as ContainerRepository;
+use Carbon_Fields\Field\Taxonomy_Field;
 
 /**
  * Decorate default REST routes with extra information provided by Carbon Fields
@@ -95,7 +96,8 @@ class Decorator {
 						$name = $field->get_base_name();
 						$fields[] = Helper::get_field_clone( $object_id, $container->type, $container->id, $name );
 						if ( $field->get_visible_in_rest_api() && isset( $params[ $name ] ) ) {
-							if ( $name !== $field_name && ! $this->container_repository->allows_rest_field( $container, $object_id, $name ) ) {
+							if ( ( $name !== $field_name && ! $this->container_repository->allows_rest_field( $container, $object_id, $name ) ) ||
+								( $field instanceof Taxonomy_Field && ! $field->can_assign_terms() ) ) {
 								return $forbidden;
 							}
 							$changes[ $name ] = $params[ $name ];

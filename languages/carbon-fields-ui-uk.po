@@ -467,3 +467,6 @@ msgstr "Повзунок"
 
 msgid "Enter a number within the allowed range."
 msgstr "Введіть число в допустимому діапазоні."
+
+msgid "You are not allowed to assign these terms."
+msgstr "У вас немає прав призначати ці терміни."

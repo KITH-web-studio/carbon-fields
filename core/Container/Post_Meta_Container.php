@@ -41,6 +41,8 @@ class Post_Meta_Container extends Container {
 	 */
 	protected $revisions_disabled = false;
 
+	protected $admin_columns = array();
+
 	/**
 	 * List of default container settings
 	 *
@@ -394,6 +396,35 @@ class Post_Meta_Container extends Container {
 	}
 
 	/**
+	 * Declare a column for a top-level post field.
+	 */
+	public function add_admin_column( $field_name, array $options = array() ) {
+		if ( ! is_string( $field_name ) || ! Helper::is_valid_entity_id( $field_name ) ) {
+			Incorrect_Syntax_Exception::raise( 'Admin columns require the base name of a post field.' );
+			return $this;
+		}
+		$options = wp_parse_args( $options, array( 'label' => '', 'sortable' => false, 'filter' => false ) );
+		if ( ! is_string( $options['label'] ) || ! in_array( $options['sortable'], array( false, 'numeric', 'text' ), true ) ||
+			! is_bool( $options['filter'] ) ) {
+			Incorrect_Syntax_Exception::raise( 'Use a text label, a boolean filter, and numeric or text sorting for admin columns.' );
+			return $this;
+		}
+		$this->admin_columns[ $field_name ] = $options;
+		return $this;
+	}
+
+	public function get_admin_columns() {
+		return $this->admin_columns;
+	}
+
+	public function allows_admin_column_queries( $post_type ) {
+		// An object-dependent condition cannot authorize selection or ordering for the whole list.
+		return $this->condition_collection->evaluate( array(
+			'post_type', 'current_user_id', 'current_user_role', 'current_user_capability', 'blog_id',
+		), false, array( 'CUSTOM' ), true )->is_fulfilled( array( 'post_type' => $post_type ) );
+	}
+
+	/**
 	 * Add meta box for each of the container post types
 	 */
 	public function attach() {
@@ -440,7 +471,7 @@ class Post_Meta_Container extends Container {
 
 		foreach ( $this->fields as $field ) {
 			$datastore = $field->get_datastore();
-			if ( $datastore->get_object_id() === 0 ) {
+			if ( $datastore->get_object_id() === 0 || $datastore instanceof \Carbon_Fields\Datastore\Taxonomy_Datastore ) {
 				$datastore->set_object_id( $post_id );
 			}
 		}

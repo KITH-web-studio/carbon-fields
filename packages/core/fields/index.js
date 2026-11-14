@@ -35,6 +35,7 @@ import SelectField from './select';
 import SeparatorField from './separator';
 import SetField from './set';
 import SidebarField from './sidebar';
+import TaxonomyField from './taxonomy';
 import TextField from './text';
 import TextareaField from './textarea';
 import TimeField from './time';
@@ -85,6 +86,7 @@ addFilter( 'carbon-fields.register-field-type', 'carbon-fields/core', ( type, co
 	[ 'separator', SeparatorField ],
 	[ 'set', SetField ],
 	[ 'sidebar', SidebarField ],
+	[ 'taxonomy', TaxonomyField ],
 	[ 'text', TextField ],
 	[ 'textarea', TextareaField ],
 	[ 'time', TimeField ],

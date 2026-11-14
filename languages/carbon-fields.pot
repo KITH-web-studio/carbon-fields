@@ -230,3 +230,6 @@ msgstr ""
 
 msgid "You are not allowed to edit some of these settings."
 msgstr ""
+
+msgid "All (%s)"
+msgstr ""

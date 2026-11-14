@@ -240,3 +240,6 @@ msgstr ""
 
 msgid "Enter a number within the allowed range."
 msgstr ""
+
+msgid "You are not allowed to assign these terms."
+msgstr ""

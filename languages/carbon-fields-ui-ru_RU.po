@@ -466,3 +466,6 @@ msgstr "Ползунок"
 
 msgid "Enter a number within the allowed range."
 msgstr "Введите число в допустимом диапазоне."
+
+msgid "You are not allowed to assign these terms."
+msgstr "У вас нет прав на назначение этих терминов."

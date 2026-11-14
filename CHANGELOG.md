@@ -2,6 +2,12 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.24
+
+- Add PHP declarations for post list columns with numeric and text sorting, select filters, and container permission checks.
+- Add a searchable taxonomy field that saves native WordPress term assignments.
+- Document both features with PHP examples in English and Russian.
+
 ## 3.6.11.23
 
 - Add a visual row picker for complex fields with searchable labels and descriptions, optional thumbnails, and an icon-only close control.

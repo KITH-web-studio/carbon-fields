@@ -18,6 +18,7 @@ Create a field with `Field::make( $type, $name, $label )`. Use the same stable n
 | `image`, `file` | Select a Media Library attachment. The default is its ID. Use `set_value_type( 'url' )` to store its URL. |
 | `media_gallery` | An ordered list of attachment IDs. `set_type()` filters the picker. |
 | `association` | An ordered list of references to posts, terms, users, or comments. Use `set_types()` to configure targets. |
+| `taxonomy` | Search and assign native WordPress taxonomy terms to the post. |
 | `map` | Google Maps picker. The value contains `lat`, `lng`, `zoom`, and `address`. |
 | `oembed` | An embeddable URL. Use WordPress `wp_oembed_get()` to render it. |
 | `sidebar` | Select or create a widget area. Use its ID with `dynamic_sidebar()`. |
@@ -243,6 +244,19 @@ Field::make( 'association', 'kith_related_pages', 'Related pages' )
     ->set_types( array( array( 'type' => 'post', 'post_type' => 'page' ) ) )
     ->set_max( 5 );
 ```
+
+## Native WordPress taxonomy field
+
+Add a top-level field to a `post_meta` container. Pass the name of a taxonomy registered for that post type to `set_taxonomy()`.
+
+```php
+Field::make( 'taxonomy', 'service_regions', 'Regions' )
+    ->set_taxonomy( 'service_region' );
+```
+
+The picker searches existing terms. Use `set_max( 1 )` to allow a single selection. The user needs permission to edit the post and the taxonomy's `assign_terms` capability. If replacing the standard term panel, hide that panel on the relevant screen.
+
+`carbon_get_post_meta( $post_id, 'service_regions' )` returns an array of term IDs. Use `tax_query` to find posts by their terms. The field uses native WordPress term assignments and reflects changes made using other WordPress interfaces.
 
 ## Button groups and sliders
 

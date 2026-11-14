@@ -194,6 +194,26 @@ add_action( 'carbon_fields_register_fields', function () {
 
 A `network` option belongs to a network. Use `carbon_get_network_option( $network_id, $name )` to read from an explicit network. See [the data guide](data-and-integrations.md) for getter and setter signatures.
 
+## Post list columns and filters
+
+Call `add_admin_column()` with a top-level field name after declaring its fields. The column uses the field label by default. Use the `label` option to choose another label.
+
+```php
+Container::make( 'post_meta', 'Catalog' )
+    ->where( 'post_type', '=', 'product' )
+    ->add_fields( array(
+        Field::make( 'text', 'catalog_price', 'Price' )
+            ->set_attribute( 'type', 'number' )
+            ->set_attribute( 'step', '0.01' ),
+        Field::make( 'select', 'catalog_stock', 'Availability' )
+            ->set_options( array( 'in_stock' => 'In stock', 'sold' => 'Sold' ) ),
+    ) )
+    ->add_admin_column( 'catalog_price', array( 'sortable' => 'numeric' ) )
+    ->add_admin_column( 'catalog_stock', array( 'filter' => true ) );
+```
+
+Columns support text fields, single-choice fields, and sliders. Use `'numeric'` or `'text'` for sorting. Filters support standalone `select` options. Sorting and filtering use saved values in standard WordPress post metadata. When container conditions depend on individual posts, permitted values appear in those rows and sorting and filtering are unavailable for that column.
+
 ## Conditions
 
 Chain `where()` calls when every condition must match. Use `or_where()` to add an alternative condition group. For posts, common conditions include `post_type`, `post_id`, `post_template`, `post_parent_id`, and `post_term`. For terms, use `term_taxonomy` to target a taxonomy. For users, `user_role` checks the edited user. `current_user_role` and `current_user_capability` check the current editor.

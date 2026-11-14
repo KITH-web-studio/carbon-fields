@@ -83,7 +83,7 @@ class Meta_Query_Service extends Service {
 		$property = isset( $condition['carbon_field_property'] ) ? $condition['carbon_field_property'] : Value_Set::VALUE_PROPERTY;
 
 		// bail if we cannot find the field
-		if ( $field !== null ) {
+		if ( $field !== null && ! $field instanceof \Carbon_Fields\Field\Taxonomy_Field ) {
 			$storage_key = $this->key_toolset->get_storage_key_with_index_wildcards(
 				$field->is_simple_root_field(),
 				array_merge( $field->get_hierarchy(), array( $field->get_base_name() ) ),

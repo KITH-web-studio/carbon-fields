@@ -229,3 +229,6 @@ msgstr "Проверьте это поле и попробуйте ещё раз
 
 msgid "You are not allowed to edit some of these settings."
 msgstr "У вас нет прав на изменение некоторых из этих настроек."
+
+msgid "All (%s)"
+msgstr "Все (%s)"
