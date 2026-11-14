@@ -100,6 +100,72 @@ class Repository {
 	}
 
 	/**
+	 * Theme options use the same storage across containers. A second declaration
+	 * of the same option must not bypass an explicit access restriction.
+	 */
+	public function get_restricted_theme_options() {
+		$restricted = array();
+		$containers = $this->get_containers( 'theme_options' );
+		foreach ( $containers as $container ) {
+			if ( ! ( $container instanceof Theme_Options_Container ) ) {
+				continue;
+			}
+			foreach ( $container->get_restricted_option_names() as $name ) {
+				$restricted[ $name ] = true;
+			}
+		}
+		if ( ! $restricted ) {
+			return $restricted;
+		}
+
+		$dependent = array();
+		foreach ( $containers as $container ) {
+			foreach ( $container->get_fields() as $field ) {
+				if ( $field instanceof \Carbon_Fields\Field\Select_Field && $field->get_options_source() !== '' ) {
+					$dependent[ $field->get_options_source() ][] = $field->get_base_name();
+				}
+			}
+		}
+		// Without its source, a dependent select would submit an empty value.
+		$pending = array_keys( $restricted );
+		while ( $pending ) {
+			$name = array_pop( $pending );
+			foreach ( $dependent[ $name ] ?? array() as $field ) {
+				if ( ! isset( $restricted[ $field ] ) ) {
+					$restricted[ $field ] = true;
+					$pending[] = $field;
+				}
+			}
+		}
+		return $restricted;
+	}
+
+	public function is_theme_option_restricted( $field_name, array $restricted ) {
+		// Match get_field_by_name(), including paths with empty segments.
+		$segments = array_filter( explode( Container::HIERARCHY_FIELD_SEPARATOR, $field_name ) );
+		$segment = reset( $segments );
+		return false !== $segment && isset( $restricted[ substr( $segment, 0, strcspn( $segment, '[:' ) ) ] );
+	}
+
+	/**
+	 * Look up a field on behalf of an editor. PHP template lookup is independent
+	 * of who happens to be viewing the page.
+	 */
+	public function get_editor_field_in_container( $field_name, $container_id ) {
+		foreach ( $this->get_containers() as $container ) {
+			if ( $container->get_id() !== $container_id ) {
+				continue;
+			}
+			if ( 'theme_options' === $container->type &&
+				$this->is_theme_option_restricted( $field_name, $this->get_restricted_theme_options() ) ) {
+				return null;
+			}
+			return $container->get_field_by_name( $field_name );
+		}
+		return null;
+	}
+
+	/**
 	 * Return field in a container with supplied id
 	 *
 	 * @param  string                    $field_name

@@ -14,11 +14,13 @@ import { findLazyFieldError } from '../../utils/lazy-complex';
  */
 export default createHigherOrderComponent( ( Component ) => {
 	const applyWithSelect = withSelect( ( select, { id } ) => {
-		const container = select( 'carbon-fields/metaboxes' ).getContainerById( id );
-		const invalid = container && container.type === 'post_meta' && findLazyFieldError( container, select( 'carbon-fields/metaboxes' ).getFields() );
+		const store = select( 'carbon-fields/metaboxes' );
+		const container = store.getContainerById( id );
+		const invalid = container && container.type === 'post_meta' && findLazyFieldError( container, store.getFields() );
 
 		return {
 			container,
+			serverError: store.getServerError( id ),
 			invalidFieldId: invalid ? invalid.field.id : null,
 			invalidLabel: invalid ? invalid.field.label : null,
 			invalidMessage: invalid ? invalid.error : null

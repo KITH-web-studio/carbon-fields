@@ -288,6 +288,7 @@ class Router {
 		$object_id = ( $object_id !== '' ) ? $object_id : null;
 
 		$containers = $this->container_repository->get_containers( $container_type );
+		$restricted = 'theme_options' === $container_type ? $this->container_repository->get_restricted_theme_options() : array();
 		$fields = array();
 		foreach ( $containers as $container ) {
 			$fields = array_merge( $fields, $container->get_fields() );
@@ -295,7 +296,7 @@ class Router {
 
 		$values = array();
 		foreach ( $fields as $field ) {
-			if ( ! $field->get_visible_in_rest_api() ) {
+			if ( isset( $restricted[ $field->get_base_name() ] ) || ! $field->get_visible_in_rest_api() ) {
 				continue;
 			}
 
@@ -496,7 +497,7 @@ class Router {
 			return $this->invalid_association_request();
 		}
 
-		$field = Helper::get_field( null, $container_id, $field_id );
+		$field = $this->container_repository->get_editor_field_in_container( $field_id, $container_id );
 		if ( ! ( $field instanceof \Carbon_Fields\Field\Association_Field ) ) {
 			return new \WP_Error( 'carbon_fields_association_not_found', __( 'Association field not found.', 'carbon-fields' ), array( 'status' => 404 ) );
 		}
@@ -560,6 +561,12 @@ class Router {
 			return new \WP_REST_Response( __( 'No option names provided', 'carbon-fields' ) );
 		}
 
+		$restricted = $this->container_repository->get_restricted_theme_options();
+		foreach ( array_keys( $options ) as $key ) {
+			if ( $this->container_repository->is_theme_option_restricted( (string) $key, $restricted ) ) {
+				return new \WP_Error( 'carbon_fields_forbidden_settings', __( 'You are not allowed to edit some of these settings.', 'carbon-fields' ), array( 'status' => 403 ) );
+			}
+		}
 		foreach ( $options as $key => $value ) {
 			try {
 				Helper::set_value( null, 'Theme_Options', '', $key, $value );

@@ -2,6 +2,13 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.20
+
+- Set WordPress capabilities for theme settings pages and individual sections, including inherited access for subsections.
+- Declare server-side field validation in PHP for theme settings and post metadata. The editor opens the field that needs attention, including nested rows and tabs.
+- Show theme settings sections conditionally while preserving values entered in hidden sections.
+- Add a searchable icon field with support for Dashicons and developer-supplied SVG URLs.
+
 ## 3.6.11.19
 
 - Add a link field for published site content or external HTTP and HTTPS URLs, with an optional label and new-tab setting.

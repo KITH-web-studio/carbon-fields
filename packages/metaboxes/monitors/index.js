@@ -12,6 +12,7 @@ import WidgetHandler from './widget-handler';
 import RevisionsFlag from './revisions-flag';
 import initializePostMetaForm from './post-meta-form';
 import initializeTranslationChanges from './translation-changes';
+import initializeFieldValidation from './field-validation';
 import isGutenberg from '../utils/is-gutenberg';
 import { PAGE_NOW_WIDGETS, PAGE_NOW_CUSTOMIZE } from '../lib/constants';
 
@@ -24,6 +25,7 @@ import { PAGE_NOW_WIDGETS, PAGE_NOW_CUSTOMIZE } from '../lib/constants';
 export default function initializeMonitors( context ) {
 	initializePostMetaForm();
 	initializeTranslationChanges( isGutenberg() );
+	initializeFieldValidation( isGutenberg() );
 	const { pagenow } = window.cf.config;
 
 	const MonitorElement = document.createElement( 'div' );

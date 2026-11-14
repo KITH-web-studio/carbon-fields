@@ -125,6 +125,46 @@ add_action( 'carbon_fields_register_fields', function () {
 
 The panel can display existing `add_tab()`, `add_fields()`, and `add_sidebar_section()` declarations. To make a link independent of tab order or translated labels, use `add_section()` with an explicit ID. Saving covers the whole page and preserves the active section and Polylang language. Moving a field into a section preserves its stored value as long as the field name and datastore stay the same.
 
+Use the `conditional_logic` argument of `add_section()` to show a section when other top-level fields in the same panel match. Use their base names and the same operators as for field conditions. The default relation is `AND`.
+
+```php
+$panel->add_fields( array(
+    Field::make( 'checkbox', 'kith_enable_top_bar', 'Enable top bar' ),
+) )->add_section( 'top-bar', 'Top bar', array(
+    Field::make( 'text', 'kith_top_bar_message', 'Message' ),
+), array(
+    'conditional_logic' => array(
+        array( 'field' => 'kith_enable_top_bar', 'value' => true ),
+    ),
+) );
+```
+
+A hidden section and its subsections disappear from navigation and search. Their settings remain in the form, so hiding a section preserves its values when saving. Required fields in hidden sections do not block saving.
+
+### Section permissions
+
+Set the page capability with `set_page_capability()` and pass a WordPress capability as `capability` when declaring a restricted section.
+
+```php
+Container::make( 'theme_options', 'client_options', 'Site settings' )
+    ->set_page_file( 'client-options' )
+    ->set_page_layout( 'panel' )
+    ->set_page_capability( 'edit_pages' )
+    ->add_section( 'contacts', 'Contacts', array(
+        Field::make( 'text', 'client_phone', 'Phone' ),
+    ) )
+    ->add_section( 'integrations', 'Integrations', array(
+        Field::make( 'code', 'client_tracking_code', 'Tracking code' )
+            ->set_language( 'javascript' ),
+    ), array( 'capability' => 'manage_options' ) );
+```
+
+`edit_pages` lets WordPress editors and administrators open this example page. The integrations section also requires `manage_options`. A subsection requires its parent's capability in addition to its own. The default page access rules continue to apply unless you set a page capability explicitly.
+
+Restricted sections and fields are omitted from navigation, search, and editor data. A request that includes restricted fields is rejected. Normal saves leave the restricted values intact, including the shared and localized values in Polylang. Theme option names share storage across pages, so a restriction on an option also applies to another declaration of the same option. The theme options REST endpoint still requires `manage_options` and honors section restrictions. Theme PHP can continue to read values with `carbon_get_theme_option()`.
+
+A dependent select also requires access to its source field. On pages with an explicit page capability, built-in header and footer script fields also require `unfiltered_html`. Assign an appropriate section capability for any custom fields that your theme outputs as executable code.
+
 ## Terms, users, comments, menus, and Multisite
 
 ```php

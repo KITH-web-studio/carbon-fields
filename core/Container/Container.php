@@ -345,8 +345,12 @@ abstract class Container implements Datastore_Holder_Interface {
 	 * @see is_valid_save()
 	 */
 	public function save( $data = null ) {
-		foreach ( $this->fields as $field ) {
-			$field->set_value_from_input( Helper::input() );
+		$this->save_editor_fields( $this->fields, Helper::input() );
+	}
+
+	protected function save_editor_fields( array $fields, array $input ) {
+		foreach ( $fields as $field ) {
+			$field->set_value_from_input( $input );
 			$field->save();
 		}
 	}
@@ -794,6 +798,10 @@ abstract class Container implements Datastore_Holder_Interface {
 	 * @return array
 	 */
 	public function to_json( $load ) {
+		return $this->editor_json( $load, $this->get_fields(), $this->settings );
+	}
+
+	protected function editor_json( $load, array $fields, array $settings ) {
 		$conditions = $this->condition_collection->evaluate( $this->get_condition_types( true ), $this->get_environment_for_request(), array( 'CUSTOM' ) );
 		$conditions = $this->condition_translator->fulfillable_to_foreign( $conditions );
 
@@ -803,7 +811,7 @@ abstract class Container implements Datastore_Holder_Interface {
 			'title' => $this->title,
 			'layout' => $this->layout,
 			'classes' => $this->get_classes(),
-			'settings' => $this->settings,
+			'settings' => $settings,
 			'conditions' => $conditions,
 			'fields' => array(),
 			'nonce' => array(
@@ -812,7 +820,10 @@ abstract class Container implements Datastore_Holder_Interface {
 			),
 		);
 
-		$fields = $this->get_fields();
+		if ( in_array( $this->type, array( 'theme_options', 'post_meta' ), true ) &&
+			\Carbon_Fields\Helper\Field_Validation::has_rules( $fields ) ) {
+			$container_data['settings']['server_validation'] = true;
+		}
 		foreach ( $fields as $field ) {
 			$field_data = $field->to_json( $load );
 			$container_data['fields'][] = $field_data;

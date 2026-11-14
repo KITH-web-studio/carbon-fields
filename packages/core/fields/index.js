@@ -19,6 +19,7 @@ import DateTimeField from './datetime';
 import FileField from './file';
 import HiddenField from './hidden';
 import HtmlField from './html';
+import IconField from './icon';
 import LinkField from './link';
 import MapField from './map';
 import MediaGalleryField from './media-gallery';
@@ -65,6 +66,7 @@ addFilter( 'carbon-fields.register-field-type', 'carbon-fields/core', ( type, co
 	[ 'header_scripts', TextareaField ],
 	[ 'hidden', HiddenField ],
 	[ 'html', HtmlField ],
+	[ 'icon', IconField ],
 	[ 'image', FileField ],
 	[ 'link', LinkField ],
 	[ 'map', MapField ],

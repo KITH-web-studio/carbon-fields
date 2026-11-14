@@ -5,7 +5,7 @@ import { getOptionsSourceValue } from './dependent-select';
 export const ComplexRevealContext = createContext( null );
 
 const supportedTypes = new Set( [
-	'checkbox', 'color', 'file', 'hidden', 'image', 'media_gallery',
+	'checkbox', 'color', 'file', 'hidden', 'icon', 'image', 'media_gallery',
 	'multiselect', 'rich_text', 'select', 'set', 'text', 'textarea'
 ] );
 

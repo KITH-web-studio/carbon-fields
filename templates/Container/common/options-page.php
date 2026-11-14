@@ -90,7 +90,7 @@ if ( ! isset( $container_css_class ) ) {
 				</div>
 			</div>
 		</div>
-		<?php if ( $settings_panel || $sidebar_sections ) : ?>
+		<?php if ( $this->requires_complete_editor_form() ) : ?>
 			<input type="hidden" name="<?php echo esc_attr( $container_id . '_options_complete' ); ?>" value="1">
 		<?php endif; ?>
 	</form>

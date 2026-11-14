@@ -10,6 +10,7 @@ namespace Carbon_Fields;
  * @method static \Carbon_Fields\Field\Checkbox_Field make_checkbox( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Code_Field make_code( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Link_Field make_link( string $name, string $label = null )
+ * @method static \Carbon_Fields\Field\Icon_Field make_icon( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Color_Field make_color( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Complex_Field make_complex( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Date_Field make_date( string $name, string $label = null )

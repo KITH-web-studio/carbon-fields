@@ -61,14 +61,19 @@ export function getFieldById( state, fieldId ) {
 	return state.fields[ fieldId ];
 }
 
+export function getServerError( state, containerId ) {
+	return state.serverError?.containerId === containerId ? state.serverError : null;
+}
+
 /**
  * Returns whether saving is locked.
  *
  * @param  {Object} state
+ * @param  {Function} consider Optional filter for the names of active locks.
  * @return {boolean}
  */
-export function isSavingLocked( state ) {
-	return Object.keys( state.savingLock ).length > 0;
+export function isSavingLocked( state, consider = () => true ) {
+	return Object.keys( state.savingLock ).some( consider );
 }
 
 /**

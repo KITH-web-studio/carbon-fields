@@ -90,7 +90,7 @@ export default compose(
 		const { getValidationError, isFieldVisible } = select( 'carbon-fields/core' );
 
 		return {
-			error: getValidationError( props.id ),
+			error: props.serverError || getValidationError( props.id ),
 			hidden: ! isFieldVisible( props.id )
 		};
 	} ),

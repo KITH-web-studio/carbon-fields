@@ -380,6 +380,13 @@ class Complex_Field extends Field {
 	}
 
 	/**
+	 * Get the populated fields in each row, including their hierarchy and row index.
+	 */
+	public function get_populated_groups() {
+		return $this->get_prefilled_groups( $this->get_value(), $this->get_value_tree() );
+	}
+
+	/**
 	 * Load the field value from an input array based on its name.
 	 *
 	 * @param  array $input Array of field names and values.

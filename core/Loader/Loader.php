@@ -5,6 +5,7 @@ namespace Carbon_Fields\Loader;
 use Carbon_Fields\Container\Repository as ContainerRepository;
 use Carbon_Fields\Exception\Incorrect_Syntax_Exception;
 use Carbon_Fields\Helper\Helper;
+use Carbon_Fields\Helper\Field_Validation;
 use Carbon_Fields\Libraries\Sidebar_Manager\Sidebar_Manager;
 use Carbon_Fields\Pimple\Container as PimpleContainer;
 use Carbon_Fields\Service\Legacy_Storage_Service_v_1_5;
@@ -50,6 +51,7 @@ class Loader {
 		add_action( 'admin_print_footer_scripts', array( $this, 'initialize_ui' ), 9999 );
 		add_action( 'edit_form_after_title', array( $this, 'add_carbon_fields_meta_box_contexts' ) );
 		add_action( 'wp_ajax_carbon_fields_fetch_association_options', array( $this, 'fetch_association_options' ) );
+		add_action( 'wp_ajax_carbon_fields_validate_fields', array( $this, 'validate_fields' ) );
 
 		# Enable the legacy storage service
 		\Carbon_Fields\Carbon_Fields::service( 'legacy_storage' )->enable();
@@ -249,6 +251,7 @@ class Loader {
 				'revisionsInputKey' => $revisions::CHANGE_KEY,
 				'sidebarNonce' => current_user_can( 'edit_theme_options' ) ? wp_create_nonce( Sidebar_Manager::NONCE_ACTION ) : '',
 				'codeEditors' => $code_editors,
+				'validationPostRoute' => isset( $GLOBALS['post'] ) && function_exists( 'rest_get_route_for_post' ) ? rest_get_route_for_post( $GLOBALS['post'] ) : '',
 				'linkLanguage' => \Carbon_Fields\Integration\Polylang::current_language(),
 				'wp_version' => $wp_version,
 			)
@@ -394,15 +397,50 @@ class Loader {
 		$page = isset( $_GET['page'] ) ? absint( $_GET['page'] )              : 1;
 		$term = isset( $_GET['term'] ) ? sanitize_text_field( $_GET['term'] ) : '';
 
-		$container_id = $_GET['container_id'];
-		$field_name   = $_GET['field_name'];
+		$container_id = isset( $_GET['container_id'] ) && is_string( $_GET['container_id'] ) ? wp_unslash( $_GET['container_id'] ) : '';
+		$field_name = isset( $_GET['field_name'] ) && is_string( $_GET['field_name'] ) ? wp_unslash( $_GET['field_name'] ) : '';
 
 		/** @var \Carbon_Fields\Field\Association_Field $field */
-		$field = Helper::get_field( null, $container_id, $field_name );
+		$field = $this->container_repository->get_editor_field_in_container( $field_name, $container_id );
+		if ( ! ( $field instanceof \Carbon_Fields\Field\Association_Field ) ) {
+			wp_send_json_error( __( 'Association field not found.', 'carbon-fields' ), 404 );
+		}
 
 		return wp_send_json_success( $field->get_options( array(
 			'page' => $page,
 			'term' => $term,
 		) ) );
+	}
+
+	/**
+	 * Check the submitted form without saving anything.
+	 */
+	public function validate_fields() {
+		$input = Helper::input();
+		$requested = isset( $input['_cf_validation'] ) && is_array( $input['_cf_validation'] ) ? array_filter( $input['_cf_validation'], 'is_string' ) : array();
+		$post_id = isset( $input['post_ID'] ) && is_scalar( $input['post_ID'] ) ? absint( $input['post_ID'] ) : 0;
+		$checked = array();
+		if ( 'POST' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) {
+			foreach ( $this->container_repository->get_containers() as $container ) {
+				$id = $container->get_id();
+				if ( ! in_array( $id, $requested, true ) || ! in_array( $container->type, array( 'post_meta', 'theme_options' ), true ) ||
+					! Field_Validation::has_rules( $container->get_fields() ) ) {
+					continue;
+				}
+				$error = 'post_meta' === $container->type ? $container->validate_editor_request( $post_id ) : $container->validate_editor_request();
+				if ( is_wp_error( $error ) ) {
+					wp_send_json_error( array(
+						'containerId' => $id,
+						'message' => $error->get_error_message(),
+						'path' => $error->get_error_data()['path'] ?? array(),
+					), 422 );
+				}
+				$checked[] = $id;
+			}
+			if ( $checked && ! array_diff( $requested, $checked ) ) {
+				wp_send_json_success();
+			}
+		}
+		wp_send_json_error( array( 'message' => __( 'Check the form and try saving again.', 'carbon-fields' ) ), 400 );
 	}
 }

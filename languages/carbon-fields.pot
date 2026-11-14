@@ -218,3 +218,15 @@ msgstr ""
 
 msgid "Invalid link search."
 msgstr ""
+
+msgid "Choose an icon from the available options."
+msgstr ""
+
+msgid "Check the form and try saving again."
+msgstr ""
+
+msgid "Check this field and try again."
+msgstr ""
+
+msgid "You are not allowed to edit some of these settings."
+msgstr ""

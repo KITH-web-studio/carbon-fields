@@ -25,6 +25,7 @@ export { default as withFilters } from './hocs/with-filters';
 export { default as withProps } from './hocs/with-props';
 export { default as withValidation, getFieldValidationError } from './hocs/with-validation';
 export { default as withConditionalLogic } from './hocs/with-conditional-logic';
+export { default as compareConditionalValues } from './hocs/with-conditional-logic/compare';
 export { default as uniqueId } from './utils/unique-id';
 export { default as fromSelector } from './utils/from-selector';
 export { getDependentValue, getSelectSourceValue, isSelectSource } from './utils/dependent-select';

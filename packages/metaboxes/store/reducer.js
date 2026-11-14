@@ -269,5 +269,6 @@ export default combineReducers( {
 	fields,
 	savingLock,
 	isDirty,
-	isFieldUpdated
+	isFieldUpdated,
+	serverError: ( state = null, action ) => action.type === 'SET_SERVER_ERROR' ? action.payload : state
 } );

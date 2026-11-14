@@ -55,6 +55,10 @@ class Select_Field extends Predefined_Options_Field {
 		return $this;
 	}
 
+	public function get_options_source() {
+		return $this->options_source;
+	}
+
 	/**
 	 * {@inheritDoc}
 	 */

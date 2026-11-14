@@ -2,16 +2,21 @@
 
 namespace Carbon_Fields\Container;
 
+use Carbon_Fields\Carbon_Fields;
 use Carbon_Fields\Datastore\Datastore;
 use Carbon_Fields\Exception\Incorrect_Syntax_Exception;
 use Carbon_Fields\Integration\Polylang;
 use Carbon_Fields\Helper\Helper;
+use Carbon_Fields\Helper\Field_Validation;
 
 /**
  * Theme options container class.
  */
 class Theme_Options_Container extends Container {
+	use \Carbon_Fields\Helper\Conditional_Logic;
 	protected $multilingual = true;
+	protected $page_capability = null;
+	protected $default_access_condition = null;
 
 	/**
 	 * Keep a container shared across languages when explicitly disabled.
@@ -40,10 +45,25 @@ class Theme_Options_Container extends Container {
 		return $this->get_id() . '_language';
 	}
 
+	protected function get_nonce_value() {
+		return wp_create_nonce( $this->editor_nonce_action() );
+	}
+
 	protected function verified_nonce_in_request() {
 		$input = Helper::input();
 		$name = $this->get_nonce_name();
-		return isset( $input[ $name ] ) && is_string( $input[ $name ] ) && parent::verified_nonce_in_request();
+		return isset( $input[ $name ] ) && is_string( $input[ $name ] ) && wp_verify_nonce( $input[ $name ], $this->editor_nonce_action() );
+	}
+
+	protected function editor_nonce_action() {
+		$name = $this->get_nonce_name();
+		$denied = array_intersect_key( $this->restricted_option_names(), array_flip( $this->field_base_names( $this->fields ) ) );
+		if ( ! $denied ) {
+			return $name;
+		}
+		// A form opened under different permissions cannot clear newly editable fields.
+		ksort( $denied );
+		return $name . ':' . hash( 'sha256', implode( ',', array_keys( $denied ) ) );
 	}
 
 	protected function verified_language_in_request() {
@@ -155,23 +175,48 @@ class Theme_Options_Container extends Container {
 	}
 
 	/**
+	 * Replace the default manage_options requirement for this page.
+	 * Additional container conditions still apply.
+	 */
+	public function set_page_capability( $capability ) {
+		if ( ! $this->valid_capability_name( $capability ) ) {
+			Incorrect_Syntax_Exception::raise( 'The settings page requires a valid WordPress capability name.' );
+			return $this;
+		}
+		if ( $this->default_access_condition ) {
+			$this->condition_collection->remove_fulfillable( $this->default_access_condition );
+			$this->default_access_condition = null;
+		}
+		$this->page_capability = $capability;
+		return $this;
+	}
+
+	protected function valid_capability_name( $value ) {
+		return is_string( $value ) && preg_match( '/^[a-z][a-z0-9_-]*$/D', $value );
+	}
+
+	/**
 	 * Add a section with a stable URL identifier. A subsection can reference an earlier top-level section.
 	 *
 	 * @param string $id
 	 * @param string $title
 	 * @param array $fields
-	 * @param array $args Optional description, Dashicons icon and parent section ID.
+	 * @param array $args Optional description, Dashicons icon, parent section ID, conditional logic and capability.
 	 * @return static
 	 */
 	public function add_section( $id, $title, $fields, $args = array() ) {
 		$sections = isset( $this->settings['panel_sections'] ) ? $this->settings['panel_sections'] : array();
-		$args = wp_parse_args( $args, array( 'description' => '', 'icon' => '', 'parent' => '' ) );
+		$args = wp_parse_args( $args, array( 'description' => '', 'icon' => '', 'parent' => '', 'conditional_logic' => array(), 'capability' => null ) );
 		if ( ! is_string( $id ) || ! preg_match( '/^[a-z0-9][a-z0-9_-]*$/D', $id ) || isset( $sections[ $id ] ) ) {
 			Incorrect_Syntax_Exception::raise( 'Settings panel sections need unique lowercase IDs.' );
 			return $this;
 		}
 		if ( $args['parent'] && ( ! isset( $sections[ $args['parent'] ] ) || $sections[ $args['parent'] ]['parent'] ) ) {
 			Incorrect_Syntax_Exception::raise( 'A settings panel subsection must reference a previously declared top-level section.' );
+			return $this;
+		}
+		if ( null !== $args['capability'] && ! $this->valid_capability_name( $args['capability'] ) ) {
+			Incorrect_Syntax_Exception::raise( 'A settings section capability must be a valid WordPress capability name.' );
 			return $this;
 		}
 
@@ -186,6 +231,8 @@ class Theme_Options_Container extends Container {
 			'description' => $args['description'],
 			'icon' => sanitize_html_class( $args['icon'] ),
 			'parent' => $args['parent'],
+			'conditional_logic' => $this->parse_conditional_rules( $args['conditional_logic'] ),
+			'capability' => $args['capability'],
 			'fields' => array_map( function( $field ) {
 				return $field->get_name();
 			}, array_values( $fields ) ),
@@ -193,12 +240,109 @@ class Theme_Options_Container extends Container {
 		return $this;
 	}
 
-	public function to_json( $load ) {
-		$data = parent::to_json( $load );
-		if ( $this->uses_settings_panel() ) {
-			$data['settings']['panel_sections'] = isset( $this->settings['panel_sections'] ) ? array_values( $this->settings['panel_sections'] ) : array();
+	protected function section_is_allowed( array $section, array $sections ) {
+		return ( ! isset( $section['capability'] ) || current_user_can( $section['capability'] ) ) &&
+			( ! $section['parent'] || $this->section_is_allowed( $sections[ $section['parent'] ], $sections ) );
+	}
+
+	/**
+	 * Root option keys denied by this declaration. Theme options share storage across pages.
+	 */
+	public function get_restricted_option_names() {
+		$sections = $this->settings['panel_sections'] ?? array();
+		if ( ! $this->page_capability && ! $sections ) {
+			return array();
 		}
-		return $data;
+		if ( $this->page_capability && ! current_user_can( $this->page_capability ) ) {
+			return $this->field_base_names( $this->fields );
+		}
+		$denied = array();
+		foreach ( $sections as $section ) {
+			if ( ! $this->section_is_allowed( $section, $sections ) ) {
+				foreach ( $section['fields'] as $name ) {
+					$denied[ $name ] = true;
+				}
+			}
+		}
+		$names = array();
+		$allow_scripts = ! $this->page_capability || current_user_can( 'unfiltered_html' );
+		foreach ( $this->fields as $field ) {
+			if ( isset( $denied[ $field->get_name() ] ) || ( ! $allow_scripts && $this->contains_scripts( $field ) ) ) {
+				$names[] = $field->get_base_name();
+			}
+		}
+		return $names;
+	}
+
+	protected function contains_scripts( \Carbon_Fields\Field\Field $field ) {
+		if ( $field instanceof \Carbon_Fields\Field\Scripts_Field ) {
+			return true;
+		}
+		if ( $field instanceof \Carbon_Fields\Field\Complex_Field ) {
+			foreach ( $field->get_fields() as $child ) {
+				if ( $this->contains_scripts( $child ) ) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	protected function field_base_names( array $fields ) {
+		return array_map( function( $field ) {
+			return $field->get_base_name();
+		}, $fields );
+	}
+
+	protected function restricted_option_names() {
+		return 'theme_options' === $this->type
+			? Carbon_Fields::resolve( 'container_repository' )->get_restricted_theme_options()
+			: array_fill_keys( $this->get_restricted_option_names(), true );
+	}
+
+	protected function get_editable_fields( array $denied ) {
+		return array_filter( $this->get_fields(), function( $field ) use ( $denied ) {
+			return ! isset( $denied[ $field->get_base_name() ] );
+		} );
+	}
+
+	protected function editable_sections( array $field_names ) {
+		$sections = $this->settings['panel_sections'] ?? array();
+		$editable = array();
+		foreach ( $sections as $section ) {
+			if ( $this->section_is_allowed( $section, $sections ) ) {
+				unset( $section['capability'] );
+				$section['fields'] = array_values( array_intersect( $section['fields'], $field_names ) );
+				$editable[] = $section;
+			}
+		}
+		return $editable;
+	}
+
+	protected function editor_field_names( array $fields ) {
+		return array_map( function( $field ) {
+			return $field->get_name();
+		}, $fields );
+	}
+
+	public function to_json( $load ) {
+		$denied = $this->restricted_option_names();
+		$settings = $this->settings;
+		$fields = $this->get_editable_fields( $denied );
+		$field_names = $this->editor_field_names( $fields );
+		if ( $denied && isset( $settings['tabs'] ) ) {
+			$settings['tabs'] = array_filter( array_map( function( $names ) use ( $field_names ) {
+				return array_values( array_intersect( $names, $field_names ) );
+			}, $settings['tabs'] ) );
+		}
+		unset( $settings['panel_sections'] );
+		if ( $this->uses_settings_panel() ) {
+			$settings['panel_sections'] = $this->editable_sections( $field_names );
+		}
+		if ( isset( $settings['sidebar_sections'] ) ) {
+			$settings['sidebar_sections'] = $this->get_sidebar_sections();
+		}
+		return $this->editor_json( $load, $fields, $settings );
 	}
 
 	/**
@@ -230,7 +374,23 @@ class Theme_Options_Container extends Container {
 	}
 
 	protected function get_sidebar_sections() {
-		return isset( $this->settings['sidebar_sections'] ) ? $this->settings['sidebar_sections'] : array();
+		$sections = $this->settings['sidebar_sections'] ?? array();
+		if ( ! $sections ) {
+			return $sections;
+		}
+		$fields = $this->get_editable_fields( $this->restricted_option_names() );
+		$names = $this->editor_field_names( $fields );
+		foreach ( $sections as $index => $section ) {
+			$section['fields'] = array_values( array_intersect( $section['fields'], $names ) );
+			$sections[ $index ] = $section;
+		}
+		return array_values( array_filter( $sections, function( $section ) {
+			return ! empty( $section['fields'] );
+		} ) );
+	}
+
+	protected function requires_complete_editor_form() {
+		return $this->uses_settings_panel() || ! empty( $this->settings['sidebar_sections'] );
 	}
 
 	/**
@@ -239,7 +399,7 @@ class Theme_Options_Container extends Container {
 	protected function get_untabbed_fields() {
 		$fields = parent::get_untabbed_fields();
 		$sidebar_fields = array();
-		$sections = $this->get_sidebar_sections();
+		$sections = $this->settings['sidebar_sections'] ?? array();
 		if ( $this->uses_settings_panel() && isset( $this->settings['panel_sections'] ) ) {
 			$sections = array_merge( $sections, $this->settings['panel_sections'] );
 		}
@@ -263,6 +423,8 @@ class Theme_Options_Container extends Container {
 
 		if ( apply_filters( 'carbon_fields_' . $type . '_container_admin_only_access', true, $title, $this ) ) {
 			$this->where( 'current_user_capability', '=', 'manage_options' );
+			$conditions = $this->condition_collection->get_fulfillables();
+			$this->default_access_condition = $conditions ? end( $conditions )['fulfillable'] : null;
 		}
 	}
 
@@ -312,11 +474,14 @@ class Theme_Options_Container extends Container {
 	 * @return bool
 	 */
 	public function is_valid_save() {
+		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || ! $this->is_valid_attach_for_object( null ) ) {
+			return false;
+		}
 		if ( ! $this->verified_nonce_in_request() ) {
 			return false;
 		}
 
-		if ( $this->uses_settings_panel() || $this->get_sidebar_sections() ) {
+		if ( $this->requires_complete_editor_form() ) {
 			$input = Helper::input();
 			$complete = $this->get_id() . '_options_complete';
 			if ( ! isset( $input[ $complete ] ) || '1' !== $input[ $complete ] ) {
@@ -329,8 +494,17 @@ class Theme_Options_Container extends Container {
 			return false;
 		}
 		$input = Helper::input();
-		foreach ( $this->fields as $field ) {
+		$denied = $this->restricted_option_names();
+		if ( $this->has_restricted_input( $input, $denied ) ) {
+			$this->errors[] = esc_html( $this->restricted_settings_error()->get_error_message() );
+			return false;
+		}
+		foreach ( $this->get_editable_fields( $denied ) as $field ) {
 			$name = $field->get_name();
+			if ( $field instanceof \Carbon_Fields\Field\Icon_Field && isset( $input[ $name ] ) && ! $field->is_valid_form_value( $input[ $name ] ) ) {
+				$this->errors[] = esc_html( $field->get_label() . ' · ' . __( 'Choose an icon from the available options.', 'carbon-fields' ) );
+				return false;
+			}
 			if ( isset( $input[ $name ] ) &&
 				( $field instanceof \Carbon_Fields\Field\Number_With_Unit_Field || $field instanceof \Carbon_Fields\Field\Typography_Field || $field instanceof \Carbon_Fields\Field\Link_Field ) &&
 				! $field->is_valid_form_value( $input[ $name ] ) ) {
@@ -341,7 +515,40 @@ class Theme_Options_Container extends Container {
 				return false;
 			}
 		}
-		return $this->is_valid_attach_for_object( null );
+		return true;
+	}
+
+	protected function restricted_settings_error() {
+		return new \WP_Error( 'carbon_fields_forbidden_settings', __( 'You are not allowed to edit some of these settings.', 'carbon-fields' ), array( 'status' => 403 ) );
+	}
+
+	protected function has_restricted_input( array $input, array $denied ) {
+		foreach ( $this->fields as $field ) {
+			if ( isset( $denied[ $field->get_base_name() ] ) && array_key_exists( $field->get_name(), $input ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public function validate_editor_request() {
+		if ( ! $this->is_valid_attach_for_object( null ) || ! $this->_is_valid_save() ) {
+			$message = $this->errors ? html_entity_decode( $this->errors[0], ENT_QUOTES, 'UTF-8' )
+				: __( 'Check the form and try saving again.', 'carbon-fields' );
+			return new \WP_Error( 'carbon_fields_invalid_form', $message );
+		}
+
+		$input = Helper::input();
+		$language = $this->is_multilingual() ? $input[ $this->language_input_name() ] : null;
+		return Polylang::with_language( $language, function() use ( $input ) {
+			return $this->validate_editor_input( $input );
+		} );
+	}
+
+	protected function validate_editor_input( array $input ) {
+		$fields = $this->get_editable_fields( $this->restricted_option_names() );
+		$sections = $this->uses_settings_panel() ? $this->editable_sections( $this->editor_field_names( $fields ) ) : array();
+		return Field_Validation::validate( $fields, $input, $sections );
 	}
 
 	/**
@@ -351,19 +558,33 @@ class Theme_Options_Container extends Container {
 	 * @param mixed $user_data
 	 */
 	public function save( $user_data = null ) {
+		$input = Helper::input();
+		$denied = $this->restricted_option_names();
+		if ( ( $this->page_capability && ! current_user_can( $this->page_capability ) ) || $this->has_restricted_input( $input, $denied ) ) {
+			return $this->restricted_settings_error();
+		}
 		if ( ! $this->verified_language_in_request() ) {
 			return new \WP_Error( 'carbon_fields_invalid_language', __( 'The settings language could not be verified. Reload the page and try again.', 'carbon-fields' ) );
 		}
-		$input = Helper::input();
 		$language = $this->is_multilingual() ? $input[ $this->language_input_name() ] : null;
-		Polylang::with_language( $language, function() use ( $user_data ) {
+		$error = Polylang::with_language( $language, function() use ( $user_data, $input, $denied ) {
+			if ( 'theme_options' === $this->type ) {
+				$error = $this->validate_editor_input( $input );
+				if ( $error ) {
+					return $error;
+				}
+			}
 			try {
-				parent::save( $user_data );
+				$this->save_editor_fields( $this->get_editable_fields( $denied ), $input );
 			} catch ( Incorrect_Syntax_Exception $e ) {
 				$this->errors[] = $e->getMessage();
 			}
 			do_action( 'carbon_fields_' . $this->type . '_container_saved', $user_data, $this );
 		} );
+		if ( is_wp_error( $error ) ) {
+			$this->errors[] = esc_html( $error->get_error_message() );
+			return $error;
+		}
 
 		if ( ! headers_sent() ) {
 			$args = array( 'settings-updated' => 'true' );
@@ -389,7 +610,10 @@ class Theme_Options_Container extends Container {
 	 * @return bool True if the container is allowed to be attached
 	 */
 	public function is_valid_attach_for_request() {
-		return $this->static_conditions_pass();
+		if ( ( $this->page_capability && ! current_user_can( $this->page_capability ) ) || ! $this->static_conditions_pass() ) {
+			return false;
+		}
+		return ! $this->fields || (bool) $this->get_editable_fields( $this->restricted_option_names() );
 	}
 
 	/**
@@ -408,7 +632,7 @@ class Theme_Options_Container extends Container {
 	 * @return bool
 	 */
 	public function is_valid_attach_for_object( $object_id = null ) {
-		return $this->all_conditions_pass( intval( $object_id ) );
+		return ( ! $this->page_capability || current_user_can( $this->page_capability ) ) && $this->all_conditions_pass( intval( $object_id ) );
 	}
 
 	/**
@@ -416,15 +640,14 @@ class Theme_Options_Container extends Container {
 	 * Hook the container saving action.
 	 */
 	public function attach() {
-		// use the "read" capability because conditions will handle actual access and save capability checking
-		// before the attach() method is called
+		$capability = $this->page_capability ?? 'read';
 
 		// Add menu page
 		if ( ! $this->settings['parent'] ) {
 			add_menu_page(
 				$this->title,
 				$this->settings['menu_title'] ? $this->settings['menu_title'] : $this->title,
-				'read',
+				$capability,
 				$this->get_page_file(),
 				array( $this, 'render' ),
 				$this->settings['icon'],
@@ -436,7 +659,7 @@ class Theme_Options_Container extends Container {
 			$this->settings['parent'],
 			$this->title,
 			$this->settings['menu_title'] ? $this->settings['menu_title'] : $this->title,
-			'read',
+			$capability,
 			$this->get_page_file(),
 			array( $this, 'render' )
 		);
@@ -464,6 +687,9 @@ class Theme_Options_Container extends Container {
 	 * Output the container markup
 	 */
 	public function render() {
+		if ( $this->page_capability && ! current_user_can( $this->page_capability ) ) {
+			wp_die( esc_html__( 'Sorry, you are not allowed to access this page.' ), '', array( 'response' => 403 ) );
+		}
 		$input = stripslashes_deep( $_GET );
 		$request_settings_updated = isset( $input['settings-updated'] ) ? $input['settings-updated'] : '';
 		if ( $request_settings_updated === 'true' ) {

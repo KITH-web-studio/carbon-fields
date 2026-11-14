@@ -222,3 +222,15 @@ msgstr "Перевірте посилання та спробуйте ще ра�
 
 msgid "Invalid link search."
 msgstr "Некоректний запит пошуку посилань."
+
+msgid "Choose an icon from the available options."
+msgstr "Виберіть іконку з доступних варіантів."
+
+msgid "Check the form and try saving again."
+msgstr "Перевірте форму та спробуйте зберегти ще раз."
+
+msgid "Check this field and try again."
+msgstr "Перевірте це поле та спробуйте ще раз."
+
+msgid "You are not allowed to edit some of these settings."
+msgstr "У вас немає прав на зміну деяких із цих налаштувань."

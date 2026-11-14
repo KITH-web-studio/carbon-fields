@@ -17,6 +17,7 @@ use Carbon_Fields\Exception\Incorrect_Syntax_Exception;
  * Implements factory design pattern.
  */
 class Field implements Datastore_Holder_Interface {
+	use \Carbon_Fields\Helper\Conditional_Logic;
 
 	/**
 	 * Array of field class names that have had their activation method called
@@ -24,6 +25,13 @@ class Field implements Datastore_Holder_Interface {
 	 * @var array<string>
 	 */
 	protected static $activated_field_types = array();
+
+	/**
+	 * Optional server-side editor validation callback.
+	 *
+	 * @var callable|null
+	 */
+	protected $validation_callback;
 
 	/**
 	 * Globally unique field identificator. Generated randomly
@@ -990,6 +998,27 @@ class Field implements Datastore_Holder_Interface {
 	}
 
 	/**
+	 * Validate a submitted editor value using the other values in its container or complex row.
+	 *
+	 * The callback receives ($value, $values, $field) and returns true or a plain-text error message.
+	 *
+	 * @param callable $callback
+	 * @return self
+	 */
+	public function set_validation_callback( callable $callback ) {
+		$this->validation_callback = $callback;
+		return $this;
+	}
+
+	public function has_validation_callback() {
+		return null !== $this->validation_callback;
+	}
+
+	public function validate_editor_value( $value, array $values ) {
+		return $this->has_validation_callback() ? call_user_func( $this->validation_callback, $value, $values, $this ) : true;
+	}
+
+	/**
 	 * HTML id attribute getter.
 	 * @return string
 	 */
@@ -1026,75 +1055,6 @@ class Field implements Datastore_Holder_Interface {
 	 */
 	public function get_conditional_logic() {
 		return $this->conditional_logic;
-	}
-
-	/**
-	 * Validate and parse a conditional logic rule.
-	 *
-	 * @param  array $rule
-	 * @return array
-	 */
-	protected function parse_conditional_rule( $rule ) {
-		$allowed_operators = array( '=', '!=', '>', '>=', '<', '<=', 'IN', 'NOT IN', 'INCLUDES', 'EXCLUDES' );
-		$array_operators = array( 'IN', 'NOT IN' );
-
-		// Check if the rule is valid
-		if ( ! is_array( $rule ) || empty( $rule['field'] ) ) {
-			Incorrect_Syntax_Exception::raise( 'Invalid conditional logic rule format. The rule should be an array with the "field" key set.' );
-			return null;
-		}
-
-		// Fill in optional keys with defaults
-		$rule = array_merge( array(
-			'compare' => '=',
-			'value' => '',
-		), $rule );
-
-		if ( ! in_array( $rule['compare'], $allowed_operators ) ) {
-			Incorrect_Syntax_Exception::raise( 'Invalid conditional logic compare operator: <code>' . $rule['compare'] . '</code><br>Allowed operators are: <code>' .
-			implode( ', ', $allowed_operators ) . '</code>' );
-			return null;
-		}
-
-		if ( in_array( $rule['compare'], $array_operators ) && ! is_array( $rule['value'] ) ) {
-			Incorrect_Syntax_Exception::raise( 'Invalid conditional logic value format. An array is expected, when using the "' . $rule['compare'] . '" operator.' );
-			return null;
-		}
-
-		return $rule;
-	}
-
-	/**
-	 * Validate and parse conditional logic rules.
-	 *
-	 * @param  array $rules
-	 * @return array
-	 */
-	protected function parse_conditional_rules( $rules ) {
-		if ( ! is_array( $rules ) ) {
-			Incorrect_Syntax_Exception::raise( 'Conditional logic rules argument should be an array.' );
-			return array();
-		}
-
-		$parsed_rules = array(
-			'relation' => Helper::get_relation_type_from_array( $rules ),
-			'rules' => array(),
-		);
-
-		$rules_only = $rules;
-		unset( $rules_only['relation'] ); // Skip the relation key as it is already handled above
-
-		foreach ( $rules_only as $key => $rule ) {
-			$rule = $this->parse_conditional_rule( $rule );
-
-			if ( $rule === null ) {
-				return array();
-			}
-
-			$parsed_rules['rules'][] = $rule;
-		}
-
-		return $parsed_rules;
 	}
 
 	/**

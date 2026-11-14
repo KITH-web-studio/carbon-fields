@@ -169,3 +169,7 @@ export function unlockSaving( lockName ) {
 		}
 	};
 }
+
+export function setServerError( error ) {
+	return { type: 'SET_SERVER_ERROR', payload: error };
+}

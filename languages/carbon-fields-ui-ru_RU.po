@@ -436,3 +436,24 @@ msgstr "Текст ссылки"
 
 msgid "Open in a new tab"
 msgstr "Открывать в новой вкладке"
+
+msgid "Choose an icon"
+msgstr "Выбрать иконку"
+
+msgid "Search icons"
+msgstr "Искать иконки"
+
+msgid "Icons"
+msgstr "Иконки"
+
+msgid "No icons found."
+msgstr "Иконки не найдены."
+
+msgid "Check the form and try saving again."
+msgstr "Проверьте форму и попробуйте сохранить ещё раз."
+
+msgid ""
+"The fields changed during validation. Save again to check the new values."
+msgstr ""
+"Поля изменились во время проверки. Нажмите «Сохранить» ещё раз, чтобы "
+"проверить новые значения."

@@ -212,3 +212,22 @@ msgstr ""
 
 msgid "Open in a new tab"
 msgstr ""
+
+msgid "Choose an icon"
+msgstr ""
+
+msgid "Search icons"
+msgstr ""
+
+msgid "Icons"
+msgstr ""
+
+msgid "No icons found."
+msgstr ""
+
+msgid "Check the form and try saving again."
+msgstr ""
+
+msgid ""
+"The fields changed during validation. Save again to check the new values."
+msgstr ""

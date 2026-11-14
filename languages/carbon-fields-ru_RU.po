@@ -217,3 +217,15 @@ msgstr "Проверьте ссылку и повторите попытку."
 
 msgid "Invalid link search."
 msgstr "Некорректный запрос поиска ссылок."
+
+msgid "Choose an icon from the available options."
+msgstr "Выберите иконку из доступных вариантов."
+
+msgid "Check the form and try saving again."
+msgstr "Проверьте форму и попробуйте сохранить ещё раз."
+
+msgid "Check this field and try again."
+msgstr "Проверьте это поле и попробуйте ещё раз."
+
+msgid "You are not allowed to edit some of these settings."
+msgstr "У вас нет прав на изменение некоторых из этих настроек."

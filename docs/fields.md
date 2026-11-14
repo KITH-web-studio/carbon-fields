@@ -29,6 +29,27 @@ Create a field with `Field::make( $type, $name, $label )`. Use the same stable n
 
 Common settings include `set_default_value()`, `set_required()`, `set_width()`, `set_help_text()`, `set_classes()`, and `set_attribute()`. A default fills in an unset value. The width is a percentage where the editor layout supports it. Input attributes and required flags guide the editor. Validate values separately when writing data from your own code.
 
+## Custom validation
+
+Use `set_validation_callback()` in a `theme_options` or `post_meta` container to validate a field on the server. The callback receives the submitted value, an array of submitted values keyed by their base field names, and the field object. In a complex field, the array contains the values from the same row.
+
+```php
+Field::make( 'complex', 'campaigns', 'Campaigns' )->add_fields( array(
+    Field::make( 'text', 'starts_at', 'Start date' )->set_attribute( 'type', 'date' ),
+    Field::make( 'text', 'ends_at', 'End date' )->set_attribute( 'type', 'date' )
+        ->set_validation_callback( function( $end, $values ) {
+            if ( '' === $end || '' === $values['starts_at'] || $end > $values['starts_at'] ) {
+                return true;
+            }
+            return __( 'Enter an end date after the start date.', 'my-theme' );
+        } ),
+) );
+```
+
+Return `true` to accept the value or a plain-text error message to reject it. The editor opens the field's section and row tabs and keeps the unsaved values in the form. The container stops on the first error before writing its fields. Fields and sections hidden by conditional logic are skipped. An inactive tab or section still participates in validation when it is available.
+
+Use the callback for checks without side effects. The editor runs it before submission and PHP runs it again during saving. Programmatic setters such as `carbon_set_post_meta()` and `carbon_set_theme_option()` keep their existing behavior.
+
 ## Show a field conditionally
 
 The summary appears when the editor selects **Short**. Use the controlling field's name and its stored option value. Rules use `AND` by default. Set the `relation` key to `OR` to show the field when any rule matches. `IN` and `NOT IN` take a list of values.
@@ -155,6 +176,24 @@ foreach ( (array) carbon_get_the_post_meta( 'kith_related_pages' ) as $item ) {
 ```
 
 Read text with `esc_html()`, URLs with `esc_url()`, and rich text with `wp_kses_post()` where appropriate for your template. An ID-backed attachment lets WordPress resolve its current URL and image size.
+
+## Choose an icon
+
+Declare the choices for an `icon` field with `set_icons()`. Each icon has a stable key, a label, and either a Dashicons class or an image URL, including SVG images. Editors can search by label or key and see the icon before selecting it.
+
+```php
+Field::make( 'icon', 'kith_button_icon', 'Button icon' )
+    ->set_icons( array(
+        'mail' => array( 'label' => 'Email', 'dashicon' => 'dashicons-email-alt' ),
+        'download' => array(
+            'label' => 'Download',
+            'url' => get_theme_file_uri( 'assets/icons/download.svg' ),
+        ),
+    ) )
+    ->set_default_value( 'mail' );
+```
+
+The field returns the selected key or an empty string. Use the key to look up the icon in your theme's declared collection when rendering it.
 
 ## Link to site content or an external URL
 

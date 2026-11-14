@@ -1,7 +1,7 @@
 import { dispatch, select, useSelect } from '@wordpress/data';
 import { createPortal, useEffect, useMemo, useRef, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import { focusComplexField, getDependentValue, getFieldValidationError } from '@carbon-fields/core';
+import { compareConditionalValues, focusComplexField, getDependentValue, getFieldValidationError } from '@carbon-fields/core';
 import { getOptionsSourceValue } from '../../utils/dependent-select';
 
 const sectionParam = 'cf-section';
@@ -48,14 +48,37 @@ function normalizeSearch( value ) {
 	return value.normalize( 'NFKD' ).replace( /[\u0300-\u036f]/g, '' ).toLocaleLowerCase();
 }
 
-export default function SettingsPanel( { container, renderField } ) {
+function visibleSectionIds( sections, fieldsByBaseName, getField ) {
+	const visible = new Set();
+	for ( const section of sections ) {
+		if ( section.parent && ! visible.has( section.parent ) ) {
+			continue;
+		}
+		const { relation, rules } = section.conditional_logic || {};
+		const matches = ( rule ) => {
+			const field = getField( fieldsByBaseName.get( rule.field ) );
+			if ( ! field ) {
+				return false;
+			}
+			const value = field.dependent_options ? getDependentValue( field, getOptionsSourceValue( field, getField ), field.value ) : field.value;
+			if ( [ 'INCLUDES', 'EXCLUDES' ].includes( rule.compare ) && ! Array.isArray( value ) && typeof value !== 'string' ) {
+				return false;
+			}
+			return compareConditionalValues( value, rule.compare, rule.value );
+		};
+		if ( ! rules?.length || ( relation === 'OR' ? rules.some( matches ) : rules.every( matches ) ) ) {
+			visible.add( section.id );
+		}
+	}
+	return Array.from( visible );
+}
+
+export default function SettingsPanel( { container, renderField, serverError } ) {
 	const sections = useMemo( () => buildSections( container ), [ container ] );
 	const fieldByName = useMemo( () => new Map( container.fields.map( ( field ) => [ field.name, field ] ) ), [ container ] );
-	const readSection = () => {
-		const id = new URL( window.location.href ).searchParams.get( sectionParam );
-		return sections.find( ( section ) => section.id === id )?.id || sections[ 0 ]?.id;
-	};
-	const [ current, setCurrent ] = useState( readSection );
+	const fieldIdByBaseName = useMemo( () => new Map( container.fields.map( ( field ) => [ field.base_name, field.id ] ) ), [ container ] );
+	const readSection = () => new URL( window.location.href ).searchParams.get( sectionParam );
+	const [ requested, setRequested ] = useState( readSection );
 	const [ query, setQuery ] = useState( '' );
 	const [ problem, setProblem ] = useState( '' );
 	const [ saving, setSaving ] = useState( false );
@@ -66,9 +89,19 @@ export default function SettingsPanel( { container, renderField } ) {
 	const resultsList = useRef();
 	const toolbar = document.getElementById( container.id + '-toolbar' );
 	const form = toolbar?.closest( 'form' );
-	const dirty = useSelect( ( store ) => store( 'carbon-fields/metaboxes' ).isDirty(), [] );
+	const { dirty, availableIds } = useSelect( ( stores ) => {
+		const store = stores( 'carbon-fields/metaboxes' );
+		return {
+			dirty: store.isDirty(),
+			availableIds: visibleSectionIds( sections, fieldIdByBaseName, store.getFieldById ).join( ' ' )
+		};
+	}, [ sections, fieldIdByBaseName ] );
+	const available = new Set( availableIds.split( ' ' ).filter( Boolean ) );
+	const visibleSections = sections.filter( ( section ) => available.has( section.id ) );
+	const current = available.has( requested ) ? requested : visibleSections[ 0 ]?.id;
+	const canValidate = ( element ) => ! element?.closest( '[data-cf-section-unavailable]' );
 	const words = normalizeSearch( query.trim() ).split( /\s+/ );
-	const results = query.trim() ? [ ...sections, ...( container.settings.sidebar_sections || [] ) ].flatMap( ( section, index ) => {
+	const results = query.trim() ? [ ...visibleSections, ...( container.settings.sidebar_sections || [] ) ].flatMap( ( section, index ) => {
 		const entries = [ { section, key: 'section-' + index, label: section.title } ];
 		for ( const name of section.fields ) {
 			const ref = fieldByName.get( name );
@@ -86,7 +119,7 @@ export default function SettingsPanel( { container, renderField } ) {
 			url.searchParams.delete( 'settings-updated' );
 			if ( id !== current ) {
 				window.history.pushState( null, '', url );
-				setCurrent( id );
+				setRequested( id );
 			}
 		}
 		if ( fieldId ) {
@@ -96,13 +129,38 @@ export default function SettingsPanel( { container, renderField } ) {
 	};
 
 	useEffect( () => {
-		const onPopState = () => setCurrent( readSection() );
+		if ( serverError?.fieldId ) {
+			const section = visibleSections.find( ( candidate ) => candidate.fields.includes( serverError.rootName ) );
+			openSection( section?.id );
+			cancelAnimationFrame( focusFrame.current );
+			focusFrame.current = requestAnimationFrame( () => {
+				focusFrame.current = requestAnimationFrame( () => focusComplexField( document, serverError.fieldId ) );
+			} );
+		}
+	}, [ serverError ] );
+
+	useEffect( () => {
+		const onPopState = () => setRequested( readSection() );
 		window.addEventListener( 'popstate', onPopState );
 		return () => {
 			window.removeEventListener( 'popstate', onPopState );
 			cancelAnimationFrame( focusFrame.current );
 		};
-	}, [ sections ] );
+	}, [] );
+
+	useEffect( () => {
+		if ( requested && requested !== current ) {
+			const url = new URL( window.location.href );
+			if ( current ) {
+				url.searchParams.set( sectionParam, current );
+			} else {
+				url.searchParams.delete( sectionParam );
+			}
+			window.history.replaceState( window.history.state, '', url );
+			setRequested( current );
+			setProblem( '' );
+		}
+	}, [ requested, current ] );
 
 	useEffect( () => {
 		if ( ! dirty ) {
@@ -124,9 +182,15 @@ export default function SettingsPanel( { container, renderField } ) {
 			return;
 		}
 		const languageLinks = form.querySelectorAll( '.cf-settings-toolbar .nav-tab-wrapper a' );
-		if ( current ) {
-			languageLinks.forEach( ( link ) => { link.href = urlForSection( current, link.href ).href; } );
-		}
+		languageLinks.forEach( ( link ) => {
+			const url = new URL( link.href );
+			if ( current ) {
+				url.searchParams.set( sectionParam, current );
+			} else {
+				url.searchParams.delete( sectionParam );
+			}
+			link.href = url.href;
+		} );
 	}, [ form, current ] );
 
 	useEffect( () => {
@@ -137,9 +201,10 @@ export default function SettingsPanel( { container, renderField } ) {
 		const submit = ( event ) => {
 			const store = select( 'carbon-fields/metaboxes' );
 			const visibility = select( 'carbon-fields/core' );
+			const findFieldNode = ( id ) => form.querySelector( '[data-cf-field-id="' + CSS.escape( id ) + '"]' );
 			const invalid = container.fields.map( ( { id } ) => {
 				const field = store.getFieldById( id );
-				if ( ! field || ( ! field.required && field.type !== 'link' ) || ! visibility.isFieldVisible( id ) ) {
+				if ( ! field || ( ! field.required && field.type !== 'link' ) || ! visibility.isFieldVisible( id ) || ! canValidate( findFieldNode( id ) ) ) {
 					return null;
 				}
 				const value = field.dependent_options ? getDependentValue( field, getOptionsSourceValue( field, store.getFieldById ), field.value ) : field.value;
@@ -147,13 +212,13 @@ export default function SettingsPanel( { container, renderField } ) {
 				return error ? { id, error } : null;
 			} ).find( Boolean );
 			const invalidControl = Array.from( form.querySelectorAll( ':invalid' ) ).find( ( control ) =>
-				control.matches( 'input, textarea, select' ) && ! control.closest( '.cf-field[hidden]' )
+				control.matches( 'input, textarea, select' ) && ! control.closest( '.cf-field[hidden]' ) && canValidate( control )
 			);
-			if ( invalid || invalidControl || store.isSavingLocked() ) {
+			if ( invalid || invalidControl || store.isSavingLocked( ( id ) => canValidate( findFieldNode( id ) ) ) ) {
 				event.preventDefault();
 				const invalidNode = invalid
-					? form.querySelector( '[data-cf-field-id="' + CSS.escape( invalid.id ) + '"]' )
-					: invalidControl?.closest( '.cf-field' ) || form.querySelector( '.cf-field--invalid, .cf-complex__validation' );
+					? findFieldNode( invalid.id )
+					: invalidControl?.closest( '.cf-field' ) || Array.from( form.querySelectorAll( '.cf-field--invalid, .cf-complex__validation' ) ).find( canValidate );
 				if ( invalid ) {
 					dispatch( 'carbon-fields/core' ).markAsInvalid( invalid.id, invalid.error );
 				}
@@ -252,14 +317,14 @@ export default function SettingsPanel( { container, renderField } ) {
 						</span>
 						<button type="submit" name="publish" value="1" className="button button-primary" disabled={ saving }>{ saving ? __( 'Saving…', 'carbon-fields-ui' ) : toolbar.dataset.saveLabel }</button>
 					</div>
-					{ problem && <p className="cf-settings-problem" role="alert">{ problem }</p> }
+					{ ( serverError || problem ) && <p className="cf-settings-problem" role="alert">{ serverError?.message || problem }</p> }
 				</div>,
 				toolbar
 			) }
-			{ !! sections.length && (
+			{ !! visibleSections.length && (
 				<nav className="cf-settings-nav" aria-label={ __( 'Settings sections', 'carbon-fields-ui' ) }>
 					<ul>
-						{ sections.map( ( section ) => (
+						{ visibleSections.map( ( section ) => (
 							<li key={ section.id }>
 								<a href={ urlForSection( section.id ).href } className={ section.parent ? 'cf-settings-nav__child-link' : undefined } aria-current={ section.id === current ? 'location' : undefined } onClick={ ( event ) => {
 									if ( event.ctrlKey || event.metaKey || event.shiftKey || event.altKey ) {
@@ -278,7 +343,7 @@ export default function SettingsPanel( { container, renderField } ) {
 			) }
 			<div className="cf-settings-content">
 				{ sections.map( ( section ) => (
-					<section key={ section.id } data-cf-section={ section.id } aria-label={ section.title } hidden={ section.id !== current }>
+					<section key={ section.id } data-cf-section={ section.id } data-cf-section-unavailable={ available.has( section.id ) ? undefined : '' } aria-label={ section.title } hidden={ section.id !== current }>
 						<header className="cf-settings-content__heading">
 							<h2>{ section.title }</h2>
 							{ section.description && <p>{ section.description }</p> }

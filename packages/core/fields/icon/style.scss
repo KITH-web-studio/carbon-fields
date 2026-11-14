@@ -1,0 +1,73 @@
+.cf-icon-picker {
+	position: relative;
+	max-width: 480px;
+
+	&__controls, &__toggle.button {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	&__toggle.button {
+		white-space: normal;
+		text-align: left;
+	}
+
+	[dir="rtl"] &__toggle.button { text-align: right; }
+
+	img {
+		display: block;
+		width: 24px;
+		height: 24px;
+		object-fit: contain;
+	}
+
+	&__panel {
+		position: absolute;
+		z-index: 10;
+		left: 0;
+		right: 0;
+		top: calc(100% + 5px);
+		padding: 8px;
+		background: #fff;
+		color: #1d2327;
+		border: 1px solid #c3c4c7;
+		border-radius: 6px;
+		box-shadow: 0 5px 15px rgba(0, 0, 0, .12);
+
+		input[type=search] { width: 100%; margin: 0; }
+		p { margin: 8px 0 0; }
+	}
+
+	&__grid {
+		position: relative;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+		gap: 5px;
+		max-height: 240px;
+		overflow: auto;
+		margin: 8px 0 0;
+		padding: 2px;
+
+		li {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 4px;
+			min-height: 64px;
+			min-width: 0;
+			margin: 0;
+			padding: 4px;
+			border: 1px solid #dcdcde;
+			border-radius: 4px;
+			text-align: center;
+			cursor: pointer;
+			overflow-wrap: anywhere;
+
+			span:not(.dashicons) { font-size: 11px; line-height: 1.25; }
+			&[aria-selected=true] { border-color: var(--wp-admin-theme-color, #2271b1); }
+			&:hover, &[data-active=true] { background: #eaf3fb; }
+		}
+	}
+}

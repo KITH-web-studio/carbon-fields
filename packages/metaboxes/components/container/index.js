@@ -58,7 +58,10 @@ class Container extends Component {
 	}
 
 	componentDidUpdate( previous ) {
-		const { invalidFieldId } = this.props;
+		const { container, invalidFieldId, serverError } = this.props;
+		if ( serverError?.fieldId && serverError !== previous.serverError && container.settings.page_layout !== 'panel' ) {
+			this.revealField( serverError.fieldId, serverError.groups, serverError.rootName );
+		}
 		if ( !! previous.invalidFieldId !== !! invalidFieldId ) {
 			this.setValidationLock( !! invalidFieldId );
 		}
@@ -92,13 +95,18 @@ class Container extends Component {
 			return;
 		}
 		const { field, error, path, rootName } = invalid;
+		dispatch( 'carbon-fields/core' ).markAsInvalid( field.id, error );
+		this.revealField( field.id, path, rootName );
+	}
+
+	revealField( fieldId, groups, rootName ) {
+		const { container } = this.props;
 		const tabs = container.settings.tabs || {};
 		const currentTab = Object.keys( tabs ).find( ( tab ) => tabs[ tab ].includes( rootName ) ) || this.state.currentTab;
-		dispatch( 'carbon-fields/core' ).markAsInvalid( field.id, error );
 		cancelAnimationFrame( this.focusFrame );
-		this.setState( { currentTab, reveal: { groups: path, fieldId: field.id } }, () => {
+		this.setState( { currentTab, reveal: { groups, fieldId } }, () => {
 			this.focusFrame = requestAnimationFrame( () => {
-				focusComplexField( this.node.current.ownerDocument, field.id );
+				focusComplexField( this.node.current.ownerDocument, fieldId );
 				this.setState( { reveal: null } );
 			} );
 		} );
@@ -127,8 +135,10 @@ class Container extends Component {
 			return null;
 		}
 
+		const { container, serverError } = this.props;
+		const reveal = container.settings.page_layout === 'panel' && serverError?.fieldId ? serverError : this.state.reveal;
 		return (
-			<ComplexRevealContext.Provider key={ field.id } value={ this.state.reveal }>
+			<ComplexRevealContext.Provider key={ field.id } value={ reveal }>
 				<Field id={ field.id }>
 					<FieldEdit id={ field.id } containerId={ this.props.id } />
 				</Field>
@@ -173,7 +183,7 @@ class Container extends Component {
 	 */
 	render() {
 		const { currentTab } = this.state;
-		const { container, invalidLabel, invalidMessage } = this.props;
+		const { container, invalidLabel, invalidMessage, serverError } = this.props;
 
 		const hasTabs = this.isTabbed( container );
 		const hasPanel = container.type === 'theme_options' && container.settings.page_layout === 'panel';
@@ -211,7 +221,10 @@ class Container extends Component {
 					</p>
 				) }
 
-				{ hasPanel && <SettingsPanel container={ container } renderField={ this.renderField } /> }
+				{ serverError && ! hasPanel && (
+					<div className="notice notice-error inline" role="alert"><p>{ serverError.label ? serverError.label + ' · ' : '' }{ serverError.message }</p></div>
+				) }
+				{ hasPanel && <SettingsPanel container={ container } renderField={ this.renderField } serverError={ serverError } /> }
 				{ ! hasPanel && hasTabs && (
 					<div className={ `cf-container__tabs cf-container__tabs--${ container.layout }` }>
 						<ul className="cf-container__tabs-list">
@@ -260,7 +273,7 @@ class Container extends Component {
 
 				{ ! hasPanel && ! hasTabs && (
 					<div className="cf-container__fields">
-						{ map( mainFields, this.renderField ) }
+						{ mainFields.map( ( field ) => this.renderField( field ) ) }
 					</div>
 				) }
 				{ sidebarSections.map( this.renderSidebarSection ) }

@@ -6,6 +6,7 @@ namespace Carbon_Fields\Container;
 
 use Carbon_Fields\Carbon_Fields;
 use Carbon_Fields\Helper\Helper;
+use Carbon_Fields\Helper\Field_Validation;
 use Carbon_Fields\Datastore\Datastore;
 use Carbon_Fields\Datastore\Post_Meta_Datastore;
 use Carbon_Fields\Exception\Incorrect_Syntax_Exception;
@@ -201,6 +202,20 @@ class Post_Meta_Container extends Container {
 		return new \WP_Error( 'carbon_fields_incomplete_form', __( 'Carbon Fields received an incomplete form. The custom fields in this box were not saved. Reload the editor and try again.', 'carbon-fields' ) );
 	}
 
+	public function validate_editor_request( $post_id ) {
+		$token = Helper::input()[ $this->get_id() . '_validation_nonce' ] ?? '';
+		if ( ! get_post( $post_id ) || ! current_user_can( 'edit_post', $post_id ) || ! $this->verified_nonce_in_request() ||
+			! is_string( $token ) || ! wp_verify_nonce( $token, $this->get_id() . ':validate:' . $post_id ) ) {
+			return new \WP_Error( 'carbon_fields_invalid_form', __( 'Check the form and try saving again.', 'carbon-fields' ) );
+		}
+		$this->set_post_id( $post_id );
+		if ( ! $this->static_conditions_pass() ) {
+			return new \WP_Error( 'carbon_fields_invalid_form', __( 'Check the form and try saving again.', 'carbon-fields' ) );
+		}
+		$input = $this->get_save_input();
+		return is_wp_error( $input ) ? $input : Field_Validation::validate( $this->fields, $input );
+	}
+
 	private function get_translation_sync_fields() {
 		$names = array();
 		foreach ( $this->fields as $field ) {
@@ -214,6 +229,10 @@ class Post_Meta_Container extends Container {
 
 	public function to_json( $load ) {
 		$data = parent::to_json( $load );
+		if ( ! empty( $data['settings']['server_validation'] ) ) {
+			$post_id = get_the_ID();
+			$data['settings']['validation_nonce'] = wp_create_nonce( $this->get_id() . ':validate:' . $post_id );
+		}
 		$names = $this->get_translation_sync_fields();
 		if ( $names ) {
 			$data['settings']['translationSyncFields'] = $names;
@@ -231,6 +250,12 @@ class Post_Meta_Container extends Container {
 		$input = $this->get_save_input();
 		if ( is_wp_error( $input ) ) {
 			return $input;
+		}
+
+		$this->set_post_id( $post_id );
+		$error = Field_Validation::validate( $this->fields, $input );
+		if ( $error ) {
+			return $error;
 		}
 
 		$skip = array();
@@ -254,8 +279,6 @@ class Post_Meta_Container extends Container {
 
 		// Unhook action to garantee single save
 		remove_action( 'save_post', array( $this, '_save' ) );
-
-		$this->set_post_id( $post_id );
 
 		$saved = Carbon_Fields::service( 'revisions' )->track_container_save( $post_id, $this, function() use ( $input, $skip ) {
 			foreach ( $this->fields as $field ) {

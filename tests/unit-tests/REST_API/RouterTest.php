@@ -88,6 +88,54 @@ class RouterTest extends WP_UnitTestCase {
 		$this->assertSame( 200, $this->request( '/association/options', $params + array( 'term' => 'Association' ) )->get_status() );
 	}
 
+	public function testThemeOptionRestrictionsApplyToNestedRestPathsAndDuplicateDeclarations() {
+		$container = Container::make( 'theme_options', 'REST section permissions fixture' )
+			->set_page_capability( 'manage_options' )
+			->add_fields( array(
+				Field::make( 'text', 'rest_acl_public' )->set_visible_in_rest_api(),
+				Field::make( 'select', 'rest_acl_dependent' )->set_visible_in_rest_api()
+					->set_dependent_options( 'rest_acl_source', array( 'type' => array( 'item' => 'Item' ) ) ),
+			) )
+			->add_section( 'private', 'Private', array(
+				Field::make( 'text', 'rest_acl_secret' )->set_visible_in_rest_api(),
+				Field::make( 'select', 'rest_acl_source' )->set_options( array( 'type' => 'Type' ) ),
+				Field::make( 'complex', 'rest_acl_rows' )->add_fields( 'row', array(
+					Field::make( 'association', 'related' ),
+				) ),
+			), array( 'capability' => 'rest_acl_manage_private' ) );
+		Container::make( 'theme_options', 'REST section duplicate fixture' )->add_fields( array(
+			Field::make( 'text', 'rest_acl_secret' )->set_visible_in_rest_api(),
+		) );
+
+		$admin = self::factory()->user->create_and_get( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin->ID );
+		update_option( '_rest_acl_public', 'original' );
+		update_option( '_rest_acl_secret', 'protected' );
+		update_option( '_rest_acl_dependent', 'item' );
+
+		$options = $this->request( '/options' )->get_data()['carbon_fields'];
+		$this->assertSame( 'original', $options['rest_acl_public'] );
+		$this->assertArrayNotHasKey( 'rest_acl_secret', $options );
+		$this->assertArrayNotHasKey( 'rest_acl_dependent', $options );
+
+		$params = array( 'container_id' => $container->get_id(), 'field_id' => '/rest_acl_rows[0]:row//related' );
+		$this->assertSame( 404, $this->request( '/association/options', $params )->get_status() );
+
+		$request = new WP_REST_Request( 'POST', '/carbon-fields/v1/options' );
+		$request->set_body_params( array( 'rest_acl_public' => 'changed', '/rest_acl_secret' => 'tampered' ) );
+		$this->assertSame( 403, rest_do_request( $request )->get_status() );
+		$this->assertSame( 'original', get_option( '_rest_acl_public' ) );
+		$this->assertSame( 'protected', get_option( '_rest_acl_secret' ) );
+
+		$admin->add_cap( 'rest_acl_manage_private' );
+		wp_set_current_user( 0 );
+		wp_set_current_user( $admin->ID );
+		$this->assertSame( 200, $this->request( '/association/options', $params )->get_status() );
+		$options = $this->request( '/options' )->get_data()['carbon_fields'];
+		$this->assertSame( 'protected', $options['rest_acl_secret'] );
+		$this->assertSame( 'item', $options['rest_acl_dependent'] );
+	}
+
 	public function testAttachmentMetadataRespectsParentAndPosterPermissions() {
 		$editor = self::factory()->user->create( array( 'role' => 'editor' ) );
 		$subscriber = self::factory()->user->create( array( 'role' => 'subscriber' ) );
