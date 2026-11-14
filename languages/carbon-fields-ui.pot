@@ -185,3 +185,30 @@ msgstr ""
 
 msgid "Check the required fields before saving."
 msgstr ""
+
+msgid "Enter a valid HTTP or HTTPS URL."
+msgstr ""
+
+msgid "Link type"
+msgstr ""
+
+msgid "External URL"
+msgstr ""
+
+msgid "Site content"
+msgstr ""
+
+msgid "URL"
+msgstr ""
+
+msgid "Search published content"
+msgstr ""
+
+msgid "Could not load links. Try again."
+msgstr ""
+
+msgid "Link text"
+msgstr ""
+
+msgid "Open in a new tab"
+msgstr ""

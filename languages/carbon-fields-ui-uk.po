@@ -410,3 +410,30 @@ msgstr "Завантажити ще результати"
 
 msgid "Search and select…"
 msgstr "Знайти й вибрати…"
+
+msgid "Enter a valid HTTP or HTTPS URL."
+msgstr "Введіть дійсну URL-адресу з HTTP або HTTPS."
+
+msgid "Link type"
+msgstr "Тип посилання"
+
+msgid "External URL"
+msgstr "Зовнішня URL-адреса"
+
+msgid "Site content"
+msgstr "Сторінка або запис сайту"
+
+msgid "URL"
+msgstr "URL-адреса"
+
+msgid "Search published content"
+msgstr "Пошук за опублікованими записами"
+
+msgid "Could not load links. Try again."
+msgstr "Не вдалося завантажити посилання. Спробуйте ще раз."
+
+msgid "Link text"
+msgstr "Текст посилання"
+
+msgid "Open in a new tab"
+msgstr "Відкривати в новій вкладці"

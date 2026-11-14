@@ -211,3 +211,9 @@ msgstr "Плагину Carbon Fields не удалось восстановит�
 
 msgid "Check the number, unit, or font settings and try again."
 msgstr "Проверьте число, единицу или настройки шрифта и повторите попытку."
+
+msgid "Check the link and try again."
+msgstr "Проверьте ссылку и повторите попытку."
+
+msgid "Invalid link search."
+msgstr "Некорректный запрос поиска ссылок."

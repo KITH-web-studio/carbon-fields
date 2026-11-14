@@ -156,6 +156,23 @@ foreach ( (array) carbon_get_the_post_meta( 'kith_related_pages' ) as $item ) {
 
 Read text with `esc_html()`, URLs with `esc_url()`, and rich text with `wp_kses_post()` where appropriate for your template. An ID-backed attachment lets WordPress resolve its current URL and image size.
 
+## Link to site content or an external URL
+
+Use `Field::make( 'link', 'kith_header_cta', 'Header button' )` to select published site content or enter an HTTP or HTTPS URL. Editors can add a label and choose a new tab. With Polylang, search follows the language of the edited post or the selected theme settings language. Shared settings can search across languages.
+
+The returned array contains `type` (`post` or `url`), `post_id`, `url`, `label`, and `new_tab`. Internal links resolve the current permalink. If their target becomes unavailable, `url` is empty.
+
+```php
+$link = carbon_get_theme_option( 'kith_header_cta' );
+if ( ! empty( $link['url'] ) && '' !== $link['label'] ) {
+    printf( '<a href="%s"%s>%s</a>',
+        esc_url( $link['url'] ),
+        $link['new_tab'] ? ' target="_blank" rel="noopener noreferrer"' : '',
+        esc_html( $link['label'] )
+    );
+}
+```
+
 ## Measurements and typography
 
 `number_with_unit` returns a CSS measurement such as `24px` or `1.5rem`. Set the allowed units and the numeric range in PHP. The range applies to the number as entered for each unit. An empty string in the units array allows unitless numbers.

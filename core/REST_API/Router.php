@@ -4,6 +4,8 @@ namespace Carbon_Fields\REST_API;
 
 use Carbon_Fields\Helper\Helper;
 use Carbon_Fields\Container\Repository as ContainerRepository;
+use Carbon_Fields\Field\Link_Field;
+use Carbon_Fields\Integration\Polylang;
 
 /**
 * Register custom routes for REST API
@@ -64,6 +66,12 @@ class Router {
 			'permission_callback' => 'attachment_data_permission',
 			'methods'             => 'GET',
 			'args'                => 'attachment_data_args_schema',
+		),
+		'link_targets' => array(
+			'path'                => '/link-targets',
+			'callback'            => 'get_link_targets',
+			'permission_callback' => 'association_permission',
+			'methods'             => 'GET',
 		),
 		'block_renderer' => array(
 			'path'                => '/block-renderer',
@@ -430,6 +438,54 @@ class Router {
 			'page' => null === $page ? 1 : (int) $page,
 			'term' => null === $term ? '' : sanitize_text_field( $term ),
 		) );
+	}
+
+	public function get_link_targets( $request ) {
+		$term = $request->get_param( 'term' );
+		$language = $request->get_param( 'lang' );
+		$target = $request->get_param( 'target' );
+		$editor = $request->get_param( 'editor' );
+		if ( ( null !== $term && ( ! is_string( $term ) || strlen( $term ) > 240 ) ) ||
+			( null !== $language && ! Polylang::valid_language( $language ) ) ||
+			( null !== $target && ( ( ! is_string( $target ) && ! is_int( $target ) ) || ! ctype_digit( (string) $target ) || (string) (int) $target !== (string) $target ) ) ||
+			( null !== $editor && ( ( ! is_string( $editor ) && ! is_int( $editor ) ) || ! ctype_digit( (string) $editor ) || (string) (int) $editor !== (string) $editor ) ) ) {
+			return new \WP_Error( 'carbon_fields_invalid_link_search', __( 'Invalid link search.', 'carbon-fields' ), array( 'status' => 400 ) );
+		}
+
+		if ( $target ) {
+			$posts = array( get_post( (int) $target ) );
+		} else {
+			if ( $editor && current_user_can( 'edit_post', (int) $editor ) && function_exists( 'pll_get_post_language' ) ) {
+				$editing_language = pll_get_post_language( (int) $editor, 'slug' );
+				if ( $editing_language ) {
+					$language = $editing_language;
+				}
+			}
+			$types = get_post_types( array( 'public' => true ), 'objects' );
+			$types = array_filter( $types, function( $type ) {
+				return 'attachment' !== $type->name && is_post_type_viewable( $type );
+			} );
+			if ( ! $types ) {
+				return array();
+			}
+			$posts = get_posts( array(
+				'post_type' => array_keys( $types ),
+				'post_status' => 'publish',
+				'has_password' => false,
+				's' => sanitize_text_field( (string) $term ),
+				'lang' => null === $language || 'all' === $language ? '' : $language,
+				'posts_per_page' => 20,
+				'suppress_filters' => false,
+				'update_post_meta_cache' => false,
+			) );
+		}
+
+		return array_values( array_map( function( $post ) {
+			return array(
+				'id' => $post->ID,
+				'title' => wp_strip_all_tags( get_the_title( $post ) ),
+			);
+		}, array_filter( $posts, array( Link_Field::class, 'is_public_target' ) ) ) );
 	}
 
 	private function get_association_field( $request ) {

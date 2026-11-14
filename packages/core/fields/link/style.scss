@@ -1,0 +1,36 @@
+.cf-link-control {
+	display: grid;
+	gap: 10px;
+	max-width: 660px;
+
+	> label:not(.cf-link-control__checkbox) { display: grid; gap: 4px; }
+	> label > select { justify-self: start; }
+	input[type=url], input[type=text], input[type=search] { width: 100%; }
+
+	&__search { position: relative; }
+	&__search > label { display: block; margin-bottom: 4px; }
+	&__selected { display: flex; gap: 12px; align-items: center; margin-bottom: 6px; }
+
+	&__results {
+		position: absolute;
+		z-index: 9;
+		left: 0;
+		right: 0;
+		margin: 4px 0 0;
+		max-height: 220px;
+		overflow: auto;
+		background: #fff;
+		border: 1px solid #c3c4c7;
+		border-radius: 4px;
+		box-shadow: 0 4px 12px rgba(0,0,0,.12);
+
+		li {
+			margin: 0;
+			padding: 8px 10px;
+			cursor: pointer;
+
+			&[aria-selected=true], &:hover { background: #f0f6fc; }
+		}
+	}
+	&__error { color: #b32d2e; }
+}

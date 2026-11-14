@@ -2403,6 +2403,88 @@ span.flatpickr-weekday {
 /* ==========================================================================
    Mixins
    ========================================================================== */
+.cf-link-control {
+  display: grid;
+  grid-gap: 10px;
+  gap: 10px;
+  max-width: 660px;
+}
+.cf-link-control > label:not(.cf-link-control__checkbox) {
+  display: grid;
+  grid-gap: 4px;
+  gap: 4px;
+}
+.cf-link-control > label > select {
+  justify-self: start;
+}
+.cf-link-control input[type=url], .cf-link-control input[type=text], .cf-link-control input[type=search] {
+  width: 100%;
+}
+.cf-link-control__search {
+  position: relative;
+}
+.cf-link-control__search > label {
+  display: block;
+  margin-bottom: 4px;
+}
+.cf-link-control__selected {
+  display: flex;
+  grid-gap: 12px;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.cf-link-control__results {
+  position: absolute;
+  z-index: 9;
+  left: 0;
+  right: 0;
+  margin: 4px 0 0;
+  max-height: 220px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #c3c4c7;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.cf-link-control__results li {
+  margin: 0;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.cf-link-control__results li[aria-selected=true], .cf-link-control__results li:hover {
+  background: #f0f6fc;
+}
+.cf-link-control__error {
+  color: #b32d2e;
+}
+/* ==========================================================================
+   Colors
+   ========================================================================== */
+/* ==========================================================================
+   WordPress Colors - https://make.wordpress.org/design/handbook/design-guide/foundations/colors/
+   ========================================================================== */
+/* ==========================================================================
+   Gutenberg Colors - https://github.com/WordPress/gutenberg/blob/master/assets/stylesheets/_colors.scss
+   ========================================================================== */
+/* ==========================================================================
+   Fonts
+   ========================================================================== */
+/* ==========================================================================
+   Variables
+   ========================================================================== */
+/* ==========================================================================
+   WordPress Variables
+   ========================================================================== */
+/* ==========================================================================
+   Gutenberg Variables - https://github.com/WordPress/gutenberg/blob/master/assets/stylesheets/_variables.scss
+   ========================================================================== */
+/* ==========================================================================
+   WP Admin CSS Custom Properties - https://github.com/WordPress/wordpress-develop/blob/trunk/src/wp-admin/css/common.css
+   ========================================================================== */
+/* ==========================================================================
+   Mixins
+   ========================================================================== */
 /* ==========================================================================
    Map
    ========================================================================== */

@@ -249,6 +249,7 @@ class Loader {
 				'revisionsInputKey' => $revisions::CHANGE_KEY,
 				'sidebarNonce' => current_user_can( 'edit_theme_options' ) ? wp_create_nonce( Sidebar_Manager::NONCE_ACTION ) : '',
 				'codeEditors' => $code_editors,
+				'linkLanguage' => \Carbon_Fields\Integration\Polylang::current_language(),
 				'wp_version' => $wp_version,
 			)
 		) ) );

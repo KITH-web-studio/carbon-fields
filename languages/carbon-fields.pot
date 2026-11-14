@@ -212,3 +212,9 @@ msgstr ""
 
 msgid "Check the number, unit, or font settings and try again."
 msgstr ""
+
+msgid "Check the link and try again."
+msgstr ""
+
+msgid "Invalid link search."
+msgstr ""

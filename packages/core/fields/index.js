@@ -19,6 +19,7 @@ import DateTimeField from './datetime';
 import FileField from './file';
 import HiddenField from './hidden';
 import HtmlField from './html';
+import LinkField from './link';
 import MapField from './map';
 import MediaGalleryField from './media-gallery';
 import MultiselectField from './multiselect';
@@ -65,6 +66,7 @@ addFilter( 'carbon-fields.register-field-type', 'carbon-fields/core', ( type, co
 	[ 'hidden', HiddenField ],
 	[ 'html', HtmlField ],
 	[ 'image', FileField ],
+	[ 'link', LinkField ],
 	[ 'map', MapField ],
 	[ 'multiselect', MultiselectField ],
 	[ 'number_with_unit', NumberWithUnitField ],

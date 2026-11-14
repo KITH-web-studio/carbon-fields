@@ -2,6 +2,11 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.19
+
+- Add a link field for published site content or external HTTP and HTTPS URLs, with an optional label and new-tab setting.
+- Search internal links in the active Polylang language and resolve current permalinks from stored post IDs.
+
 ## 3.6.11.18
 
 - Add an opt-in theme settings panel with sections, permalinks, field search, a sticky save bar, and sidebar panels.

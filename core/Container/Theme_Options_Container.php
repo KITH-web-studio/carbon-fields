@@ -332,9 +332,12 @@ class Theme_Options_Container extends Container {
 		foreach ( $this->fields as $field ) {
 			$name = $field->get_name();
 			if ( isset( $input[ $name ] ) &&
-				( $field instanceof \Carbon_Fields\Field\Number_With_Unit_Field || $field instanceof \Carbon_Fields\Field\Typography_Field ) &&
+				( $field instanceof \Carbon_Fields\Field\Number_With_Unit_Field || $field instanceof \Carbon_Fields\Field\Typography_Field || $field instanceof \Carbon_Fields\Field\Link_Field ) &&
 				! $field->is_valid_form_value( $input[ $name ] ) ) {
-				$this->errors[] = esc_html( $field->get_label() . ' · ' . __( 'Check the number, unit, or font settings and try again.', 'carbon-fields' ) );
+				$message = $field instanceof \Carbon_Fields\Field\Link_Field
+					? __( 'Check the link and try again.', 'carbon-fields' )
+					: __( 'Check the number, unit, or font settings and try again.', 'carbon-fields' );
+				$this->errors[] = esc_html( $field->get_label() . ' · ' . $message );
 				return false;
 			}
 		}

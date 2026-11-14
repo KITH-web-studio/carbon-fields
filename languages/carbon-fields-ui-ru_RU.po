@@ -409,3 +409,30 @@ msgstr "Загрузить ещё результаты"
 
 msgid "Search and select…"
 msgstr "Найти и выбрать…"
+
+msgid "Enter a valid HTTP or HTTPS URL."
+msgstr "Введите действительный URL с HTTP или HTTPS."
+
+msgid "Link type"
+msgstr "Тип ссылки"
+
+msgid "External URL"
+msgstr "Внешний URL"
+
+msgid "Site content"
+msgstr "Страница или запись сайта"
+
+msgid "URL"
+msgstr "URL"
+
+msgid "Search published content"
+msgstr "Поиск по опубликованным записям"
+
+msgid "Could not load links. Try again."
+msgstr "Не удалось загрузить ссылки. Повторите попытку."
+
+msgid "Link text"
+msgstr "Текст ссылки"
+
+msgid "Open in a new tab"
+msgstr "Открывать в новой вкладке"

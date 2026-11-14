@@ -139,7 +139,7 @@ export default function SettingsPanel( { container, renderField } ) {
 			const visibility = select( 'carbon-fields/core' );
 			const invalid = container.fields.map( ( { id } ) => {
 				const field = store.getFieldById( id );
-				if ( ! field?.required || ! visibility.isFieldVisible( id ) ) {
+				if ( ! field || ( ! field.required && field.type !== 'link' ) || ! visibility.isFieldVisible( id ) ) {
 					return null;
 				}
 				const value = field.dependent_options ? getDependentValue( field, getOptionsSourceValue( field, store.getFieldById ), field.value ) : field.value;
