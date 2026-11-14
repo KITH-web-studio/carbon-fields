@@ -214,6 +214,27 @@ Container::make( 'post_meta', 'Catalog' )
 
 Columns support text fields, single-choice fields, and sliders. Use `'numeric'` or `'text'` for sorting. Filters support standalone `select` options. Sorting and filtering use saved values in standard WordPress post metadata. When container conditions depend on individual posts, permitted values appear in those rows and sorting and filtering are unavailable for that column.
 
+### Quick Edit and Bulk Edit
+
+Enable either action per column. Use `text` with `set_attribute( 'type', 'number' )` for a numeric input, and `select` with its own options for a dropdown.
+
+```php
+->add_admin_column( 'catalog_price', array(
+    'sortable'   => 'numeric',
+    'quick_edit' => true,
+    'bulk_edit'  => true,
+) )
+->add_admin_column( 'catalog_stock', array(
+    'filter'     => true,
+    'quick_edit' => true,
+    'bulk_edit'  => true,
+) );
+```
+
+Quick Edit fills in the saved value and submits changed inputs. In Bulk Edit, tick **Change** next to each field to apply its value to the selected posts. The editor checks permissions and container rules for each post and runs the registered `set_validation_callback()` callbacks, using saved values for fields omitted from the request. A post with a validation or permission error is skipped for Carbon Fields changes. WordPress processes its own bulk fields separately.
+
+Editing supports top-level `text` and independent `select` fields in the standard post meta datastore. It omits read-only fields, fields with conditional logic, and fields involved in dependent selects.
+
 ## Conditions
 
 Chain `where()` calls when every condition must match. Use `or_where()` to add an alternative condition group. For posts, common conditions include `post_type`, `post_id`, `post_template`, `post_parent_id`, and `post_term`. For terms, use `term_taxonomy` to target a taxonomy. For users, `user_role` checks the edited user. `current_user_role` and `current_user_capability` check the current editor.

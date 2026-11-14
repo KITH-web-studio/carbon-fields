@@ -237,3 +237,15 @@ msgstr "У вас немає прав на зміну деяких із цих �
 
 msgid "All (%s)"
 msgstr "Усі (%s)"
+
+msgid "Change %s"
+msgstr "Змінити: %s"
+
+msgid "Carbon Fields bulk edit. Updated: %1$s. Skipped: %2$s."
+msgstr "Масове редагування Carbon Fields. Оновлено: %1$s. Пропущено: %2$s."
+
+msgid "Skipped posts: %s"
+msgstr "Пропущені записи: %s"
+
+msgid "Could not save the field."
+msgstr "Не вдалося зберегти поле."

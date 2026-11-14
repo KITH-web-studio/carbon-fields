@@ -233,3 +233,15 @@ msgstr ""
 
 msgid "All (%s)"
 msgstr ""
+
+msgid "Change %s"
+msgstr ""
+
+msgid "Carbon Fields bulk edit. Updated: %1$s. Skipped: %2$s."
+msgstr ""
+
+msgid "Skipped posts: %s"
+msgstr ""
+
+msgid "Could not save the field."
+msgstr ""

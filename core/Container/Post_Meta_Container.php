@@ -403,10 +403,12 @@ class Post_Meta_Container extends Container {
 			Incorrect_Syntax_Exception::raise( 'Admin columns require the base name of a post field.' );
 			return $this;
 		}
-		$options = wp_parse_args( $options, array( 'label' => '', 'sortable' => false, 'filter' => false ) );
+		$options = wp_parse_args( $options, array(
+			'label' => '', 'sortable' => false, 'filter' => false, 'quick_edit' => false, 'bulk_edit' => false,
+		) );
 		if ( ! is_string( $options['label'] ) || ! in_array( $options['sortable'], array( false, 'numeric', 'text' ), true ) ||
-			! is_bool( $options['filter'] ) ) {
-			Incorrect_Syntax_Exception::raise( 'Use a text label, a boolean filter, and numeric or text sorting for admin columns.' );
+			! is_bool( $options['filter'] ) || ! is_bool( $options['quick_edit'] ) || ! is_bool( $options['bulk_edit'] ) ) {
+			Incorrect_Syntax_Exception::raise( 'Use a text label, boolean filter and editing options, and numeric or text sorting for admin columns.' );
 			return $this;
 		}
 		$this->admin_columns[ $field_name ] = $options;

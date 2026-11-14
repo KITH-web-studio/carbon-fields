@@ -232,3 +232,15 @@ msgstr "У вас нет прав на изменение некоторых и�
 
 msgid "All (%s)"
 msgstr "Все (%s)"
+
+msgid "Change %s"
+msgstr "Изменить: %s"
+
+msgid "Carbon Fields bulk edit. Updated: %1$s. Skipped: %2$s."
+msgstr "Массовое редактирование Carbon Fields. Обновлено: %1$s. Пропущено: %2$s."
+
+msgid "Skipped posts: %s"
+msgstr "Пропущенные записи: %s"
+
+msgid "Could not save the field."
+msgstr "Не удалось сохранить поле."

@@ -14,6 +14,7 @@ final class Post_List {
 	private $repository;
 	private $post_type;
 	private $columns = array();
+	private $editor;
 
 	public function __construct( Repository $repository ) {
 		$this->repository = $repository;
@@ -24,18 +25,40 @@ final class Post_List {
 		if ( ! $screen || 'edit' !== $screen->base ) {
 			return;
 		}
-		$this->post_type = $screen->post_type;
-		$this->columns = $this->collect_columns();
-		if ( ! $this->columns ) {
+		if ( ! $this->register_columns( $screen->post_type ) ) {
 			return;
 		}
 
-		add_filter( "manage_{$this->post_type}_posts_columns", array( $this, 'add_columns' ) );
-		add_action( "manage_{$this->post_type}_posts_custom_column", array( $this, 'render_cell' ), 10, 2 );
 		add_filter( "manage_{$screen->id}_sortable_columns", array( $this, 'add_sortable_columns' ) );
 		add_action( 'restrict_manage_posts', array( $this, 'render_filters' ), 10, 2 );
 		add_action( 'pre_get_posts', array( $this, 'filter_query' ), 20 );
 		add_filter( 'posts_orderby', array( $this, 'order_query' ), 10, 2 );
+		$this->editor->attach();
+	}
+
+	public function prepare_quick_edit() {
+		$id = $_POST['post_ID'] ?? '';
+		$nonce = $_POST['_inline_edit'] ?? '';
+		if ( ! is_string( $id ) || ! ctype_digit( $id ) || ! is_string( $nonce ) ||
+			! wp_verify_nonce( $nonce, 'inlineeditnonce' ) || ! current_user_can( 'edit_post', (int) $id ) ) {
+			return;
+		}
+		$post_type = get_post_type( (int) $id );
+		if ( $post_type && $this->register_columns( $post_type ) ) {
+			$this->editor->prepare_quick_edit( (int) $id );
+		}
+	}
+
+	private function register_columns( $post_type ) {
+		$this->post_type = $post_type;
+		$this->columns = $this->collect_columns();
+		if ( ! $this->columns ) {
+			return false;
+		}
+		$this->editor = new Post_List_Editor( $this->post_type, $this->columns );
+		add_filter( "manage_{$this->post_type}_posts_columns", array( $this, 'add_columns' ) );
+		add_action( "manage_{$this->post_type}_posts_custom_column", array( $this, 'render_cell' ), 10, 2 );
+		return true;
 	}
 
 	private function collect_columns() {
@@ -112,6 +135,7 @@ final class Post_List {
 		if ( ! is_scalar( $value ) ) {
 			return;
 		}
+		$this->editor->render_row_value( $id, $post_id, $value );
 		if ( $field instanceof Select_Field && '' === $field->get_options_source() ) {
 			$value = $field->get_options()[ $value ] ?? $value;
 		}

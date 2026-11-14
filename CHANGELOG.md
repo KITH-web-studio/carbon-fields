@@ -2,6 +2,12 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.25
+
+- Add opt-in Quick Edit and Bulk Edit for text, numbers, and standalone select fields in the WordPress post list.
+- Validate submitted values and check post and container permissions before saving. Bulk Edit reports updated and skipped posts.
+- Document the PHP options and add Russian and Ukrainian translations for the editing controls and notices.
+
 ## 3.6.11.24
 
 - Add PHP declarations for post list columns with numeric and text sorting, select filters, and container permission checks.
