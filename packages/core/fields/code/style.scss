@@ -1,0 +1,26 @@
+.cf-code-editor {
+	min-width: 0;
+	width: 100%;
+
+	> textarea,
+	.CodeMirror {
+		box-sizing: border-box;
+		width: 100%;
+		border: 1px solid #a7aaad;
+		border-radius: 4px;
+		font-family: Consolas, Monaco, monospace;
+		font-size: 13px;
+		line-height: 20px;
+	}
+
+	> textarea {
+		display: block;
+		padding: 8px;
+		tab-size: 4;
+	}
+
+	.CodeMirror-focused {
+		border-color: var(--wp-admin-theme-color, #2271b1);
+		box-shadow: 0 0 0 1px var(--wp-admin-theme-color, #2271b1);
+	}
+}

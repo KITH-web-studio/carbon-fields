@@ -6,6 +6,7 @@ namespace Carbon_Fields\Libraries\Sidebar_Manager;
  * This class is responsible for handling custom sidebars.
  */
 class Sidebar_Manager {
+	const NONCE_ACTION = 'carbon_fields_manage_sidebars';
 
 	/**
 	 * Register actions, filters, etc...
@@ -31,6 +32,23 @@ class Sidebar_Manager {
 	 * Handle action requests.
 	 */
 	public function action_handler() {
+		if ( ! current_user_can( 'edit_theme_options' ) ) {
+			wp_send_json( array(
+				'success' => false,
+				'error' => __( 'Sorry, you are not allowed to edit theme options on this site.' ),
+				'errorCode' => 'forbidden',
+			), 403 );
+		}
+
+		$nonce = isset( $_POST['_ajax_nonce'] ) ? $_POST['_ajax_nonce'] : '';
+		if ( ! is_string( $nonce ) || ! wp_verify_nonce( wp_unslash( $nonce ), self::NONCE_ACTION ) ) {
+			wp_send_json( array(
+				'success' => false,
+				'error' => __( 'The link you followed has expired.' ),
+				'errorCode' => 'invalid-nonce',
+			), 403 );
+		}
+
 		$response = array(
 			'success' => false,
 			'error' => null,
@@ -65,7 +83,10 @@ class Sidebar_Manager {
 	 */
 	public function execute_action( $action, $input ) {
 		$name = isset( $input['name'] ) ? $input['name'] : '';
-		if ( empty( $name ) ) {
+		if ( 'carbon_fields_add_sidebar' === $action && is_string( $name ) ) {
+			$name = sanitize_text_field( $name );
+		}
+		if ( ! is_string( $name ) || '' === trim( $name ) ) {
 			return new \WP_Error( 'name-missing', __( 'Please enter a name for the sidebar.', 'carbon-fields' ) );
 		}
 
@@ -97,8 +118,11 @@ class Sidebar_Manager {
 
 		// Sanitize the sidebar ID the same way as dynamic_sidebar()
 		$id = sanitize_title( $id );
+		if ( '' === $id || '0' === $id ) {
+			return new \WP_Error( 'name-missing', __( 'Please enter a name for the sidebar.', 'carbon-fields' ) );
+		}
 
-		if ( isset( $registered_sidebars[ $id ] ) ) {
+		if ( isset( $registered_sidebars[ $id ] ) || is_registered_sidebar( $id ) ) {
 			return new \WP_Error( 'sidebar-exists', __( 'Sidebar with the same ID is already registered.', 'carbon-fields' ) );
 		}
 
@@ -173,13 +197,19 @@ class Sidebar_Manager {
 	/**
 	 * Enqueue the UI scripts.
 	 */
-	public function enqueue_scripts() {
+	public function enqueue_scripts( $hook_suffix ) {
+		if ( 'widgets.php' !== $hook_suffix || ! current_user_can( 'edit_theme_options' ) ) {
+			return;
+		}
+
 		wp_enqueue_style( 'carbon-sidebar-manager', \Carbon_Fields\URL . '/core/Libraries/Sidebar_Manager/assets/css/app.css', array(), \Carbon_Fields\VERSION );
-		wp_enqueue_script( 'carbon-sidebar-manager', \Carbon_Fields\URL . '/core/Libraries/Sidebar_Manager/assets/js/app.js', array(), \Carbon_Fields\VERSION );
+		wp_enqueue_script( 'carbon-sidebar-manager', \Carbon_Fields\URL . '/core/Libraries/Sidebar_Manager/assets/js/app.js', array( 'jquery' ), \Carbon_Fields\VERSION );
 		wp_localize_script( 'carbon-sidebar-manager', 'crbSidebarl10n',
 			array(
+				'nonce' => wp_create_nonce( self::NONCE_ACTION ),
 				'add_sidebar' => __( 'Add Sidebar', 'carbon-fields' ),
 				'enter_name_of_new_sidebar' => __( 'Please enter the name of the new sidebar:', 'carbon-fields' ),
+				'remove_sidebar' => __( 'Remove Sidebar', 'carbon-fields' ),
 				'remove_sidebar_confirmation' => __( 'Are you sure you wish to remove this sidebar?', 'carbon-fields' ),
 			)
 		);

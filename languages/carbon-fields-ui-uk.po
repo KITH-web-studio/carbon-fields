@@ -338,3 +338,75 @@ msgstr "Виберіть варіант"
 #: packages/core/fields/select/searchable.js:119
 msgid "No matching options."
 msgstr "Відповідних варіантів немає."
+
+#: packages/metaboxes/components/container/settings-panel.js
+msgid "General"
+msgstr "Загальні"
+
+#: packages/metaboxes/components/container/settings-panel.js
+msgid "Find a setting…"
+msgstr "Знайти налаштування…"
+
+#: packages/metaboxes/components/container/settings-panel.js
+msgid "Find a setting"
+msgstr "Знайти налаштування"
+
+#: packages/metaboxes/components/container/settings-panel.js
+msgid "No settings found."
+msgstr "Налаштувань не знайдено."
+
+#: packages/metaboxes/components/container/settings-panel.js
+msgid "Unsaved changes"
+msgstr "Є незбережені зміни"
+
+#: packages/metaboxes/components/container/settings-panel.js
+msgid "Settings saved."
+msgstr "Налаштування збережено."
+
+#: packages/metaboxes/components/container/settings-panel.js
+msgid "Saving…"
+msgstr "Збереження…"
+
+#: packages/metaboxes/components/container/settings-panel.js
+msgid "Settings sections"
+msgstr "Розділи налаштувань"
+
+#: packages/metaboxes/components/container/settings-panel.js
+msgid "Check the required fields before saving."
+msgstr "Перевірте обов’язкові поля перед збереженням."
+
+msgid "Unit"
+msgstr "Одиниця"
+
+msgid "Unitless"
+msgstr "Без одиниці"
+
+msgid "Enter a number within the allowed range and choose a supported unit."
+msgstr "Введіть число в допустимому діапазоні та виберіть одиницю."
+
+msgid "Inherit"
+msgstr "Успадкувати"
+
+msgid "Font family"
+msgstr "Гарнітура"
+
+msgid "Font size"
+msgstr "Розмір шрифту"
+
+msgid "Font weight"
+msgstr "Насиченість"
+
+msgid "Line height"
+msgstr "Міжрядковий інтервал"
+
+msgid "The quick brown fox jumps over the lazy dog."
+msgstr "Ще й ґедзь дзижчить над квітучим садом."
+
+msgid "Item #%s"
+msgstr "Елемент №%s"
+
+msgid "Load more results"
+msgstr "Завантажити ще результати"
+
+msgid "Search and select…"
+msgstr "Знайти й вибрати…"

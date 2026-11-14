@@ -337,3 +337,75 @@ msgstr "Выберите вариант"
 #: packages/core/fields/select/searchable.js:119
 msgid "No matching options."
 msgstr "Подходящих вариантов нет."
+
+#: packages/metaboxes/components/container/settings-panel.js
+msgid "General"
+msgstr "Общие"
+
+#: packages/metaboxes/components/container/settings-panel.js
+msgid "Find a setting…"
+msgstr "Найти настройку…"
+
+#: packages/metaboxes/components/container/settings-panel.js
+msgid "Find a setting"
+msgstr "Найти настройку"
+
+#: packages/metaboxes/components/container/settings-panel.js
+msgid "No settings found."
+msgstr "Настройки не найдены."
+
+#: packages/metaboxes/components/container/settings-panel.js
+msgid "Unsaved changes"
+msgstr "Есть несохранённые изменения"
+
+#: packages/metaboxes/components/container/settings-panel.js
+msgid "Settings saved."
+msgstr "Настройки сохранены."
+
+#: packages/metaboxes/components/container/settings-panel.js
+msgid "Saving…"
+msgstr "Сохранение…"
+
+#: packages/metaboxes/components/container/settings-panel.js
+msgid "Settings sections"
+msgstr "Разделы настроек"
+
+#: packages/metaboxes/components/container/settings-panel.js
+msgid "Check the required fields before saving."
+msgstr "Проверьте обязательные поля перед сохранением."
+
+msgid "Unit"
+msgstr "Единица"
+
+msgid "Unitless"
+msgstr "Без единицы"
+
+msgid "Enter a number within the allowed range and choose a supported unit."
+msgstr "Введите число в допустимом диапазоне и выберите единицу."
+
+msgid "Inherit"
+msgstr "Наследовать"
+
+msgid "Font family"
+msgstr "Гарнитура"
+
+msgid "Font size"
+msgstr "Размер шрифта"
+
+msgid "Font weight"
+msgstr "Насыщенность"
+
+msgid "Line height"
+msgstr "Межстрочный интервал"
+
+msgid "The quick brown fox jumps over the lazy dog."
+msgstr "Съешь ещё этих мягких французских булок."
+
+msgid "Item #%s"
+msgstr "Элемент №%s"
+
+msgid "Load more results"
+msgstr "Загрузить ещё результаты"
+
+msgid "Search and select…"
+msgstr "Найти и выбрать…"

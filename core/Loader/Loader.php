@@ -211,10 +211,16 @@ class Loader {
 		global $pagenow;
 		global $wp_version;
 
+		$preloaded = $this->get_json_data();
+		$code_editors = $this->enqueue_code_editors( $preloaded );
+
 		$this->enqueue_style( 'core' );
 		$this->enqueue_style( 'metaboxes' );
 
 		$core_deps = array( 'carbon-fields-vendor' );
+		if ( $code_editors ) {
+			$core_deps[] = 'code-editor';
+		}
 
 		if ( $this->get_assets_context() === 'gutenberg' ) {
 			$core_deps[] = 'wp-components';
@@ -230,7 +236,7 @@ class Loader {
 		}
 
 		wp_add_inline_script( 'carbon-fields-vendor', 'window.cf = window.cf || {}', 'before' );
-		wp_add_inline_script( 'carbon-fields-vendor', sprintf( 'window.cf.preloaded = %s', wp_json_encode( $this->get_json_data() ) ), 'before' );
+		wp_add_inline_script( 'carbon-fields-vendor', sprintf( 'window.cf.preloaded = %s', wp_json_encode( $preloaded ) ), 'before' );
 
 		$revisions = \Carbon_Fields\Carbon_Fields::service( 'revisions' );
 
@@ -241,9 +247,41 @@ class Loader {
 				'compactInput' => \Carbon_Fields\COMPACT_INPUT,
 				'compactInputKey' => \Carbon_Fields\COMPACT_INPUT_KEY,
 				'revisionsInputKey' => $revisions::CHANGE_KEY,
+				'sidebarNonce' => current_user_can( 'edit_theme_options' ) ? wp_create_nonce( Sidebar_Manager::NONCE_ACTION ) : '',
+				'codeEditors' => $code_editors,
 				'wp_version' => $wp_version,
 			)
 		) ) );
+	}
+
+	/**
+	 * Enqueue the WordPress code editor for languages declared on the current screen.
+	 */
+	protected function enqueue_code_editors( $preloaded ) {
+		if ( ! function_exists( 'wp_enqueue_code_editor' ) ) {
+			return array();
+		}
+		$editors = array();
+		$scan = function( $fields ) use ( &$editors, &$scan ) {
+			foreach ( $fields as $field ) {
+				if ( 'code' === $field['type'] && isset( $field['code_language'] ) && 'text' !== $field['code_language'] && ! isset( $editors[ $field['code_language'] ] ) ) {
+					$language = $field['code_language'];
+					$editors[ $language ] = wp_enqueue_code_editor( array(
+						'type' => \Carbon_Fields\Field\Code_Field::LANGUAGES[ $language ],
+						'codemirror' => array( 'lint' => false ),
+					) );
+				}
+				if ( 'complex' === $field['type'] ) {
+					foreach ( $field['groups'] as $group ) {
+						$scan( $group['fields'] );
+					}
+				}
+			}
+		};
+		foreach ( array_merge( $preloaded['containers'], $preloaded['blocks'] ) as $container ) {
+			$scan( $container['fields'] );
+		}
+		return array_filter( $editors );
 	}
 
 	/**

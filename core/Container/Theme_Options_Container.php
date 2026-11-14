@@ -122,6 +122,136 @@ class Theme_Options_Container extends Container {
 	);
 
 	/**
+	 * Optional introduction shown under the settings page title.
+	 *
+	 * @var string
+	 */
+	protected $page_description = '';
+
+	/**
+	 * Set a short, plain-text description for this settings page.
+	 *
+	 * @param string $description
+	 * @return static
+	 */
+	public function set_page_description( $description ) {
+		$this->page_description = $description;
+		return $this;
+	}
+
+	/**
+	 * Opt into the settings panel layout.
+	 *
+	 * @param string $layout 'panel' or 'default'
+	 * @return static
+	 */
+	public function set_page_layout( $layout ) {
+		$this->settings['page_layout'] = 'panel' === $layout ? 'panel' : 'default';
+		return $this;
+	}
+
+	protected function uses_settings_panel() {
+		return 'theme_options' === $this->type && isset( $this->settings['page_layout'] ) && 'panel' === $this->settings['page_layout'];
+	}
+
+	/**
+	 * Add a section with a stable URL identifier. A subsection can reference an earlier top-level section.
+	 *
+	 * @param string $id
+	 * @param string $title
+	 * @param array $fields
+	 * @param array $args Optional description, Dashicons icon and parent section ID.
+	 * @return static
+	 */
+	public function add_section( $id, $title, $fields, $args = array() ) {
+		$sections = isset( $this->settings['panel_sections'] ) ? $this->settings['panel_sections'] : array();
+		$args = wp_parse_args( $args, array( 'description' => '', 'icon' => '', 'parent' => '' ) );
+		if ( ! is_string( $id ) || ! preg_match( '/^[a-z0-9][a-z0-9_-]*$/D', $id ) || isset( $sections[ $id ] ) ) {
+			Incorrect_Syntax_Exception::raise( 'Settings panel sections need unique lowercase IDs.' );
+			return $this;
+		}
+		if ( $args['parent'] && ( ! isset( $sections[ $args['parent'] ] ) || $sections[ $args['parent'] ]['parent'] ) ) {
+			Incorrect_Syntax_Exception::raise( 'A settings panel subsection must reference a previously declared top-level section.' );
+			return $this;
+		}
+
+		$field_count = count( $this->fields );
+		$this->add_fields( $fields );
+		if ( $fields && count( $this->fields ) === $field_count ) {
+			return $this;
+		}
+		$this->settings['panel_sections'][ $id ] = array(
+			'id' => $id,
+			'title' => $title,
+			'description' => $args['description'],
+			'icon' => sanitize_html_class( $args['icon'] ),
+			'parent' => $args['parent'],
+			'fields' => array_map( function( $field ) {
+				return $field->get_name();
+			}, array_values( $fields ) ),
+		);
+		return $this;
+	}
+
+	public function to_json( $load ) {
+		$data = parent::to_json( $load );
+		if ( $this->uses_settings_panel() ) {
+			$data['settings']['panel_sections'] = isset( $this->settings['panel_sections'] ) ? array_values( $this->settings['panel_sections'] ) : array();
+		}
+		return $data;
+	}
+
+	/**
+	 * Add a named panel to the settings page sidebar.
+	 *
+	 * @param string $title
+	 * @param array $fields
+	 * @return static
+	 */
+	public function add_sidebar_section( $title, $fields ) {
+		if ( empty( $fields ) ) {
+			return $this;
+		}
+
+		$field_count = count( $this->fields );
+		$this->add_fields( $fields );
+		if ( count( $this->fields ) === $field_count ) {
+			return $this;
+		}
+
+		$this->settings['sidebar_sections'][] = array(
+			'title' => $title,
+			'fields' => array_map( function( $field ) {
+				return $field->get_name();
+			}, array_values( $fields ) ),
+		);
+
+		return $this;
+	}
+
+	protected function get_sidebar_sections() {
+		return isset( $this->settings['sidebar_sections'] ) ? $this->settings['sidebar_sections'] : array();
+	}
+
+	/**
+	 * Keep sidebar fields out of the default tab.
+	 */
+	protected function get_untabbed_fields() {
+		$fields = parent::get_untabbed_fields();
+		$sidebar_fields = array();
+		$sections = $this->get_sidebar_sections();
+		if ( $this->uses_settings_panel() && isset( $this->settings['panel_sections'] ) ) {
+			$sections = array_merge( $sections, $this->settings['panel_sections'] );
+		}
+		foreach ( $sections as $section ) {
+			$sidebar_fields = array_merge( $sidebar_fields, $section['fields'] );
+		}
+		return array_filter( $fields, function( $field ) use ( $sidebar_fields ) {
+			return ! in_array( $field->get_name(), $sidebar_fields, true );
+		} );
+	}
+
+	/**
 	 * {@inheritDoc}
 	 */
 	public function __construct( $id, $title, $type, $condition_collection, $condition_translator ) {
@@ -168,7 +298,11 @@ class Theme_Options_Container extends Container {
 			add_action( 'admin_menu', array( $this, '_attach' ) );
 			add_filter( 'pll_admin_languages_filter', array( $this, 'admin_language_items' ), 10, 2 );
 			add_action( $this->get_id() . '_before_fields', array( $this, 'render_language_fields' ) );
-			add_action( $this->get_id() . '_after_fields', array( $this, 'render_language_complete' ) );
+			if ( $this->uses_settings_panel() || $this->get_sidebar_sections() ) {
+				add_action( $this->get_id() . '_after_sidebar', array( $this, 'render_language_complete' ), PHP_INT_MAX );
+			} else {
+				add_action( $this->get_id() . '_after_fields', array( $this, 'render_language_complete' ) );
+			}
 		}
 	}
 
@@ -182,9 +316,27 @@ class Theme_Options_Container extends Container {
 			return false;
 		}
 
+		if ( $this->uses_settings_panel() || $this->get_sidebar_sections() ) {
+			$input = Helper::input();
+			$complete = $this->get_id() . '_options_complete';
+			if ( ! isset( $input[ $complete ] ) || '1' !== $input[ $complete ] ) {
+				return false;
+			}
+		}
+
 		if ( ! $this->verified_language_in_request() ) {
 			$this->errors[] = esc_html__( 'The settings language could not be verified. Reload the page and try again.', 'carbon-fields' );
 			return false;
+		}
+		$input = Helper::input();
+		foreach ( $this->fields as $field ) {
+			$name = $field->get_name();
+			if ( isset( $input[ $name ] ) &&
+				( $field instanceof \Carbon_Fields\Field\Number_With_Unit_Field || $field instanceof \Carbon_Fields\Field\Typography_Field ) &&
+				! $field->is_valid_form_value( $input[ $name ] ) ) {
+				$this->errors[] = esc_html( $field->get_label() . ' · ' . __( 'Check the number, unit, or font settings and try again.', 'carbon-fields' ) );
+				return false;
+			}
 		}
 		return $this->is_valid_attach_for_object( null );
 	}

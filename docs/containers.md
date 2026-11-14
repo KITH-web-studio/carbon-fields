@@ -50,6 +50,81 @@ add_action( 'carbon_fields_register_fields', function () {
 
 `add_fields()` adds a plain group. `add_tab()` adds a named tab, and the container accepts `tabbed-horizontal` or `tabbed-vertical`. Tab organization changes the editor layout. The same field names are used to read the values.
 
+## Containers in the admin sidebar
+
+On a post, page, or custom post type edit screen, set a `post_meta` container's context to `side`. WordPress places it in the sidebar in the Classic Editor and in the side meta box area where available in the block editor. The fields still belong to the edited post.
+
+```php
+use Carbon_Fields\Container;
+use Carbon_Fields\Field;
+
+add_action( 'carbon_fields_register_fields', function () {
+    Container::make( 'post_meta', 'kith_page_flags', 'Page settings' )
+        ->where( 'post_type', '=', 'page' )
+        ->set_context( 'side' )
+        ->set_priority( 'high' )
+        ->add_fields( array(
+            Field::make( 'checkbox', 'kith_hide_page_title', 'Hide page title' ),
+        ) );
+} );
+```
+
+On a `theme_options` page, use `add_sidebar_section( $title, $fields )` to add a titled panel above **Save Changes**. Call it again to add more panels in declaration order. On narrow screens the sidebar sits below the main fields.
+
+```php
+use Carbon_Fields\Container;
+use Carbon_Fields\Field;
+
+add_action( 'carbon_fields_register_fields', function () {
+    Container::make( 'theme_options', 'kith_site_appearance', 'Site appearance' )
+        ->set_page_description( 'Manage the site branding and footer details.' )
+        ->add_tab( 'Branding', array(
+            Field::make( 'image', 'kith_appearance_logo', 'Logo' ),
+        ) )
+        ->add_sidebar_section( 'Footer', array(
+            Field::make( 'checkbox', 'kith_show_footer_contacts', 'Show contact details' ),
+            Field::make( 'text', 'kith_footer_phone', 'Phone' )
+                ->set_conditional_logic( array(
+                    array( 'field' => 'kith_show_footer_contacts', 'value' => true ),
+                ) ),
+        ) )
+        ->add_sidebar_section( 'Help', array(
+            Field::make( 'html', 'kith_appearance_help' )
+                ->set_html( '<p>The logo appears in the site header.</p>' ),
+        ) );
+} );
+```
+
+`set_page_description()` optionally adds plain text below the page title. Main and sidebar fields share the same form, field names, permissions, and Polylang language selection. Read sidebar values with `carbon_get_theme_option( 'kith_footer_phone' )`. These panels are part of the settings page. See [the sidebar field](fields.md#choose-a-widget-area) to select a widget area for the front end.
+
+## Settings panel for a theme
+
+Use `set_page_layout( 'panel' )` on a `theme_options` container to enable section navigation, search by field label, and a sticky save toolbar. Each section has a URL with `cf-section=<id>`. Use stable IDs with lowercase letters, digits, hyphens, or underscores. Use `parent` to place a subsection beneath an earlier top-level section. Section descriptions and titles are plain text.
+
+```php
+use Carbon_Fields\Container;
+use Carbon_Fields\Field;
+
+add_action( 'carbon_fields_register_fields', function () {
+    Container::make( 'theme_options', 'kith_site_panel', 'Site appearance' )
+        ->set_page_file( 'kith-appearance' )
+        ->set_page_layout( 'panel' )
+        ->set_page_description( 'Manage the appearance of the site.' )
+        ->add_section( 'header', 'Header', array(
+            Field::make( 'image', 'kith_header_logo', 'Logo' ),
+        ), array(
+            'icon' => 'dashicons-admin-appearance',
+            'description' => 'The logo appears at the top of the site.',
+        ) )
+        ->add_section( 'custom-css', 'Custom CSS', array(
+            Field::make( 'code', 'kith_header_css', 'Custom styles' )
+                ->set_language( 'css' ),
+        ), array( 'parent' => 'header' ) );
+} );
+```
+
+The panel can display existing `add_tab()`, `add_fields()`, and `add_sidebar_section()` declarations. To make a link independent of tab order or translated labels, use `add_section()` with an explicit ID. Saving covers the whole page and preserves the active section and Polylang language. Moving a field into a section preserves its stored value as long as the field name and datastore stay the same.
+
 ## Terms, users, comments, menus, and Multisite
 
 ```php

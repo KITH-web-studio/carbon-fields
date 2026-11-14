@@ -19,7 +19,7 @@ Create a field with `Field::make( $type, $name, $label )`. Use the same stable n
 | `association` | An ordered list of references to posts, terms, users, or comments. Use `set_types()` to configure targets. |
 | `map` | Google Maps picker. The value contains `lat`, `lng`, `zoom`, and `address`. |
 | `oembed` | An embeddable URL. Use WordPress `wp_oembed_get()` to render it. |
-| `sidebar` | Select a registered sidebar. Use its ID with `dynamic_sidebar()`. |
+| `sidebar` | Select or create a widget area. Use its ID with `dynamic_sidebar()`. |
 | `gravity_form` | Choose a form ID from an active Gravity Forms installation. |
 | `complex` | Repeat a group of fields, including nested groups. See [Complex fields](complex-fields.md). |
 | `hidden` | A hidden input. Its value is still part of the form. |
@@ -155,6 +155,67 @@ foreach ( (array) carbon_get_the_post_meta( 'kith_related_pages' ) as $item ) {
 ```
 
 Read text with `esc_html()`, URLs with `esc_url()`, and rich text with `wp_kses_post()` where appropriate for your template. An ID-backed attachment lets WordPress resolve its current URL and image size.
+
+## Measurements and typography
+
+`number_with_unit` returns a CSS measurement such as `24px` or `1.5rem`. Set the allowed units and the numeric range in PHP. The range applies to the number as entered for each unit. An empty string in the units array allows unitless numbers.
+
+```php
+Field::make( 'number_with_unit', 'kith_content_gap', 'Content gap' )
+    ->set_units( array( 'px', 'rem', '%' ) )
+    ->set_range( 0, 100, 0.5 )
+    ->set_default_value( '24px' );
+
+Field::make( 'typography', 'kith_heading_type', 'Headings' )
+    ->set_families( array( 'system-ui' => 'System', 'Georgia, serif' => 'Georgia' ) )
+    ->set_default_value( array(
+        'family' => 'Georgia, serif', 'size' => '28px',
+        'weight' => '600', 'line_height' => '1.35',
+    ) );
+```
+
+`typography` returns an array with `family`, `size`, `weight`, and `line_height`. An empty string means the property inherits its value. The preview uses fonts available on the device and fonts already loaded by the theme.
+
+## Search and select relationships
+
+`set_layout( 'multiselect' )` gives an `association` field a searchable dropdown and displays the selection as removable chips. Search and pagination use the existing association queries. The stored relationship array and `set_types()`, `set_min()`, and `set_max()` still apply. The selected items stay in selection order.
+
+```php
+Field::make( 'association', 'kith_related_pages', 'Related pages' )
+    ->set_layout( 'multiselect' )
+    ->set_types( array( array( 'type' => 'post', 'post_type' => 'page' ) ) )
+    ->set_max( 5 );
+```
+
+## Edit code snippets
+
+`Field::make( 'code', $name, $label )` stores a multiline string. Use `set_language()` with `css` (default), `html`, `javascript`, `json`, or `text`. `set_rows()` controls the editor height. The field uses the WordPress code editor when highlighting is available and a standard textarea when highlighting is disabled in the user profile.
+
+```php
+Field::make( 'code', 'kith_custom_css', 'Custom CSS' )
+    ->set_language( 'css' )
+    ->set_rows( 12 );
+```
+
+Read the string with the usual getter for the container. The language controls syntax highlighting. To display the snippet as text, escape it with `esc_html()`. Treat publishing HTML or JavaScript on the front end as a separate integration with its own permissions and output handling.
+
+## Choose a widget area
+
+The `sidebar` field selects an existing WordPress widget area. Users with `edit_theme_options` can also create an area from the field. Use `disable_add_new()` to display only existing areas in that field.
+
+```php
+Field::make( 'sidebar', 'kith_page_sidebar', 'Widget area' )
+    ->disable_add_new();
+```
+
+To display the selected widgets in a theme template, pass the saved ID to WordPress.
+
+```php
+$sidebar_id = carbon_get_the_post_meta( 'kith_page_sidebar' );
+if ( $sidebar_id ) {
+    dynamic_sidebar( $sidebar_id );
+}
+```
 
 ## Set up a map field
 

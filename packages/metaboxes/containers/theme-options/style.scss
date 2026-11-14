@@ -8,3 +8,387 @@
 		position: fixed; right: 0; margin-right: 20px;
 	}
 }
+
+.carbon-options-description {
+	max-width: 68ch;
+	margin-bottom: 12px;
+}
+
+.carbon-options-with-sidebar {
+	> h2 {
+		margin: 12px 0 4px;
+		padding: 0;
+		font-size: 24px;
+		line-height: 1.3;
+	}
+
+	#poststuff #post-body.columns-2 {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+		gap: 16px;
+		align-items: start;
+		margin: 0;
+	}
+
+	#post-body-content,
+	#post-body.columns-2 #postbox-container-1 {
+		float: none;
+		width: auto;
+		min-width: 0;
+		margin: 0;
+	}
+
+	#post-body-content > .carbon-box,
+	#postbox-container-1 > .postbox {
+		border-radius: 6px;
+	}
+
+	#post-body-content > .carbon-box > .inside > .cf-container > .cf-container__tabs--tabbed-horizontal {
+		border-radius: 6px 6px 0 0;
+		padding-inline: 12px;
+		padding-top: 6px;
+	}
+
+	.carbon-options-panel .postbox-header .hndle {
+		margin: 0;
+		padding: 10px 12px;
+	}
+
+	.carbon-options-panel .cf-container__fields {
+		margin: 0;
+	}
+
+	@media (max-width: 1080px) {
+		#poststuff #post-body.columns-2 {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 0;
+		}
+	}
+}
+
+/* The active section uses the WordPress accent and a matching edge in the navigation. */
+.cf-settings-page {
+	--cf-panel-ink: #192736;
+	--cf-panel-muted: #526274;
+	--cf-panel-border: #d9e1ea;
+	--cf-panel-surface: #fff;
+	--cf-panel-soft: #f4f7fb;
+	--cf-panel-accent: var(--wp-admin-theme-color, #2271b1);
+	--cf-panel-top: 32px;
+
+	> h1 {
+		padding: 8px 0 0;
+		font-size: clamp(25px, 3vw, 36px);
+		font-weight: 650;
+		line-height: 1.2;
+		color: var(--cf-panel-ink);
+	}
+
+	> .carbon-options-description {
+		color: var(--cf-panel-muted);
+		font-size: 14px;
+		margin: 8px 0 20px;
+	}
+
+	#poststuff { padding-top: 16px; }
+
+	#poststuff #post-body.columns-2 {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		align-items: start;
+		gap: 16px;
+		margin: 0;
+	}
+
+	&.carbon-options-with-sidebar #poststuff #post-body.columns-2 {
+		grid-template-columns: minmax(0, 1fr) clamp(190px, 19vw, 260px);
+	}
+
+	#post-body-content,
+	#poststuff #post-body.columns-2 #postbox-container-1 {
+		min-width: 0;
+		width: auto;
+		margin: 0;
+		float: none;
+	}
+
+	#post-body-content > .carbon-box {
+		border: 0;
+		margin: 0;
+		background: transparent;
+		box-shadow: none;
+	}
+
+	#postbox-container-1:empty { display: none; }
+
+	.carbon-options-panel {
+		border-color: var(--cf-panel-border);
+		border-radius: 8px;
+		box-shadow: 0 1px 2px rgba( 25, 39, 54, .05 );
+	}
+
+	.nav-tab-wrapper {
+		border: 0;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px;
+		padding: 0;
+	}
+
+	.nav-tab {
+		border: 1px solid transparent;
+		border-radius: 4px;
+		margin: 0;
+		padding: 5px 8px;
+		background: transparent;
+		line-height: 1.35;
+	}
+
+	.nav-tab-active {
+		background: var(--cf-panel-soft);
+		border-color: var(--cf-panel-border);
+	}
+
+	.cf-settings-toolbar > .description { display: none; }
+
+	@media (max-width: 1240px) {
+		&.carbon-options-with-sidebar #poststuff #post-body.columns-2 {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+
+	@media (max-width: 782px) {
+		--cf-panel-top: 46px;
+	}
+
+	@media (max-width: 600px) {
+		--cf-panel-top: 0px;
+	}
+}
+
+.cf-settings-toolbar {
+	position: sticky;
+	top: var(--cf-panel-top);
+	z-index: 20;
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px 16px;
+	margin-top: 12px;
+	padding: 10px 14px;
+	background: var(--cf-panel-surface);
+	border: 1px solid var(--cf-panel-border);
+	border-radius: 8px;
+	box-shadow: 0 2px 6px rgba( 25, 39, 54, .05 );
+
+	&__mount {
+		flex: 1 1 340px;
+		min-width: 0;
+	}
+}
+
+.cf-settings-controls {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 14px;
+	align-items: center;
+	justify-content: space-between;
+
+	&__actions {
+		display: flex;
+		gap: 12px;
+		align-items: center;
+		margin-inline-start: auto;
+	}
+}
+
+.cf-settings-status {
+	color: var(--cf-panel-muted);
+	font-size: 12px;
+
+	&[data-dirty="true"] { color: #854d0e; }
+}
+
+.cf-settings-problem {
+	flex: 1 1 100%;
+	color: #b32d2e;
+	margin: 0;
+}
+
+.cf-settings-search {
+	position: relative;
+	flex: 1 1 150px;
+	max-width: 330px;
+	color: var(--cf-panel-muted);
+
+	> .dashicons {
+		position: absolute;
+		left: 8px;
+		top: 50%;
+		transform: translateY(-50%);
+		pointer-events: none;
+	}
+
+	input[type="search"].cf-settings-search__input {
+		width: 100%;
+		margin: 0;
+		padding-left: 32px;
+		border-color: var(--cf-panel-border);
+		background: var(--cf-panel-soft);
+	}
+
+	[dir="rtl"] & {
+		> .dashicons { left: auto; right: 8px; }
+		input[type="search"].cf-settings-search__input { padding-left: 8px; padding-right: 32px; }
+	}
+
+	&__results {
+		position: absolute;
+		inset-inline: 0;
+		top: calc(100% + 6px);
+		overflow: auto;
+		max-height: 44vh;
+		min-width: 170px;
+		background: var(--cf-panel-surface);
+		border: 1px solid var(--cf-panel-border);
+		border-radius: 6px;
+		box-shadow: 0 6px 18px rgba( 25, 39, 54, .12 );
+
+		button {
+			display: flex;
+			width: 100%;
+			flex-direction: column;
+			gap: 2px;
+			padding: 8px 11px;
+			border: 0;
+			background: transparent;
+			color: var(--cf-panel-ink);
+			text-align: left;
+			align-items: flex-start;
+			cursor: pointer;
+
+			&:hover,
+			&:focus-visible { background: var(--cf-panel-soft); }
+		}
+
+		[dir="rtl"] & button { text-align: right; }
+		small { color: var(--cf-panel-muted); }
+		p { margin: 10px; }
+	}
+}
+
+.cf-settings-panel {
+	display: grid;
+	grid-template-columns: minmax(142px, 192px) minmax(0, 1fr);
+	gap: 16px;
+	align-items: start;
+
+	@media (max-width: 782px) {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 10px;
+	}
+}
+
+.cf-settings-nav {
+	padding: 6px;
+	border: 1px solid var(--cf-panel-border);
+	border-radius: 8px;
+	background: var(--cf-panel-surface);
+
+	ul, li { margin: 0; }
+
+	a {
+		display: flex;
+		position: relative;
+		gap: 8px;
+		align-items: center;
+		padding: 10px 10px 10px 17px;
+		border-radius: 5px;
+		color: var(--cf-panel-ink);
+		text-decoration: none;
+		overflow-wrap: anywhere;
+
+		> .dashicons { flex: 0 0 20px; }
+
+		&:hover { background: var(--cf-panel-soft); }
+
+		&[aria-current] {
+			background: var(--cf-panel-soft);
+			color: var(--cf-panel-accent);
+			font-weight: 650;
+
+			&::before {
+				content: "";
+				position: absolute;
+				top: 7px;
+				bottom: 7px;
+				left: 5px;
+				width: 3px;
+				border-radius: 2px;
+				background: currentColor;
+			}
+		}
+	}
+
+	a.cf-settings-nav__child-link { padding-left: 33px; }
+
+	[dir="rtl"] & {
+		a { padding-left: 10px; padding-right: 17px; }
+		a.cf-settings-nav__child-link { padding-right: 33px; }
+		a[aria-current]::before { left: auto; right: 5px; }
+	}
+
+	@media (max-width: 782px) {
+		ul {
+			display: flex;
+			overflow: auto;
+			gap: 4px;
+			padding: 2px;
+		}
+		li { flex: none; }
+		a.cf-settings-nav__child-link { padding-left: 17px; }
+		[dir="rtl"] & a.cf-settings-nav__child-link { padding-right: 17px; }
+	}
+}
+
+.cf-settings-content {
+	min-width: 0;
+
+	> section {
+		border: 1px solid var(--cf-panel-border);
+		border-radius: 8px;
+		background: var(--cf-panel-surface);
+		box-shadow: 0 1px 2px rgba( 25, 39, 54, .05 );
+	}
+
+	&__heading {
+		padding: 16px 18px;
+		background: var(--cf-panel-soft);
+		border-bottom: 1px solid var(--cf-panel-border);
+		border-radius: 8px 8px 0 0;
+
+		#poststuff & h2 {
+			margin: 0;
+			padding: 0;
+			color: var(--cf-panel-ink);
+			font-size: 20px;
+			font-weight: 650;
+			line-height: 1.25;
+		}
+
+		p {
+			margin: 5px 0 0;
+			color: var(--cf-panel-muted);
+		}
+	}
+
+	.cf-container__fields {
+		margin: 0;
+		border-radius: 0 0 8px 8px;
+	}
+
+	.cf-container__fields > .cf-field {
+		padding: 15px 18px;
+	}
+}

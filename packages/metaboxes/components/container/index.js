@@ -2,7 +2,7 @@
  * External dependencies.
  */
 import cx from 'classnames';
-import { Component, createRef } from '@wordpress/element';
+import { Component, createPortal, createRef } from '@wordpress/element';
 import { dispatch, select } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
 import {
@@ -24,6 +24,7 @@ import './style.scss';
 import Field from '../field';
 import { ComplexRevealContext, findLazyFieldError, supportsPackedPostMeta } from '../../utils/lazy-complex';
 import isGutenberg from '../../utils/is-gutenberg';
+import SettingsPanel from './settings-panel';
 
 class Container extends Component {
 	node = createRef();
@@ -135,6 +136,24 @@ class Container extends Component {
 		);
 	}
 
+	renderSidebarSection = ( section, index ) => {
+		const { container } = this.props;
+		const node = document.getElementById( container.id + '-sidebar-' + index );
+		if ( ! node ) {
+			return null;
+		}
+
+		return createPortal(
+			<div className="cf-container cf-container--plain">
+				<div className="cf-container__fields">
+					{ section.fields.map( ( name ) => this.renderField( find( container.fields, [ 'name', name ] ) ) ) }
+				</div>
+			</div>,
+			node,
+			index
+		);
+	}
+
 	/**
 	 * Handles click on the tabs.
 	 *
@@ -157,6 +176,11 @@ class Container extends Component {
 		const { container, invalidLabel, invalidMessage } = this.props;
 
 		const hasTabs = this.isTabbed( container );
+		const hasPanel = container.type === 'theme_options' && container.settings.page_layout === 'panel';
+		const sidebarSections = container.settings.sidebar_sections || [];
+		const mainFields = sidebarSections.length && ! hasTabs
+			? container.fields.filter( ( field ) => ! sidebarSections.some( ( section ) => section.fields.includes( field.name ) ) )
+			: container.fields;
 		const protectedForm = container.type === 'post_meta';
 
 		const classes = cx( [
@@ -187,7 +211,8 @@ class Container extends Component {
 					</p>
 				) }
 
-				{ hasTabs && (
+				{ hasPanel && <SettingsPanel container={ container } renderField={ this.renderField } /> }
+				{ ! hasPanel && hasTabs && (
 					<div className={ `cf-container__tabs cf-container__tabs--${ container.layout }` }>
 						<ul className="cf-container__tabs-list">
 							{ map( container.settings.tabs, ( fieldNames, tabName ) => {
@@ -219,7 +244,7 @@ class Container extends Component {
 					</div>
 				) }
 
-				{ hasTabs && (
+				{ ! hasPanel && hasTabs && (
 					map( container.settings.tabs, ( fieldNames, tabName ) => {
 						return (
 							<div className="cf-container__fields" key={ tabName } hidden={ tabName !== currentTab }>
@@ -233,11 +258,12 @@ class Container extends Component {
 					} )
 				) }
 
-				{ ! hasTabs && (
+				{ ! hasPanel && ! hasTabs && (
 					<div className="cf-container__fields">
-						{ map( container.fields, this.renderField ) }
+						{ map( mainFields, this.renderField ) }
 					</div>
 				) }
+				{ sidebarSections.map( this.renderSidebarSection ) }
 				{ protectedForm && (
 					<input type="hidden" name={ container.nonce.name + '_complete' } value="native" />
 				) }

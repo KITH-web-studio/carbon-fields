@@ -4,6 +4,7 @@
  import { addFilter } from '@wordpress/hooks';
  import { withEffects } from 'refract-callbag';
  import { map, pipe } from 'callbag-basics';
+ import empty from 'callbag-empty';
  import fromEvent from 'callbag-from-event';
  
  /**
@@ -17,6 +18,9 @@
   * @return {Object}
   */
  function aperture() {
+	 if ( document.querySelector( '.carbon-options-with-sidebar, .cf-settings-page' ) ) {
+		 return empty;
+	 }
 	 return pipe(
 		 fromEvent( window, 'scroll' ),
 		 map( () => window.jQuery( window ).scrollTop() )
@@ -49,4 +53,3 @@
  }
  
  addFilter( 'carbon-fields.theme_options.classic', 'carbon-fields/metaboxes', withEffects( aperture, { handler } ) );
- 

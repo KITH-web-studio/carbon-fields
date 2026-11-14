@@ -50,6 +50,81 @@ add_action( 'carbon_fields_register_fields', function () {
 
 `add_fields()` добавляет обычную группу полей. `add_tab()` создаёт именованную вкладку. Для контейнера доступны `tabbed-horizontal` и `tabbed-vertical`. Вкладки влияют на раскладку редактора. Значения читаются по тем же именам полей.
 
+## Контейнеры в боковой колонке админки
+
+На экране редактирования записи, страницы или произвольного типа записей задайте контейнеру `post_meta` контекст `side`. WordPress разместит его в боковой колонке классического редактора или в области боковых метабоксов, если она доступна в редакторе блоков. Значения по-прежнему относятся к редактируемой записи.
+
+```php
+use Carbon_Fields\Container;
+use Carbon_Fields\Field;
+
+add_action( 'carbon_fields_register_fields', function () {
+    Container::make( 'post_meta', 'kith_page_flags', 'Настройки страницы' )
+        ->where( 'post_type', '=', 'page' )
+        ->set_context( 'side' )
+        ->set_priority( 'high' )
+        ->add_fields( array(
+            Field::make( 'checkbox', 'kith_hide_page_title', 'Скрыть заголовок страницы' ),
+        ) );
+} );
+```
+
+На странице `theme_options` вызовите `add_sidebar_section( $title, $fields )`, чтобы добавить панель с заголовком над кнопкой **Сохранить изменения**. Несколько вызовов добавят панели в порядке объявления. На узких экранах боковая колонка располагается под основными полями.
+
+```php
+use Carbon_Fields\Container;
+use Carbon_Fields\Field;
+
+add_action( 'carbon_fields_register_fields', function () {
+    Container::make( 'theme_options', 'kith_site_appearance', 'Оформление сайта' )
+        ->set_page_description( 'Настройте логотип сайта и контакты в подвале.' )
+        ->add_tab( 'Оформление', array(
+            Field::make( 'image', 'kith_appearance_logo', 'Логотип' ),
+        ) )
+        ->add_sidebar_section( 'Подвал', array(
+            Field::make( 'checkbox', 'kith_show_footer_contacts', 'Показывать контакты' ),
+            Field::make( 'text', 'kith_footer_phone', 'Телефон' )
+                ->set_conditional_logic( array(
+                    array( 'field' => 'kith_show_footer_contacts', 'value' => true ),
+                ) ),
+        ) )
+        ->add_sidebar_section( 'Подсказка', array(
+            Field::make( 'html', 'kith_appearance_help' )
+                ->set_html( '<p>Логотип отображается в шапке сайта.</p>' ),
+        ) );
+} );
+```
+
+`set_page_description()` добавляет необязательное текстовое описание под заголовком страницы. Основные и боковые поля используют общую форму, имена полей, права доступа и выбранный язык Polylang. Читайте значение бокового поля через `carbon_get_theme_option( 'kith_footer_phone' )`. Для выбора области виджетов на сайте используется [поле `sidebar`](fields.md#выбор-области-виджетов).
+
+## Панель настроек темы
+
+Вызовите `set_page_layout( 'panel' )` у контейнера `theme_options`, чтобы включить навигацию по разделам, поиск по названиям полей и закреплённую кнопку сохранения. Раздел открывается по ссылке с параметром `cf-section=<id>`. Используйте постоянные ID из строчных латинских букв, цифр, дефисов и подчёркиваний. Параметр `parent` помещает подраздел под ранее объявленным разделом. Заголовки и описания задаются обычным текстом.
+
+```php
+use Carbon_Fields\Container;
+use Carbon_Fields\Field;
+
+add_action( 'carbon_fields_register_fields', function () {
+    Container::make( 'theme_options', 'kith_site_panel', 'Оформление сайта' )
+        ->set_page_file( 'kith-appearance' )
+        ->set_page_layout( 'panel' )
+        ->set_page_description( 'Управляйте внешним видом сайта.' )
+        ->add_section( 'header', 'Шапка', array(
+            Field::make( 'image', 'kith_header_logo', 'Логотип' ),
+        ), array(
+            'icon' => 'dashicons-admin-appearance',
+            'description' => 'Логотип появляется в верхней части сайта.',
+        ) )
+        ->add_section( 'custom-css', 'Свой CSS', array(
+            Field::make( 'code', 'kith_header_css', 'Дополнительные стили' )
+                ->set_language( 'css' ),
+        ), array( 'parent' => 'header' ) );
+} );
+```
+
+Панель поддерживает существующие объявления `add_tab()`, `add_fields()` и `add_sidebar_section()`. Чтобы ссылка сохранялась при перестановке разделов и переводе заголовков, задайте явный ID через `add_section()`. Кнопка сохраняет всю страницу. После сохранения остаются открытыми тот же раздел и язык Polylang. При переносе поля в раздел сохранённое значение доступно по прежнему имени, если хранилище осталось тем же.
+
 ## Термины, пользователи, комментарии, меню и Multisite
 
 ```php

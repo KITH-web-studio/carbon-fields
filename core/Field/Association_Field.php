@@ -405,9 +405,20 @@ class Association_Field extends Field {
 			'min'                => $this->get_min(),
 			'max'                => $this->get_max(),
 			'duplicates_allowed' => $this->duplicates_allowed,
+			'association_layout' => $this->association_layout,
 		) );
 
 		return $field_data;
+	}
+
+	protected $association_layout = 'default';
+
+	/**
+	 * Choose the standard two-column interface or the searchable multiselect.
+	 */
+	public function set_layout( $layout ) {
+		$this->association_layout = 'multiselect' === $layout ? 'multiselect' : 'default';
+		return $this;
 	}
 
 	/**

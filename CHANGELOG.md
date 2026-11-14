@@ -2,6 +2,12 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.18
+
+- Add an opt-in theme settings panel with sections, permalinks, field search, a sticky save bar, and sidebar panels.
+- Add code, typography, and CSS measurement fields, plus a searchable multiselect layout for association fields.
+- Require permission and a valid nonce to create or delete widget areas.
+
 ## 3.6.11.17
 
 - Enable keyboard-accessible option search on individual select fields, including dependent selects.

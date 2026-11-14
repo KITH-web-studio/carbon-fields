@@ -8,6 +8,7 @@ namespace Carbon_Fields;
  *
  * @method static \Carbon_Fields\Field\Association_Field make_association( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Checkbox_Field make_checkbox( string $name, string $label = null )
+ * @method static \Carbon_Fields\Field\Code_Field make_code( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Color_Field make_color( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Complex_Field make_complex( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Date_Field make_date( string $name, string $label = null )
@@ -32,6 +33,8 @@ namespace Carbon_Fields;
  * @method static \Carbon_Fields\Field\Sidebar_Field make_sidebar( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Text_Field make_text( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Textarea_Field make_textarea( string $name, string $label = null )
+ * @method static \Carbon_Fields\Field\Number_With_Unit_Field make_number_with_unit( string $name, string $label = null )
+ * @method static \Carbon_Fields\Field\Typography_Field make_typography( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Time_Field make_time( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Block_Preview_Field make_html( string $name, string $label = null )
  */

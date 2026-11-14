@@ -127,11 +127,12 @@ function handler( props ) {
 
 				const request = window.jQuery.post( window.ajaxurl, {
 					action: 'carbon_fields_add_sidebar',
+					_ajax_nonce: window.cf.config.sidebarNonce,
 					name
 				}, null, 'json' );
 
 				/* eslint-disable-next-line no-alert */
-				const errorHandler = () => alert( __( 'An error occurred while trying to create the sidebar.', 'carbon-fields-ui' ) );
+				const errorHandler = ( response ) => alert( response?.error || __( 'An error occurred while trying to create the sidebar.', 'carbon-fields-ui' ) );
 
 				request.done( ( response ) => {
 					if ( response && response.success ) {
@@ -145,11 +146,11 @@ function handler( props ) {
 						onAdded( sidebar );
 						onChange( effect.payload.fieldKey, sidebar.value );
 					} else {
-						errorHandler();
+						errorHandler( response );
 					}
 				} );
 
-				request.fail( errorHandler );
+				request.fail( ( xhr ) => errorHandler( xhr.responseJSON ) );
 				break;
 		}
 	};

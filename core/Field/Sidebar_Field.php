@@ -68,7 +68,7 @@ class Sidebar_Field extends Select_Field {
 	public function to_json( $load ) {
 		$options = array();
 
-		if ( $this->enable_add_new ) {
+		if ( $this->enable_add_new && current_user_can( 'edit_theme_options' ) ) {
 			$options[] = array(
 				'value' => '__add_new',
 				'label' => _x( 'Add New', 'sidebar', 'carbon-fields' ),

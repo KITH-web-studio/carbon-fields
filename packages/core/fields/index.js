@@ -11,6 +11,7 @@ import withFilters from '../hocs/with-filters';
 import { registerFieldType } from '../registry/fields';
 import AssociationField from './association';
 import CheckboxField from './checkbox';
+import CodeField from './code';
 import ColorField from './color';
 import ComplexField from './complex';
 import DateField from './date';
@@ -21,6 +22,7 @@ import HtmlField from './html';
 import MapField from './map';
 import MediaGalleryField from './media-gallery';
 import MultiselectField from './multiselect';
+import NumberWithUnitField from './number-with-unit';
 import OembedField from './oembed';
 import RadioField from './radio';
 import RadioImageField from './radio-image';
@@ -32,6 +34,7 @@ import SidebarField from './sidebar';
 import TextField from './text';
 import TextareaField from './textarea';
 import TimeField from './time';
+import TypographyField from './typography';
 import BlockPreviewField from './block-preview';
 
 /**
@@ -50,6 +53,7 @@ addFilter( 'carbon-fields.register-field-type', 'carbon-fields/core', ( type, co
 [
 	[ 'association', AssociationField ],
 	[ 'checkbox', CheckboxField ],
+	[ 'code', CodeField ],
 	[ 'color', ColorField ],
 	[ 'complex', ComplexField ],
 	[ 'date', DateField ],
@@ -63,6 +67,7 @@ addFilter( 'carbon-fields.register-field-type', 'carbon-fields/core', ( type, co
 	[ 'image', FileField ],
 	[ 'map', MapField ],
 	[ 'multiselect', MultiselectField ],
+	[ 'number_with_unit', NumberWithUnitField ],
 	[ 'media_gallery', MediaGalleryField ],
 	[ 'oembed', OembedField ],
 	[ 'radio', RadioField ],
@@ -75,5 +80,6 @@ addFilter( 'carbon-fields.register-field-type', 'carbon-fields/core', ( type, co
 	[ 'text', TextField ],
 	[ 'textarea', TextareaField ],
 	[ 'time', TimeField ],
+	[ 'typography', TypographyField ],
 	[ 'block_preview', BlockPreviewField ]
 ].forEach( ( field ) => registerFieldType( ...field ) );

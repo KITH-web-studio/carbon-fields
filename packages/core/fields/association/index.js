@@ -34,7 +34,8 @@ import of from 'callbag-of';
 import './style.scss';
 import SearchInput from '../../components/search-input';
 import Sortable from '../../components/sortable';
-import apiFetch from '../../utils/api-fetch';
+import { associationRequest } from './request';
+import AssociationMultiselect from './multiselect';
 
 class AssociationField extends Component {
 	/**
@@ -439,8 +440,7 @@ function handler( props ) {
 		const { payload, type } = effect;
 		const {
 			setState,
-			selectedOptions,
-			hierarchyResolver
+			selectedOptions
 		} = props;
 
 		switch ( type ) {
@@ -450,17 +450,7 @@ function handler( props ) {
 				} );
 
 				// eslint-disable-next-line
-				const request = apiFetch(
-					`${ window.wpApiSettings.root }carbon-fields/v1/association/options`,
-					'get',
-					{
-						container_id: props.containerId,
-						options: props.value.map( ( option ) => `${ option.id }:${ option.type }:${ option.subtype }` ).join( ';' ),
-						field_id: hierarchyResolver,
-						term: payload.queryTerm,
-						page: payload.page || 1
-					}
-				);
+				const request = associationRequest( props, { term: payload.queryTerm, page: payload.page || 1 } );
 
 				/* eslint-disable-next-line no-alert */
 				const errorHandler = () => alert( __( 'An error occurred while trying to fetch association options.', 'carbon-fields-ui' ) );
@@ -481,15 +471,7 @@ function handler( props ) {
 				break;
 
 			case 'FETCH_SELECTED_OPTIONS':
-				apiFetch(
-					`${ window.wpApiSettings.root }carbon-fields/v1/association/`,
-					'get',
-					{
-						container_id: props.containerId,
-						options: props.value.map( ( option ) => `${ option.id }:${ option.type }:${ option.subtype }` ).join( ';' ),
-						field_id: hierarchyResolver
-					}
-				)
+				associationRequest( props )
 					.then( ( response ) => {
 						setState( {
 							selectedOptions: [ ...selectedOptions, ...response ]
@@ -526,7 +508,12 @@ addFilter( 'carbon-fields.association.validate', 'carbon-fields/core', ( field, 
 	return null;
 } );
 
-export default compose(
+const AssociationColumns = compose(
 	applyWithState,
 	applyWithEffects
 )( AssociationField );
+
+export default function Association( props ) {
+	const Edit = props.field.association_layout === 'multiselect' ? AssociationMultiselect : AssociationColumns;
+	return <Edit { ...props } />;
+}

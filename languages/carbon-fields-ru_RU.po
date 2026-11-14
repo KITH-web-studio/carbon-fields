@@ -97,6 +97,10 @@ msgstr "Добавить сайдбар"
 msgid "Please enter the name of the new sidebar:"
 msgstr "Пожалуйста, введите название для сайдбара."
 
+#: core/Libraries/Sidebar_Manager/Sidebar_Manager.php:214
+msgid "Remove Sidebar"
+msgstr "Удалить область виджетов"
+
 #: core/Libraries/Sidebar_Manager/Sidebar_Manager.php:183
 msgid "Are you sure you wish to remove this sidebar?"
 msgstr "Действительно удалить сайдбар?"
@@ -204,3 +208,6 @@ msgstr "Идентификатор записи, в контексте кото�
 #: core/Service/Revisions_Service.php:295
 msgid "Carbon Fields could not restore the field values. Please try again."
 msgstr "Плагину Carbon Fields не удалось восстановить значения полей. Повторите попытку."
+
+msgid "Check the number, unit, or font settings and try again."
+msgstr "Проверьте число, единицу или настройки шрифта и повторите попытку."

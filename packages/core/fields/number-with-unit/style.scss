@@ -1,0 +1,9 @@
+.cf-measurement {
+	display: flex;
+	gap: 6px;
+	align-items: stretch;
+	max-width: 230px;
+
+	input[type=number] { width: 100%; min-width: 0; }
+	select { flex: none; max-width: 95px; }
+}
