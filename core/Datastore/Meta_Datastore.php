@@ -10,6 +10,7 @@ use Carbon_Fields\Field\Field;
  * Abstract meta datastore class.
  */
 abstract class Meta_Datastore extends Key_Value_Datastore {
+	protected $storage_read_order = '`meta_key` ASC';
 
 	/**
 	 * Initialization tasks.
@@ -24,19 +25,19 @@ abstract class Meta_Datastore extends Key_Value_Datastore {
 	 * @return \stdClass[] Array of {key, value} objects
 	 */
 	protected function get_storage_array( Field $field, $storage_key_patterns ) {
-		$storage_key_comparisons = $this->key_toolset->storage_key_patterns_to_sql( '`meta_key`', $storage_key_patterns );
+		$where = $this->key_toolset->storage_key_patterns_to_sql( '`meta_key`', $storage_key_patterns );
+		$storage_array = $this->get_storage_query_rows( $this->get_storage_read_query( $this->get_object_id(), $where ) );
+		return apply_filters( 'carbon_fields_datastore_storage_array', $storage_array, $this, $storage_key_patterns );
+	}
 
-		$storage_array = $this->get_storage_query_rows( '
+	protected function get_storage_read_query( $object_id, $where ) {
+		return '
 			SELECT `meta_key` AS `key`, `meta_value` AS `value`
 			FROM ' . $this->get_table_name() . '
-			WHERE `' . $this->get_table_field_name() . '` = ' . intval( $this->get_object_id() ) . '
-				AND ' . $storage_key_comparisons . '
-			ORDER BY `meta_key` ASC
-		' );
-
-		$storage_array = apply_filters( 'carbon_fields_datastore_storage_array', $storage_array, $this, $storage_key_patterns );
-
-		return $storage_array;
+			WHERE `' . $this->get_table_field_name() . '` = ' . intval( $object_id ) . '
+				AND ' . $where . '
+			ORDER BY ' . $this->storage_read_order . '
+		';
 	}
 
 	/**

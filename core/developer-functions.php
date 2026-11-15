@@ -2,6 +2,18 @@
 
 use Carbon_Fields\Helper\Developer_API;
 use Carbon_Fields\Helper\Media;
+use Carbon_Fields\Helper\Post_Meta_Batch;
+
+/** @return array Formatted field values keyed by field name. */
+function carbon_get_post_meta_fields( $post_id, array $field_names, array $options = array() ) {
+	$posts = Post_Meta_Batch::read( array( $post_id ), $field_names, $options );
+	return reset( $posts ) ?: array();
+}
+
+/** @return array Formatted field values keyed by post ID and field name. */
+function carbon_get_post_meta_batch( array $post_ids, array $field_names, array $options = array() ) {
+	return Post_Meta_Batch::read( $post_ids, $field_names, $options );
+}
 
 /** @return true|WP_Error */
 function carbon_update_fields( $post_id, array $changes, $container_id = '' ) {

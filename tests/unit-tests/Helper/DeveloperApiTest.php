@@ -178,6 +178,121 @@ class DeveloperApiTest extends WP_UnitTestCase {
 		$this->assertSame( $rows, carbon_get_theme_option( $name, $id ) );
 	}
 
+	public function testReadingSelectedFieldsPrimesTheSameCacheAsIndividualReads() {
+		global $wpdb;
+		$title = $this->prefix . '_title';
+		$rows = $this->prefix . '_rows';
+		$other = self::factory()->post->create();
+		$this->assertTrue( carbon_update_fields( $this->id, array( $title => '0', $rows => array( array( 'city' => 'Kyiv', 'price' => '10' ) ) ) ) );
+		$fields = array( $title, $rows, $this->prefix . '_missing' );
+		$expected = array();
+		foreach ( array( $this->id, $other ) as $id ) {
+			foreach ( $fields as $name ) {
+				$expected[ $id ][ $name ] = carbon_get_post_meta( $id, $name );
+			}
+		}
+		\Carbon_Fields\Datastore\Post_Meta_Datastore::invalidate_storage_cache();
+		$before = $wpdb->num_queries;
+		$this->assertSame( $expected[ $this->id ], carbon_get_post_meta_fields( $this->id, $fields ) );
+		$this->assertSame( 1, $wpdb->num_queries - $before );
+		$before = $wpdb->num_queries;
+		$this->assertSame( $expected, carbon_get_post_meta_batch( array( $this->id, $other, $this->id ), $fields ) );
+		$this->assertSame( 1, $wpdb->num_queries - $before );
+		$before = $wpdb->num_queries;
+		$this->assertSame( '0', carbon_get_post_meta( $this->id, $title ) );
+		$this->assertSame( $before, $wpdb->num_queries );
+		update_post_meta( $this->id, '_' . $title, 'New' );
+		$this->assertSame( 'New', carbon_get_post_meta_fields( $this->id, array( $title ) )[ $title ] );
+	}
+
+	public function testBatchRetainsPreviewIdAndPerReadStorageFilters() {
+		$name = $this->prefix . '_title';
+		$preview = self::factory()->post->create();
+		update_post_meta( $this->id, '_' . $name, 'Original' );
+		update_post_meta( $preview, '_' . $name, 'Preview' );
+		$remap = function( $id, $field ) use ( $preview, $name ) {
+			return $id === $this->id && $field === $name ? $preview : $id;
+		};
+		$calls = 0;
+		$filter = static function( $rows ) use ( &$calls ) {
+			$rows[0]->value .= ++$calls;
+			return $rows;
+		};
+		add_filter( 'carbon_get_post_meta_post_id', $remap, 10, 2 );
+		add_filter( 'carbon_fields_datastore_storage_array', $filter );
+		try {
+			$this->assertSame( array( $name => 'Preview1' ), carbon_get_post_meta_fields( $this->id, array( $name ) ) );
+			$this->assertSame( 'Preview2', carbon_get_post_meta( $this->id, $name ) );
+		} finally {
+			remove_filter( 'carbon_get_post_meta_post_id', $remap, 10 );
+			remove_filter( 'carbon_fields_datastore_storage_array', $filter );
+		}
+	}
+
+	public function testBatchIncludesLegacyFallbackAndDefaultsInOneQuery() {
+		global $wpdb;
+		$rows = $this->prefix . '_old_rows';
+		$title = $this->prefix . '_default_title';
+		$this->container->add_fields( array(
+			Field::make( 'complex', $rows )->add_fields( 'offer', array( Field::make( 'text', 'city' ) ) ),
+			Field::make( 'text', $title )->set_default_value( 'Default' ),
+		) );
+		update_post_meta( $this->id, '_' . $rows . '_offer-_city_0', 'Old city' );
+
+		$service = \Carbon_Fields\Carbon_Fields::service( 'legacy_storage' );
+		$enabled_here = $service->enable();
+		try {
+			$before = $wpdb->num_queries;
+			$values = carbon_get_post_meta_fields( $this->id, array( $rows, $title ) );
+			$this->assertSame( 1, $wpdb->num_queries - $before );
+			$this->assertSame( array( array( '_type' => 'offer', 'city' => 'Old city' ) ), $values[ $rows ] );
+			$this->assertSame( 'Default', $values[ $title ] );
+		} finally {
+			if ( $enabled_here ) {
+				$service->disable();
+			}
+		}
+	}
+
+	public function testOptionalMediaPreloadingUsesDeclaredTypesIncludingNestedFields() {
+		$cover = $this->prefix . '_cover';
+		$rows = $this->prefix . '_media_rows';
+		$title = $this->prefix . '_title';
+		$video = $this->prefix . '_video';
+		$this->container->add_fields( array(
+			Field::make( 'image', $cover ),
+			Field::make( 'complex', $rows )->add_fields( array( Field::make( 'media_gallery', 'gallery' ) ) ),
+			Field::make( 'file', $video )->set_type( 'video' ),
+		) );
+		list( $image, $nested_image, $decoy, $poster ) = array_map( static function( $filename ) {
+			return wp_insert_attachment( array( 'post_mime_type' => 'image/png', 'post_title' => $filename ), false, 0, true );
+		}, array( 'Cover', 'Nested image', 'Numeric text', 'Poster' ) );
+		$video_id = wp_insert_attachment( array( 'post_mime_type' => 'video/mp4', 'post_title' => 'Video' ), false, 0, true );
+		update_post_meta( $video_id, '_thumbnail_id', $poster );
+		$this->assertTrue( carbon_update_fields( $this->id, array(
+			$cover => (string) $image,
+			$rows => array( array( 'gallery' => array( (string) $nested_image, (string) $image ) ) ),
+			$title => (string) $decoy,
+			$video => (string) $video_id,
+		) ) );
+		foreach ( array( $image, $nested_image, $decoy, $poster, $video_id ) as $attachment ) {
+			wp_cache_delete( $attachment, 'posts' );
+			wp_cache_delete( $attachment, 'post_meta' );
+		}
+		$names = array( $cover, $rows, $title, $video );
+		$plain = carbon_get_post_meta_fields( $this->id, $names );
+		$this->assertFalse( wp_cache_get( $image, 'posts' ) );
+		$this->assertSame( $plain, carbon_get_post_meta_fields( $this->id, $names, array( 'preload_media' => true ) ) );
+		$this->assertSame( $image, wp_cache_get( $image, 'posts' )->ID );
+		$this->assertSame( $nested_image, wp_cache_get( $nested_image, 'posts' )->ID );
+		$this->assertIsArray( wp_cache_get( $nested_image, 'post_meta' ) );
+		$this->assertSame( $poster, wp_cache_get( $poster, 'posts' )->ID );
+		$this->assertFalse( wp_cache_get( $decoy, 'posts' ) );
+		wp_cache_delete( $image, 'post_meta' );
+		$this->assertSame( $plain, carbon_get_post_meta_fields( $this->id, $names, array( 'preload_media' => true ) ) );
+		$this->assertIsArray( wp_cache_get( $image, 'post_meta' ) );
+	}
+
 	public function testBatchRollsBackEarlierWritesAfterDatabaseFailure() {
 		global $wpdb;
 		$p = $this->prefix;

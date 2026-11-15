@@ -31,10 +31,10 @@ abstract class Key_Value_Datastore extends Datastore {
 	protected function get_cached_storage_rows( $table, $query ) {
 		global $wpdb;
 
-		if ( ! isset( self::$storage_query_cache[ $table ][ $query ] ) ) {
+		if ( ! self::has_cached_storage_query( $table, $query ) ) {
 			$rows = $wpdb->get_results( $query, ARRAY_A );
-			if ( empty( $wpdb->last_error ) ) {
-				self::$storage_query_cache[ $table ][ $query ] = $rows;
+			if ( is_array( $rows ) && empty( $wpdb->last_error ) ) {
+				self::cache_storage_query( $table, $query, $rows );
 			}
 		} else {
 			$rows = self::$storage_query_cache[ $table ][ $query ];
@@ -43,6 +43,14 @@ abstract class Key_Value_Datastore extends Datastore {
 		return array_map( function( $row ) {
 			return (object) $row;
 		}, $rows );
+	}
+
+	protected static function has_cached_storage_query( $table, $query ) {
+		return isset( self::$storage_query_cache[ $table ][ $query ] );
+	}
+
+	protected static function cache_storage_query( $table, $query, array $rows ) {
+		self::$storage_query_cache[ $table ][ $query ] = $rows;
 	}
 
 	/**
@@ -190,7 +198,7 @@ abstract class Key_Value_Datastore extends Datastore {
 	 * @return null|array<array>
 	 */
 	public function load( Field $field ) {
-		$storage_key_patterns = $this->key_toolset->get_storage_key_getter_patterns( $field->is_simple_root_field(), $this->get_full_hierarchy_for_field( $field ) );
+		$storage_key_patterns = $this->get_storage_key_patterns_for_read( $field );
 		$cascading_storage_array = $this->get_storage_array( $field, $storage_key_patterns );
 		$value_tree_array = $this->cascading_storage_array_to_value_tree_array( $cascading_storage_array );
 		if ( $value_tree_array === null ) {
@@ -198,6 +206,10 @@ abstract class Key_Value_Datastore extends Datastore {
 		}
 		$value_tree = $this->value_tree_array_to_value_tree( $value_tree_array, $field );
 		return $value_tree;
+	}
+
+	protected function get_storage_key_patterns_for_read( Field $field ) {
+		return $this->key_toolset->get_storage_key_getter_patterns( $field->is_simple_root_field(), $this->get_full_hierarchy_for_field( $field ) );
 	}
 
 	/**

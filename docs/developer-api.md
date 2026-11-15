@@ -6,6 +6,35 @@ See the [verification record](developer-verification.md) for exercised scenarios
 
 All helpers are available after Carbon Fields boots. Register definitions before calling field helpers. Examples assume `use Carbon_Fields\Field;` and `use Carbon_Fields\Container;`.
 
+## Read selected post fields in batches
+
+Use `carbon_get_post_meta_fields()` when a template needs several fields from one post. The returned array is keyed by field name.
+
+```php
+$fields = carbon_get_post_meta_fields( get_the_ID(), array( 'subtitle', 'badge', 'catalog_image' ) );
+echo esc_html( $fields['subtitle'] ?? '' );
+```
+
+Pass the IDs from an existing catalog query to `carbon_get_post_meta_batch()`. The result is keyed by post ID, with the same field map for each post.
+
+```php
+$cards = carbon_get_post_meta_batch(
+    wp_list_pluck( $catalog_query->posts, 'ID' ),
+    array( 'badge', 'short_specs', 'catalog_image', 'gallery' ),
+    array( 'preload_media' => true )
+);
+
+foreach ( $catalog_query->posts as $product ) {
+    $fields = $cards[ $product->ID ];
+    echo esc_html( $fields['badge'] ?? '' );
+    echo carbon_image( $fields['catalog_image'] ?? null, 'medium' );
+}
+```
+
+- Both helpers return the formatted values of `carbon_get_post_meta()`, including defaults, empty values and nested complex rows. Pass `'container_id' => 'your_container_id'` in the options to select a specific container. Post ID filters and custom datastores use their usual read paths.
+- Standard post metadata for a single ID is fetched together, including the legacy value lookup, and large lists of posts are fetched in chunks. Subsequent reads reuse the request cache.
+- `preload_media` defaults to `false`. Enable it when rendering local attachments saved by ID in selected image, file, gallery, responsive image or image hotspot fields, including in nested rows. It primes the WordPress attachment and metadata caches, including video posters. Values keep the same shape with either setting.
+
 ## Validated atomic post updates
 
 ```php

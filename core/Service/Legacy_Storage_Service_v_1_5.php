@@ -8,6 +8,7 @@ use Carbon_Fields\Container\Repository as ContainerRepository;
 use Carbon_Fields\Value_Set\Value_Set;
 use Carbon_Fields\Toolset\Key_Toolset;
 use Carbon_Fields\Datastore\Datastore_Interface;
+use Carbon_Fields\Datastore\Post_Meta_Datastore;
 
 /*
  * Service which provides the ability to do meta queries for multi-value fields and nested fields
@@ -195,6 +196,20 @@ class Legacy_Storage_Service_v_1_5 extends Service {
 		return $comparisons;
 	}
 
+	private function get_storage_condition( Container $container, array $table ) {
+		$comparisons = array();
+		foreach ( $container->get_fields() as $field ) {
+			$comparisons = array_merge( $comparisons, $this->get_legacy_sql_comparisons_for_field( $field, $table['prefix'], $table['table_key_column'] ) );
+		}
+		return $comparisons ? ' ( ' . implode( ' OR ', $comparisons ) . ' ) ' : '';
+	}
+
+	/** @internal Include legacy values in a standard post-meta batch. */
+	public function get_post_meta_read_condition( Post_Meta_Datastore $datastore ) {
+		$container = $this->is_enabled() ? $this->get_container_for_datastore( $datastore ) : null;
+		return $container ? $this->get_storage_condition( $container, $this->get_table_details_for_datastore( $datastore ) ) : '';
+	}
+
 	/**
 	 * Get a key-value array of legacy values for fields in the container of the passed datastore
 	 *
@@ -211,27 +226,23 @@ class Legacy_Storage_Service_v_1_5 extends Service {
 			return array(); // bail as we have an ID column but no ID to compare with ( e.g. we are in a "create" view )
 		}
 
-		$comparisons = array();
-		$container_fields = $container->get_fields();
-		foreach ( $container_fields as $field ) {
-			$comparisons = array_merge( $comparisons, $this->get_legacy_sql_comparisons_for_field( $field, $table['prefix'], $table['table_key_column'] ) );
-		}
-
-		if ( empty( $comparisons ) ) {
+		$where = $this->get_storage_condition( $container, $table );
+		if ( '' === $where ) {
 			return array(); // no comparisons to fetch with
 		}
 
-		$where_clause = ' ( ' . implode( ' OR ', $comparisons ) . ' ) ';
-		if ( $table['table_id_column'] ) {
-			$where_clause = ' `' . $table['table_id_column'] . '` = ' . $datastore->get_object_id() . ' AND ' . $where_clause;
+		if ( Post_Meta_Datastore::class === get_class( $datastore ) ) {
+			$raw_results = $datastore->load_legacy_rows( $where );
+		} else {
+			if ( $table['table_id_column'] ) {
+				$where = ' `' . $table['table_id_column'] . '` = ' . $datastore->get_object_id() . ' AND ' . $where;
+			}
+			$raw_results = $wpdb->get_results( '
+				SELECT `' . $table['table_key_column'] . '` AS `key`, `' . $table['table_value_column'] . '` AS `value`
+				FROM `' . $table['table_name'] . '`
+				WHERE ' . $where . '
+			' );
 		}
-		$query = '
-			SELECT `' . $table['table_key_column'] . '` AS `key`, `' . $table['table_value_column'] . '` AS `value`
-			FROM `' . $table['table_name'] . '`
-			WHERE ' . $where_clause . '
-		';
-
-		$raw_results = $wpdb->get_results( $query );
 
 		$results = array();
 		foreach ( $raw_results as $result ) {

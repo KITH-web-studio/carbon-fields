@@ -2,6 +2,10 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.28
+
+- Read selected fields for one or many posts in batches, with optional attachment preloading.
+
 ## 3.6.11.27
 
 - Add PHP-declared editor actions with a preview in the post editor and WooCommerce Product data.

@@ -4,6 +4,7 @@
 
 namespace Carbon_Fields\Datastore;
 
+use Carbon_Fields\Carbon_Fields;
 use Carbon_Fields\Field\Complex_Field;
 use Carbon_Fields\Field\Field;
 use Carbon_Fields\Field\Association_Field;
@@ -13,6 +14,8 @@ use Carbon_Fields\Integration\Bidirectional_Associations;
  * Post meta (custom fields) datastore class.
  */
 class Post_Meta_Datastore extends Meta_Datastore {
+	protected $storage_read_order = '`meta_key` ASC, `meta_id` ASC';
+
 	private $last_validation_error;
 
 	public function get_last_validation_error() { return $this->last_validation_error; }
@@ -40,6 +43,82 @@ class Post_Meta_Datastore extends Meta_Datastore {
 	 */
 	protected function get_storage_query_rows( $query ) {
 		return $this->get_cached_storage_rows( $this->get_table_name(), $query );
+	}
+
+	/** @internal Read rows for the legacy storage service through the same cache. */
+	public function load_legacy_rows( $where ) {
+		return $this->get_storage_query_rows( $this->get_storage_read_query( $this->get_object_id(), $where ) );
+	}
+
+	/**
+	 * Fill the ordinary read cache in bounded queries. Let SQL apply the same
+	 * key comparisons and ordering as an individual field read.
+	 *
+	 * @internal
+	 */
+	public function prime_field_reads( array $post_ids, array $fields ) {
+		global $wpdb;
+		if ( Post_Meta_Transaction::is_active() ) {
+			return;
+		}
+		$table = $this->get_table_name();
+		$conditions = array();
+		$stores = array();
+		foreach ( $fields as $field ) {
+			$keys = $this->get_storage_key_patterns_for_read( $field );
+			$where = $this->key_toolset->storage_key_patterns_to_sql( '`meta_key`', $keys );
+			$conditions[ $where ] = $where;
+			$store = $field->get_datastore();
+			$stores[ spl_object_hash( $store ) ] = $store;
+		}
+		$legacy = Carbon_Fields::service( 'legacy_storage' );
+		foreach ( $stores as $store ) {
+			$where = $legacy->get_post_meta_read_condition( $store );
+			if ( $where ) {
+				$conditions[ $where ] = $where;
+			}
+		}
+
+		$field_batch_size = 1 === count( $post_ids ) ? max( 1, count( $conditions ) ) : 32;
+		foreach ( array_chunk( $post_ids, 100 ) as $ids ) {
+			foreach ( array_chunk( array_values( $conditions ), $field_batch_size ) as $batch ) {
+				$queries = array();
+				$selects = array();
+				foreach ( $batch as $index => $where ) {
+					foreach ( $ids as $id ) {
+						$query = $this->get_storage_read_query( $id, $where );
+						if ( ! self::has_cached_storage_query( $table, $query ) ) {
+							$queries[ $index ][ $id ] = $query;
+						}
+					}
+					if ( empty( $queries[ $index ] ) ) {
+						continue;
+					}
+					$missing = implode( ',', array_map( 'intval', array_keys( $queries[ $index ] ) ) );
+					$selects[] = "SELECT post_id, meta_id, meta_key AS `key`, meta_value AS `value`, {$index} AS batch_field
+						FROM {$table} WHERE post_id IN ({$missing}) AND {$where}";
+				}
+				if ( ! $selects ) {
+					continue;
+				}
+
+				$sql = implode( ' UNION ALL ', $selects ) . ' ORDER BY batch_field, post_id, `key` ASC, meta_id ASC';
+				$rows = $wpdb->get_results( $sql );
+				if ( ! is_array( $rows ) || $wpdb->last_error ) {
+					continue;
+				}
+
+				$by_field = array();
+				foreach ( $rows as $row ) {
+					$by_field[ $row->batch_field ][ $row->post_id ][] = array( 'key' => $row->key, 'value' => $row->value );
+				}
+				foreach ( $queries as $index => $post_queries ) {
+					foreach ( $post_queries as $id => $query ) {
+						self::cache_storage_query( $table, $query, $by_field[ $index ][ $id ] ?? array() );
+					}
+				}
+			}
+		}
 	}
 
 	/**
