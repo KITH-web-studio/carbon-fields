@@ -151,3 +151,79 @@ echo carbon_link( $row['details_link'] ?? null, array(
 ```
 
 Set `label` to override the label with plain text. Supported markup attributes include `id`, `class`, `title`, `rel`, `aria-*` and `data-*`. The field's new-tab flag sets `target="_blank"` with `noopener noreferrer`. Rendering requires a label and a valid HTTP(S) URL. Deleted, nonpublic and password-protected internal targets give an empty result.
+
+## Extend a field declaration from another module
+
+The `carbon_fields_extend_fields` action runs after all `carbon_fields_register_fields` callbacks and before Carbon Fields initializes its containers. Use the container ID returned by `$container->get_id()`. The example assumes that the `Service details` post meta container declares a `delivery` select and an `offices` complex with a `pickup` group that contains `region`.
+
+```php
+use Carbon_Fields\Field;
+
+add_action( 'carbon_fields_extend_fields', function() {
+    $container_id = 'carbon_fields_container_service_details';
+
+    carbon_extend_field( $container_id, 'delivery', array(
+        'label'     => __( 'Delivery method', 'my-site' ),
+        'help_text' => __( 'Choose how the customer receives the order.', 'my-site' ),
+        'options'   => array( 'locker' => __( 'Parcel locker', 'my-site' ) ),
+    ) );
+
+    carbon_insert_fields( $container_id, 'offices:pickup/region', array(
+        Field::make( 'text', 'terminal', __( 'Terminal', 'my-site' ) ),
+    ), 'after' );
+} );
+```
+
+The position is `before` or `after`. Inserted fields inherit the anchor's tab or theme settings section, including section access rules. Pass fresh `Field::make()` instances and use unique names within the container or row group. Use slash-separated paths for nested levels, for example `offices:pickup/branches:local/address`. Omit the group component for an unnamed group, as in `offices:pickup/branches/address`. Paths address definitions shared by all rows of that type.
+
+Use `options` with a select declared with ordinary PHP options. Reusing a key in an associative options array updates its label. Remote and dependent selects keep their declared option sources. Both helpers return `true` or `WP_Error`.
+
+## Create or update a post by external ID
+
+Declare a root text field with `set_unique()` in a post meta container. For example, add `Field::make( 'text', 'crm_id' )->set_unique()->set_normalizer( 'trim' )` alongside `service_price` in the `Service details` container.
+
+```php
+$result = carbon_upsert_post(
+    'crm_id',
+    $record['id'],
+    array( 'post_type' => 'service', 'post_title' => $record['title'] ),
+    array( 'service_price' => $record['price'] ),
+    'carbon_fields_container_service_details'
+);
+
+if ( is_wp_error( $result ) ) {
+    return $result;
+}
+
+$post_id = $result;
+```
+
+The helper returns a WordPress post ID on success. The normalized external ID is unique per post type. Pass the identity separately and send changes for other fields in the same container. When several containers declare the same identity, pass the intended container ID. A new post defaults to draft and must satisfy the required fields in the selected container. For an existing post, omitted attributes and fields keep their values, and the ID field is used to find the post. The same WordPress user permissions, field visibility and validators used by the PHP write API apply.
+
+Call this after field registration under a WordPress user authorized to perform the import. The upsert uses standard InnoDB posts and postmeta on one writable database connection. It serializes concurrent calls for the same normalized ID and requires execution outside an existing database transaction. A `carbon_fields_upsert_busy` error can be retried. A `carbon_fields_duplicate_external_id` error means existing records already share this ID, and the helper leaves them as they are.
+
+## Generate typed readers for PHPStan and IDEs
+
+Generate a PHP class after registration for a post meta container. The optional `--fields` list selects root fields by name. Save the command output as UTF-8 without BOM and load the generated class through your project's PHP autoloader.
+
+```sh
+wp carbon-fields generate-types carbon_fields_container_service_details 'Project\ServiceFields' --fields=service_price,offices > ServiceFields.php
+```
+
+In PowerShell 7, pipe the output to `Set-Content -Encoding utf8NoBOM ServiceFields.php` to set the encoding explicitly. From PHP you can instead use `carbon_generate_post_field_types( $container_id, 'Project\\ServiceFields', array( 'service_price', 'offices' ) )`. This returns PHP source or `WP_Error`.
+
+```php
+$fields = \Project\ServiceFields::get( $post_id, true );
+
+if ( $fields ) {
+    foreach ( $fields['offices'] as $office ) {
+        if ( 'pickup' === $office['_type'] ) {
+            echo esc_html( (string) $office['region'] );
+        }
+    }
+}
+
+$by_post_id = \Project\ServiceFields::get_many( $post_ids );
+```
+
+The generated class uses the existing single-post and batch readers. Both methods accept a second boolean argument to preload media. PHPStan can narrow named complex rows by `_type`, including nested rows. Unrecognized field types use `mixed`. The class exposes the shape as the `Fields` PHPStan type alias for use with `@phpstan-import-type`. Regenerate the file when changing field definitions or extensions.

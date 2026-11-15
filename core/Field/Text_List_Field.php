@@ -13,6 +13,10 @@ class Text_List_Field extends Structured_Field {
 		return $this;
 	}
 
+	public function has_icons() {
+		return $this->icons_enabled;
+	}
+
 	public function has_value_rules() {
 		return true;
 	}

@@ -35,6 +35,60 @@ class DeveloperWorkflowTest extends WP_UnitTestCase {
 		parent::tear_down();
 	}
 
+	public function testFieldExtensionsInheritTabsAndSectionPermissions() {
+		$select = Field::make( 'select', 'region' )->set_options( array( 'north' => 'North' ) );
+		$offices = Field::make( 'complex', 'offices' )
+			->add_fields( 'pickup', array( $select ) )
+			->set_group_tabs( array( 'Address' => array( 'region' ) ) )
+			->add_fields( 'warehouse', array( Field::make( 'text', 'address' ) ) );
+		$this->container->add_tab( 'Locations', array( $offices ) );
+		$options = Container::make( 'theme_options', $this->prefix . ' protected' )
+			->add_section( 'protected', 'Protected', array( Field::make( 'text', 'original_option' ) ),
+				array( 'capability' => 'manage_options' ) );
+		$id = $this->container->get_id();
+		$this->assertWPError( carbon_extend_field( $id, 'offices', array( 'label' => 'Too early' ) ) );
+		$extend = function() use ( $id, $options ) {
+			$this->assertTrue( carbon_extend_field( $id, 'offices:pickup/region', array(
+				'label' => 'Office region', 'options' => array( 'south' => 'South' ),
+			) ) );
+			$this->assertTrue( carbon_insert_fields( $id, 'offices:pickup/region', array( Field::make( 'text', 'queue' ) ), 'before' ) );
+			$this->assertTrue( carbon_insert_fields( $id, 'offices', array( Field::make( 'text', 'map_title' ) ) ) );
+			$this->assertWPError( carbon_insert_fields( $id, 'offices:pickup/region', array( Field::make( 'text', 'queue' ) ) ) );
+			$this->assertTrue( carbon_insert_fields( $options->get_id(), 'original_option', array( Field::make( 'text', 'new_option' ) ) ) );
+		};
+		add_action( 'carbon_fields_extend_fields', $extend );
+		try {
+			do_action( 'carbon_fields_extend_fields' );
+		} finally {
+			remove_action( 'carbon_fields_extend_fields', $extend );
+		}
+		$this->assertSame( 'Office region', $select->get_label() );
+		$this->assertSame( array( 'north' => 'North', 'south' => 'South' ), $select->get_options() );
+		$this->assertSame( array( '_offices', '_map_title' ), $this->container->to_json( false )['settings']['tabs']['Locations'] );
+		$this->assertSame( array( 'queue', 'region' ), $offices->get_group_by_name( 'pickup' )->to_json( false )['tabs'][0]['fields'] );
+		$rows = array( array( '_type' => 'pickup', 'queue' => '2', 'region' => 'south' ), array( '_type' => 'warehouse', 'address' => 'Depot' ) );
+		$post_id = self::factory()->post->create();
+		carbon_set_post_meta( $post_id, 'offices', $rows, $id );
+		$this->assertSame( $rows, carbon_get_post_meta( $post_id, 'offices', $id ) );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		$this->assertSame( array( 'original_option', 'new_option' ), $options->get_restricted_option_names() );
+	}
+
+	public function testGenerateTypesIncludesNestedGroupsAndSelectedFields() {
+		$this->container->add_fields( array( Field::make( 'complex', 'sections' )
+			->add_fields( 'location', array( Field::make( 'complex', 'branches' )->add_fields( array( Field::make( 'checkbox', 'open' ) ) ) ) )
+			->add_fields( 'notice', array( Field::make( 'text', 'message' ) ) ) ) );
+		$id = $this->container->get_id();
+		$source = carbon_generate_post_field_types( $id, 'Project\\PostFields', array( 'sections' ) );
+		$this->assertIsString( $source );
+		$this->assertStringContainsString( 'namespace Project;', $source );
+		$this->assertStringContainsString( "array{'_type': 'location', 'branches': array<int, array{'_type': '_', 'open': bool}>}", $source );
+		$this->assertStringContainsString( "array{'_type': 'notice', 'message': scalar|null}", $source );
+		$this->assertStringNotContainsString( $this->prefix . '_price', $source );
+		$this->assertWPError( carbon_generate_post_field_types( $id, 'Project\\int' ) );
+		$this->assertWPError( carbon_generate_post_field_types( $id, 'Project\\PostFields', array( 'missing' ) ) );
+	}
+
 	public function testParsePostFiltersPreservesZeroAndRejectsInvalidInput() {
 		$price = $this->prefix . '_price';
 		$delivery = $this->prefix . '_delivery';

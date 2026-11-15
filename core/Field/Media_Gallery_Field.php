@@ -22,6 +22,10 @@ class Media_Gallery_Field extends Field {
 		return $this;
 	}
 
+	public function has_item_details() {
+		return $this->item_details;
+	}
+
 	public function has_value_rules() {
 		return $this->item_details || parent::has_value_rules();
 	}

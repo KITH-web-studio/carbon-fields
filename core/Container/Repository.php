@@ -99,6 +99,15 @@ class Repository {
 		return $containers;
 	}
 
+	public function get_container( $id ) {
+		foreach ( $this->containers as $container ) {
+			if ( $id === $container->get_id() ) {
+				return $container;
+			}
+		}
+		return null;
+	}
+
 	/**
 	 * Theme options use the same storage across containers. A second declaration
 	 * of the same option must not bypass an explicit access restriction.

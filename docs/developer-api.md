@@ -6,7 +6,7 @@ See the [verification record](developer-verification.md) for exercised scenarios
 
 All helpers are available after Carbon Fields boots. Register definitions before calling field helpers. Examples assume `use Carbon_Fields\Field;` and `use Carbon_Fields\Container;`.
 
-See [catalog filters, post creation and cached templates](developer-recipes.md) for complete examples of the URL parser, facet counts, post creation, fragment caching and link markup.
+The [developer recipes](developer-recipes.md) cover URL filters, facet counts, post creation and updates by external ID, field declaration extensions, typed readers, fragment caching and link markup.
 
 ## Shared dictionaries for select fields
 

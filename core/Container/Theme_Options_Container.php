@@ -300,6 +300,24 @@ class Theme_Options_Container extends Container {
 		return $this;
 	}
 
+	public function insert_fields_relative( $anchor, array $fields, $position ) {
+		$result = parent::insert_fields_relative( $anchor, $fields, $position );
+		if ( true !== $result || empty( $this->settings['panel_sections'] ) ) {
+			return $result;
+		}
+		$anchor_name = $this->get_root_field_by_name( $anchor )->get_name();
+		foreach ( $this->settings['panel_sections'] as &$section ) {
+			$index = array_search( $anchor_name, $section['fields'], true );
+			if ( false !== $index ) {
+				array_splice( $section['fields'], $index + ( 'after' === $position ? 1 : 0 ), 0, array_map( static function( $field ) {
+					return $field->get_name();
+				}, $fields ) );
+			}
+		}
+		unset( $section );
+		return true;
+	}
+
 	protected function section_is_allowed( array $section, array $sections ) {
 		return ( ! isset( $section['capability'] ) || current_user_can( $section['capability'] ) ) &&
 			( ! $section['parent'] || $this->section_is_allowed( $sections[ $section['parent'] ], $sections ) );

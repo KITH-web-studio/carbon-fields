@@ -3,7 +3,7 @@
 namespace Carbon_Fields\Helper;
 
 final class Post_Creation {
-	public static function insert( array $post, array $fields, $container_id = '' ) {
+	public static function validate_attributes( array $post, $creating ) {
 		$allowed = array( 'post_type', 'post_title', 'post_content', 'post_excerpt', 'post_status', 'post_name',
 			'post_parent', 'post_password', 'menu_order', 'comment_status', 'ping_status' );
 		if ( array_diff( array_keys( $post ), $allowed ) || array_filter( $post, static function( $value ) { return ! is_scalar( $value ); } ) ) {
@@ -16,12 +16,21 @@ final class Post_Creation {
 			return new \WP_Error( 'carbon_fields_invalid_post', __( 'Check the post type and status.', 'carbon-fields' ) );
 		}
 		$parent = (int) ( $post['post_parent'] ?? 0 );
-		if ( ! current_user_can( $type->cap->create_posts ) ||
+		if ( ( $creating && ! current_user_can( $type->cap->create_posts ) ) ||
 			( in_array( $status, array( 'publish', 'private' ), true ) && ! current_user_can( $type->cap->publish_posts ) ) ||
 			( $parent && ! current_user_can( 'edit_post', $parent ) ) ) {
-			return new \WP_Error( 'carbon_fields_forbidden', __( 'You cannot create this post.', 'carbon-fields' ), array( 'status' => 403 ) );
+			return new \WP_Error( 'carbon_fields_forbidden', $creating ? __( 'You cannot create this post.', 'carbon-fields' ) :
+				__( 'You cannot edit this post.', 'carbon-fields' ), array( 'status' => 403 ) );
 		}
+		return $type;
+	}
 
+	public static function insert( array $post, array $fields, $container_id = '' ) {
+		$type = self::validate_attributes( $post, true );
+		if ( is_wp_error( $type ) ) {
+			return $type;
+		}
+		$status = $post['post_status'] ?? 'draft';
 		$post['post_type'] = $type->name;
 		$post['post_status'] = 'draft';
 		$post_id = wp_insert_post( wp_slash( $post ), true, false );

@@ -1,11 +1,14 @@
 <?php
 
 use Carbon_Fields\Helper\Developer_API;
+use Carbon_Fields\Helper\Field_Definitions;
+use Carbon_Fields\Helper\Field_Types;
 use Carbon_Fields\Helper\Fragment_Cache;
 use Carbon_Fields\Helper\Link_Markup;
 use Carbon_Fields\Helper\Media;
 use Carbon_Fields\Helper\Post_Creation;
 use Carbon_Fields\Helper\Post_Field_Filters;
+use Carbon_Fields\Helper\Post_Upsert;
 use Carbon_Fields\Helper\Post_Meta_Batch;
 use Carbon_Fields\Helper\Post_Select_Label;
 use Carbon_Fields\Helper\Theme_Option_Dictionary;
@@ -14,6 +17,21 @@ use Carbon_Fields\Helper\Text_Template;
 /** Check whether a calendar date is inside an inclusive date_range field. */
 function carbon_date_range_contains( array $range, $date ) {
 	return \Carbon_Fields\Field\Date_Range_Field::contains( $range, $date );
+}
+
+/** @return true|WP_Error Modify a field definition during carbon_fields_extend_fields. */
+function carbon_extend_field( $container_id, $path, array $changes ) {
+	return Field_Definitions::extend( $container_id, $path, $changes );
+}
+
+/** @return true|WP_Error Add newly declared fields beside an anchor in its container or group. */
+function carbon_insert_fields( $container_id, $anchor, array $fields, $position = 'after' ) {
+	return Field_Definitions::insert( $container_id, $anchor, $fields, $position );
+}
+
+/** @return string|WP_Error PHP source for a typed reader of selected post fields. */
+function carbon_generate_post_field_types( $container_id, $class, array $fields = array() ) {
+	return Field_Types::generate( $container_id, $class, $fields );
 }
 
 /** @return array Formatted field values keyed by field name. */
@@ -65,6 +83,11 @@ function carbon_update_fields( $post_id, array $changes, $container_id = '' ) {
 /** @return int|WP_Error Create a post with validated Carbon Fields data. */
 function carbon_insert_post( array $post, array $fields, $container_id = '' ) {
 	return Post_Creation::insert( $post, $fields, $container_id );
+}
+
+/** @return int|WP_Error Create or update a post using a declared unique external ID. */
+function carbon_upsert_post( $field, $external_id, array $post, array $fields, $container_id = '' ) {
+	return Post_Upsert::run( $field, $external_id, $post, $fields, $container_id );
 }
 
 /** Cache a fragment until its expiration or a saved dependency changes. */

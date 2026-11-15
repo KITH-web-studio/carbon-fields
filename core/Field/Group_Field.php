@@ -119,6 +119,29 @@ class Group_Field {
 		);
 	}
 
+	/** @internal Insert newly declared fields in the same group and tab as the anchor. */
+	public function insert_fields_relative( $anchor, array $fields, $position ) {
+		$reserved = array( 'value', Complex_Field::TYPE_PROPERTY, Complex_Field::ROW_ID_PROPERTY, Complex_Field::ROW_DISABLED_PROPERTY );
+		$index = \Carbon_Fields\Helper\Field_Definitions::insertion_index( $this->fields, $anchor, $fields, $position, $reserved );
+		if ( is_wp_error( $index ) || ! $fields ) {
+			return is_wp_error( $index ) ? $index : true;
+		}
+		$fields = array_values( $fields );
+		$this->add_fields( $fields );
+		array_splice( $this->fields, -count( $fields ) );
+		array_splice( $this->fields, $index, 0, $fields );
+		foreach ( $this->tabs as &$tab ) {
+			$index = array_search( $anchor, $tab['fields'], true );
+			if ( false !== $index ) {
+				array_splice( $tab['fields'], $index + ( 'after' === $position ? 1 : 0 ), 0, array_map( static function( $field ) {
+					return $field->get_base_name();
+				}, $fields ) );
+			}
+		}
+		unset( $tab );
+		return true;
+	}
+
 	/**
 	 * Configure tabs without changing the fields or their storage.
 	 *

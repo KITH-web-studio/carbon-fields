@@ -41,6 +41,7 @@ class Loader {
 		include_once( dirname( dirname( __DIR__ ) ) . '/config.php' );
 		include_once( \Carbon_Fields\DIR . '/core/functions.php' );
 		include_once( \Carbon_Fields\DIR . '/core/developer-functions.php' );
+		\Carbon_Fields\Helper\Field_Types::register_cli();
 		add_filter( 'posts_where', array( \Carbon_Fields\Helper\Complex_Row_Query::class, 'where' ), 10, 2 );
 		// Compile exact root keys after the legacy service has rewritten user-supplied meta_query keys.
 		add_action( 'pre_get_posts', array( \Carbon_Fields\Helper\Post_Field_Query::class, 'apply' ), 20 );
@@ -131,6 +132,7 @@ class Loader {
 	public function trigger_fields_register() {
 		try {
 			do_action( 'carbon_fields_register_fields' );
+			do_action( 'carbon_fields_extend_fields' );
 			do_action( 'carbon_fields_fields_registered' );
 		} catch ( Incorrect_Syntax_Exception $e ) {
 			$callback = '';

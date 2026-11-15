@@ -15,6 +15,19 @@ final class Post_Meta_Transaction {
 		return self::$active;
 	}
 
+	/** Check whether a caller can own the full lifetime of a write transaction. */
+	public static function can_start_transaction() {
+		global $wpdb;
+		if ( self::$depth || ! ( $wpdb->dbh instanceof \mysqli ) ) {
+			return false;
+		}
+		$scope = self::probe_savepoint();
+		if ( is_string( $scope ) && '' !== $scope ) {
+			$wpdb->query( 'RELEASE SAVEPOINT ' . $scope );
+		}
+		return '' === $scope;
+	}
+
 	/**
 	 * @param int[] $post_ids Posts and revisions participating in the operation.
 	 * @param callable $write Returns true only after all required writes succeed.
@@ -126,7 +139,16 @@ final class Post_Meta_Transaction {
 	 */
 	private static function begin() {
 		global $wpdb;
+		$savepoint = self::probe_savepoint();
+		if ( '' !== $savepoint ) {
+			return $savepoint;
+		}
+		return false === $wpdb->query( 'START TRANSACTION' ) ? false : '';
+	}
 
+	/** @return string|false Existing transaction savepoint, empty for autocommit, false on failure. */
+	private static function probe_savepoint() {
+		global $wpdb;
 		$savepoint = uniqid( 'kith_cf_' );
 		$was_suppressed = $wpdb->suppress_errors( true );
 		try {
@@ -152,6 +174,6 @@ final class Post_Meta_Transaction {
 			$wpdb->suppress_errors( $was_suppressed );
 		}
 
-		return false === $wpdb->query( 'START TRANSACTION' ) ? false : '';
+		return '';
 	}
 }

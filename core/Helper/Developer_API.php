@@ -33,7 +33,7 @@ final class Developer_API {
 		return new \WP_Error( 'carbon_fields_storage_unsupported', 'Existence checks require standard metadata or a root theme option.' );
 	}
 
-	public static function update_fields( $post_id, array $changes, $container_id = '', $creating = false ) {
+	public static function update_fields( $post_id, array $changes, $container_id = '', $creating = false, array $callbacks = array() ) {
 		if ( ! get_post( $post_id ) || ! current_user_can( 'edit_post', $post_id ) ) {
 			return new \WP_Error( 'carbon_fields_forbidden', __( 'You cannot edit this post.', 'carbon-fields' ), array( 'status' => 403 ) );
 		}
@@ -53,9 +53,14 @@ final class Developer_API {
 				}
 			}
 		}
-		$saved = Post_Meta_Transaction::batch( $lock_ids, function() use ( $post_id, $changes, $container_id, $creating, &$error ) {
+		$saved = Post_Meta_Transaction::batch( $lock_ids, function() use ( $post_id, $changes, $container_id, $creating, $callbacks, &$error ) {
 			Post_Meta_Datastore::invalidate_storage_cache();
 			wp_cache_delete( $post_id, 'post_meta' );
+			$preflight = isset( $callbacks['before'] ) ? $callbacks['before']() : true;
+			if ( is_wp_error( $preflight ) ) {
+				$error = $preflight;
+				return false;
+			}
 			$repository = Carbon_Fields::resolve( 'container_repository' );
 			$groups = array();
 			if ( $creating ) {
@@ -116,6 +121,11 @@ final class Developer_API {
 						return false;
 					}
 				}
+			}
+			$updated = isset( $callbacks['after'] ) ? $callbacks['after']() : true;
+			if ( is_wp_error( $updated ) ) {
+				$error = $updated;
+				return false;
 			}
 			return true;
 		} );

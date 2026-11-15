@@ -2,6 +2,13 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.34
+
+- Extend registered field definitions, including fields in nested complex groups, through PHP. Inserted fields inherit the anchor's tab or settings section and its access rules.
+- Create or update posts by a unique external ID with `carbon_upsert_post()`. Concurrent calls for the same ID use the same record.
+- Generate typed readers for PHPStan and IDEs with `wp carbon-fields generate-types`, including nested complex row types.
+- Add English and Russian examples for all three APIs.
+
 ## 3.6.11.33
 
 - Combine inclusive price bounds into a single `BETWEEN` condition when parsing filters or building a post query.

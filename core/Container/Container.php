@@ -912,6 +912,35 @@ abstract class Container implements Datastore_Holder_Interface {
 		return $this;
 	}
 
+	/** @internal Insert newly declared fields and inherit the anchor's tab. */
+	public function insert_fields_relative( $anchor, array $fields, $position ) {
+		$index = \Carbon_Fields\Helper\Field_Definitions::insertion_index( $this->fields, $anchor, $fields, $position );
+		if ( is_wp_error( $index ) || ! $fields ) {
+			return is_wp_error( $index ) ? $index : true;
+		}
+		$anchor_name = $this->get_root_field_by_name( $anchor )->get_name();
+		$fields = array_values( $fields );
+		$this->add_fields( $fields );
+		array_splice( $this->fields, -count( $fields ) );
+		array_splice( $this->fields, $index, 0, $fields );
+		foreach ( $this->tabs as &$tab ) {
+			$tab_index = array_search( $anchor_name, array_keys( $tab ), true );
+			if ( false !== $tab_index ) {
+				$tab_index += 'after' === $position ? 1 : 0;
+				$added = array();
+				foreach ( $fields as $field ) {
+					$added[ $field->get_name() ] = $field;
+				}
+				$tab = array_slice( $tab, 0, $tab_index, true ) + $added + array_slice( $tab, $tab_index, null, true );
+			}
+		}
+		unset( $tab );
+		if ( $this->tabs ) {
+			$this->settings['tabs'] = $this->get_tabs_json();
+		}
+		return true;
+	}
+
 	/**
 	 * Configuration function for adding tab with fields
 	 *

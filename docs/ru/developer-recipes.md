@@ -151,3 +151,79 @@ echo carbon_link( $row['details_link'] ?? null, array(
 ```
 
 `label` переопределяет подпись обычным текстом. Поддерживаются атрибуты `id`, `class`, `title`, `rel`, `aria-*` и `data-*`. Флаг новой вкладки добавляет `target="_blank"` вместе с `noopener noreferrer`. Для вывода нужны подпись и действительный HTTP(S)-адрес. Если внутренняя запись удалена, недоступна публично или защищена паролем, результат будет пустым.
+
+## Расширение объявления полей из другого модуля
+
+Хук `carbon_fields_extend_fields` срабатывает после всех обработчиков `carbon_fields_register_fields` и до инициализации контейнеров. Используйте ID из `$container->get_id()`. В примере контейнер «Service details» содержит список `delivery` и комплекс `offices`. В группе `pickup` уже объявлено поле `region`.
+
+```php
+use Carbon_Fields\Field;
+
+add_action( 'carbon_fields_extend_fields', function() {
+    $container_id = 'carbon_fields_container_service_details';
+
+    carbon_extend_field( $container_id, 'delivery', array(
+        'label'     => __( 'Способ доставки', 'my-site' ),
+        'help_text' => __( 'Выберите, как клиент получит заказ.', 'my-site' ),
+        'options'   => array( 'locker' => __( 'Постамат', 'my-site' ) ),
+    ) );
+
+    carbon_insert_fields( $container_id, 'offices:pickup/region', array(
+        Field::make( 'text', 'terminal', __( 'Терминал', 'my-site' ) ),
+    ), 'after' );
+} );
+```
+
+Позиция `before` вставляет поля перед указанным полем, `after` — после него. Новые поля получают ту же вкладку или секцию настроек темы вместе с её правилами доступа. Передавайте новые экземпляры из `Field::make()` с уникальными именами в пределах контейнера или группы. Для глубокой вложенности разделяйте уровни символом `/`, например `offices:pickup/branches:local/address`. Для безымянной группы опустите имя группы, как в `offices:pickup/branches/address`. Изменение объявления применяется ко всем строкам этого типа.
+
+Ключ `options` работает со списками, варианты которых заданы в PHP. Повторный ключ в ассоциативном массиве обновляет подпись варианта. Для серверных и зависимых списков действуют их источники вариантов. Обе функции возвращают `true` или `WP_Error`.
+
+## Создание и обновление записи по внешнему ID
+
+Объявите корневое текстовое поле с `set_unique()` в контейнере метаданных записи. Для примера добавьте `Field::make( 'text', 'crm_id' )->set_unique()->set_normalizer( 'trim' )` вместе с `service_price` в контейнер «Service details».
+
+```php
+$result = carbon_upsert_post(
+    'crm_id',
+    $record['id'],
+    array( 'post_type' => 'service', 'post_title' => $record['title'] ),
+    array( 'service_price' => $record['price'] ),
+    'carbon_fields_container_service_details'
+);
+
+if ( is_wp_error( $result ) ) {
+    return $result;
+}
+
+$post_id = $result;
+```
+
+При успехе функция возвращает ID записи WordPress. Нормализованный внешний ID уникален в пределах типа записи. Передавайте его отдельно от изменений других полей того же контейнера. Если поле ID объявлено в нескольких контейнерах, укажите ID нужного контейнера. Новая запись по умолчанию создаётся как черновик и должна пройти проверку обязательных полей выбранного контейнера. При обновлении пропущенные атрибуты и поля сохраняют прежние значения. Действуют обычные права WordPress, условия доступности полей и валидаторы PHP API.
+
+Запускайте функцию после регистрации полей от имени пользователя с нужными правами. Для записи нужны штатные таблицы записей и метаданных InnoDB и одно соединение с пишущей базой. Вызовы для одного нормализованного ID выполняются по очереди. Вызывайте функцию вне открытой транзакции. При ошибке `carbon_fields_upsert_busy` вызов можно повторить. Ошибка `carbon_fields_duplicate_external_id` означает, что в базе уже есть несколько записей с таким ID. Обновление в этом случае не выполняется.
+
+## Генерация типизированного чтения для PHPStan и IDE
+
+Сгенерируйте PHP-класс для зарегистрированного контейнера метаданных записей. Опция `--fields` принимает имена нужных корневых полей через запятую. Сохраните вывод в UTF-8 без BOM и подключите класс через автозагрузчик проекта.
+
+```sh
+wp carbon-fields generate-types carbon_fields_container_service_details 'Project\ServiceFields' --fields=service_price,offices > ServiceFields.php
+```
+
+В PowerShell 7 передайте вывод в `Set-Content -Encoding utf8NoBOM ServiceFields.php`, чтобы явно указать кодировку. В PHP можно вызвать `carbon_generate_post_field_types( $container_id, 'Project\\ServiceFields', array( 'service_price', 'offices' ) )`. Функция возвращает PHP-код или `WP_Error`.
+
+```php
+$fields = \Project\ServiceFields::get( $post_id, true );
+
+if ( $fields ) {
+    foreach ( $fields['offices'] as $office ) {
+        if ( 'pickup' === $office['_type'] ) {
+            echo esc_html( (string) $office['region'] );
+        }
+    }
+}
+
+$by_post_id = \Project\ServiceFields::get_many( $post_ids );
+```
+
+Класс использует существующие функции чтения одной и нескольких записей. У обоих методов второй аргумент включает предзагрузку медиа. PHPStan определяет состав полей по `_type` строки комплекса, в том числе на вложенных уровнях. Для незнакомых типов полей используется `mixed`. Псевдоним типа `Fields` можно подключить в другом классе через `@phpstan-import-type`. После изменения объявлений или их расширений сгенерируйте класс заново.
