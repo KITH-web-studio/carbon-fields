@@ -1,7 +1,9 @@
 <?php
 
 use Carbon_Fields\Container;
+use Carbon_Fields\Datastore\Post_Meta_Transaction;
 use Carbon_Fields\Field;
+use Carbon_Fields\Helper\Post_Facet_Cache;
 use Carbon_Fields\Helper\Post_Field_Query;
 
 class DeveloperWorkflowTest extends WP_UnitTestCase {
@@ -46,10 +48,11 @@ class DeveloperWorkflowTest extends WP_UnitTestCase {
 		), $filters );
 		$this->assertSame( array( 'min' => '0', 'max' => '1234567890.0000000001', 'delivery' => array( '0', 'carrier' ) ), $result['values'] );
 		$this->assertSame( array(
-			array( 'field' => $price, 'compare' => '>=', 'value' => '0' ),
-			array( 'field' => $price, 'compare' => '<=', 'value' => '1234567890.0000000001' ),
+			array( 'field' => $price, 'compare' => 'BETWEEN', 'value' => array( '0', '1234567890.0000000001' ) ),
 			array( 'field' => $delivery, 'compare' => 'IN', 'value' => array( '0', 'carrier' ) ),
 		), $result['where'] );
+		$single = carbon_parse_post_filters( 'post', array( 'min' => '0' ), $filters );
+		$this->assertSame( array( array( 'field' => $price, 'compare' => '>=', 'value' => '0' ) ), $single['where'] );
 		foreach ( array( array( 'min' => '0 OR 1=1' ), array( 'delivery' => 'other' ), array( 'min' => array( '0' ) ),
 			array( 'delivery' => array( array( '0' ) ) ) ) as $invalid ) {
 			$this->assertWPError( carbon_parse_post_filters( 'post', $invalid, $filters ) );
@@ -91,6 +94,81 @@ class DeveloperWorkflowTest extends WP_UnitTestCase {
 		$this->assertSame( array( $delivery => array(), $price => array( 'minimum' => null, 'maximum' => null ) ),
 			carbon_get_post_facets( $args, array( $delivery => 'choices', $price => 'range' ) ) );
 		$this->assertWPError( carbon_get_post_facets( $args, array( $delivery => 'range' ) ) );
+	}
+
+	public function testFacetCacheReusesEffectiveQueriesAndRefreshesAfterWrites() {
+		$price = $this->prefix . '_price';
+		$delivery = $this->prefix . '_delivery';
+		$first = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$second = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		wp_set_post_categories( $first, array( $this->scope ) );
+		wp_set_post_categories( $second, array( $this->scope ) );
+		carbon_set_post_meta( $first, $price, '0' );
+		carbon_set_post_meta( $second, $price, '1.25' );
+		carbon_set_post_meta( $first, $delivery, '0' );
+		carbon_set_post_meta( $second, $delivery, 'carrier' );
+		Post_Facet_Cache::register();
+		$args = array(
+			'post_type' => 'post', 'post_status' => 'publish', 'cat' => $this->scope,
+			'carbon_fields' => array( 'where' => array(
+				array( 'field' => $price, 'compare' => '>=', 'value' => '0' ),
+				array( 'field' => $price, 'compare' => '<=', 'value' => '1.25' ),
+			) ),
+		);
+		$requested = array( $delivery => 'choices', $price => 'range' );
+		$run = function( $args, $ttl = 300 ) use ( $requested ) {
+			$aggregates = 0;
+			$count = static function( $sql ) use ( &$aggregates ) {
+				$aggregates += false !== strpos( $sql, 'cf_facet ON' ) ? 1 : 0;
+				return $sql;
+			};
+			add_filter( 'query', $count );
+			try {
+				return array( carbon_get_post_facets( $args, $requested, $ttl ), $aggregates );
+			} finally {
+				remove_filter( 'query', $count );
+			}
+		};
+		$native = new WP_Query( $args );
+		$this->assertSame( 1, substr_count( $native->request, ' JOIN ' . $GLOBALS['wpdb']->postmeta ) );
+		$this->assertStringContainsString( ' BETWEEN CAST(', $native->request );
+		$initial = array( $delivery => array( '0' => 1, 'carrier' => 1 ), $price => array( 'minimum' => '0', 'maximum' => '1.25' ) );
+		$this->assertSame( array( $initial, 2 ), $run( $args ) );
+		$args['paged'] = 2;
+		$args['posts_per_page'] = 1;
+		$this->assertSame( array( $initial, 0 ), $run( $args ) );
+		$this->assertSame( array( $initial, 2 ), $run( $args, 0 ) );
+		$one_price = $args;
+		$one_price['carbon_fields']['where'][1]['value'] = '0';
+		$this->assertSame( array(
+			array( $delivery => array( '0' => 1 ), $price => $initial[ $price ] ), 1,
+		), $run( $one_price ) );
+		$admin = get_current_user_id();
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+		$this->assertSame( array( $initial, 2 ), $run( $args ) );
+		wp_set_current_user( $admin );
+		$this->assertSame( array( $initial, 0 ), $run( $args ) );
+
+		$this->assertFalse( Post_Meta_Transaction::batch( array( $first ), static function() use ( $first, $price ) {
+			update_post_meta( $first, '_' . $price, '10' );
+			return false;
+		} ) );
+		$this->assertSame( array( $initial, 0 ), $run( $args ) );
+		$this->assertTrue( carbon_update_fields( $first, array( $price => '2.25' ) ) );
+		$updated = array( $delivery => array( 'carrier' => 1 ), $price => array( 'minimum' => '1.25', 'maximum' => '2.25' ) );
+		$this->assertSame( array( $updated, 2 ), $run( $args ) );
+		update_post_meta( $second, '_' . $delivery, '0' );
+		$updated[ $delivery ] = array( '0' => 1 );
+		$this->assertSame( array( $updated, 2 ), $run( $args ) );
+
+		wp_update_post( array( 'ID' => $second, 'post_status' => 'draft' ) );
+		$updated = array( $delivery => array(), $price => array( 'minimum' => '2.25', 'maximum' => '2.25' ) );
+		$this->assertSame( array( $updated, 2 ), $run( $args ) );
+		$this->assertSame( array( $updated, 0 ), $run( $args ) );
+		wp_set_post_categories( $first, array( get_option( 'default_category' ) ) );
+		$empty = array( $delivery => array(), $price => array( 'minimum' => null, 'maximum' => null ) );
+		$this->assertSame( array( $empty, 2 ), $run( $args ) );
+		$this->assertSame( array( $empty, 0 ), $run( $args ) );
 	}
 
 	public function testInsertPostCleansUpInvalidDraftAndPublishesWithFields() {

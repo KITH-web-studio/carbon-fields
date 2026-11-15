@@ -573,6 +573,9 @@ class Revisions_Service extends Service {
 				return false;
 			}
 		}
+		if ( $deletions || $insertions ) {
+			\Carbon_Fields\Helper\Post_Facet_Cache::invalidate();
+		}
 		return true;
 	}
 }

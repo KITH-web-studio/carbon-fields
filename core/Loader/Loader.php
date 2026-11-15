@@ -45,6 +45,7 @@ class Loader {
 		// Compile exact root keys after the legacy service has rewritten user-supplied meta_query keys.
 		add_action( 'pre_get_posts', array( \Carbon_Fields\Helper\Post_Field_Query::class, 'apply' ), 20 );
 		add_filter( 'get_meta_sql', array( \Carbon_Fields\Helper\Post_Field_Query::class, 'filter_decimal_sql' ), 20, 6 );
+		\Carbon_Fields\Helper\Post_Facet_Cache::register();
 		add_action( 'rest_api_init', array( new \Carbon_Fields\REST_API\Field_Options(), 'register_routes' ) );
 		add_action( 'rest_api_init', array( new \Carbon_Fields\Admin\Field_Actions(), 'register_routes' ) );
 

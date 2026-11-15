@@ -49,6 +49,7 @@ final class Post_Meta_Transaction {
 		self::$active = $guard;
 		++self::$depth;
 		\Carbon_Fields\Helper\Field_Events::begin();
+		\Carbon_Fields\Helper\Post_Facet_Cache::begin_write();
 		$cache_was_suspended = wp_suspend_cache_addition();
 		wp_suspend_cache_addition( true );
 		// A reconnect can replay a write after the database has rolled back the transaction.
@@ -96,6 +97,7 @@ final class Post_Meta_Transaction {
 				if ( 0 === self::$depth ) {
 					\Carbon_Fields\Helper\Field_Rules::release_locks();
 				}
+				\Carbon_Fields\Helper\Post_Facet_Cache::finish_write( $committed );
 				\Carbon_Fields\Helper\Field_Events::finish( $committed );
 			}
 		}

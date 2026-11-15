@@ -51,10 +51,11 @@ final class Post_Field_Filters {
 			$result['where'][] = array( 'field' => $name, 'compare' => $multiple ? 'IN' : $compare, 'value' => $value );
 			$result['values'][ $parameter ] = $value;
 		}
+		$result['where'] = Post_Field_Query::merge_inclusive_bounds( $result['where'], $fields );
 		return $result;
 	}
 
-	public static function facets( array $query_args, array $facets ) {
+	public static function facets( array $query_args, array $facets, $cache_ttl ) {
 		$spec = $query_args['carbon_fields'] ?? array();
 		$where = $spec['where'] ?? array();
 		if ( ! is_array( $spec ) || ! is_array( $where ) ) {
@@ -76,6 +77,7 @@ final class Post_Field_Filters {
 		) );
 
 		$result = array();
+		$generation = $facets && $cache_ttl > 0 ? Post_Facet_Cache::generation() : false;
 		foreach ( $facets as $name => $mode ) {
 			// Keep the catalog context and every filter except the facet's own conditions.
 			$spec['where'] = array_values( array_filter( $where, static function( $rule ) use ( $name ) {
@@ -86,9 +88,19 @@ final class Post_Field_Filters {
 			if ( is_wp_error( $sql ) ) {
 				return $sql;
 			}
-			$result[ $name ] = self::aggregate( $sql, Post_Field_Query::storage_key( $fields[ $name ] ), $mode );
+			$key = Post_Field_Query::storage_key( $fields[ $name ] );
+			$cache_key = $generation ? Post_Facet_Cache::key( $generation, $sql, $key, $mode, $cache_ttl ) : null;
+			$cached = $cache_key ? get_transient( $cache_key ) : false;
+			if ( is_array( $cached ) ) {
+				$result[ $name ] = $cached;
+				continue;
+			}
+			$result[ $name ] = self::aggregate( $sql, $key, $mode );
 			if ( is_wp_error( $result[ $name ] ) ) {
 				return $result[ $name ];
+			}
+			if ( $cache_key ) {
+				set_transient( $cache_key, $result[ $name ], $cache_ttl );
 			}
 		}
 		return $result;

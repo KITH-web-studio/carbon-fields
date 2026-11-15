@@ -33,8 +33,8 @@ function carbon_get_post_select_label( $post_id, $name, $container_id = '' ) {
 }
 
 /** @return array|WP_Error Counts or numeric ranges across all matching posts. */
-function carbon_get_post_facets( array $query_args, array $facets ) {
-	return Post_Field_Filters::facets( $query_args, $facets );
+function carbon_get_post_facets( array $query_args, array $facets, $cache_ttl = 5 * MINUTE_IN_SECONDS ) {
+	return Post_Field_Filters::facets( $query_args, $facets, max( 0, (int) $cache_ttl ) );
 }
 
 /** @return array|WP_Error Validated where conditions and selected request values. */

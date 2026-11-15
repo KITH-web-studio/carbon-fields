@@ -2,6 +2,12 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.33
+
+- Combine inclusive price bounds into a single `BETWEEN` condition when parsing filters or building a post query.
+- Cache facet results and invalidate them after changes to posts, metadata or taxonomies.
+- Document the facet cache and the benchmark with 20,000 posts in English and Russian.
+
 ## 3.6.11.32
 
 - Calculate catalog facet counts and decimal ranges across matching posts.

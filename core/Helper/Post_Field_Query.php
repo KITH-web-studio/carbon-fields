@@ -94,7 +94,7 @@ final class Post_Field_Query {
 
 		$fields = self::fields( $post_type, $container_id );
 		$filters = $order = $order_clauses = array();
-		foreach ( $where as $rule ) {
+		foreach ( self::merge_inclusive_bounds( $where, $fields ) as $rule ) {
 			$name = $rule['field'] ?? null;
 			$field = is_string( $name ) ? ( $fields[ $name ] ?? null ) : null;
 			if ( ! $field || ! is_array( $rule ) ) {
@@ -126,6 +126,34 @@ final class Post_Field_Query {
 			$order[ $alias ] = strtoupper( $direction );
 		}
 		return array( $filters, $order );
+	}
+
+	/** @internal Combine one lower and one upper bound on the same numeric root field. */
+	public static function merge_inclusive_bounds( array $where, array $fields ) {
+		$bounds = array();
+		foreach ( $where as $index => $rule ) {
+			$name = $rule['field'] ?? null;
+			$field = is_string( $name ) ? ( $fields[ $name ] ?? null ) : null;
+			$compare = $rule['compare'] ?? null;
+			if ( $field && self::is_numeric_field( $field ) && in_array( $compare, array( '>=', '<=' ), true ) &&
+				self::is_number( $rule['value'] ?? null ) ) {
+				$bounds[ $name ][ $compare ][] = $index;
+			}
+		}
+		foreach ( $bounds as $name => $pair ) {
+			if ( 1 !== count( $pair['>='] ?? array() ) || 1 !== count( $pair['<='] ?? array() ) ) {
+				continue;
+			}
+			$lower = $pair['>='][0];
+			$upper = $pair['<='][0];
+			$where[ $lower ] = array(
+				'field' => $name,
+				'compare' => 'BETWEEN',
+				'value' => array( $where[ $lower ]['value'], $where[ $upper ]['value'] ),
+			);
+			unset( $where[ $upper ] );
+		}
+		return array_values( $where );
 	}
 
 	/** @internal Standard, unambiguous root fields for the requested post type. */

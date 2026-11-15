@@ -41,6 +41,8 @@ $minimum_selected = $parsed['values']['min_price'] ?? '';
 
 Single numeric filters accept `=`, `>=`, `<=`, `>` and `<`. The default comparison is `=`. `multiple` uses `IN` and returns an array of unique values. For a regular select, accepted keys come from its current options. Use `choices` to give an explicit array of accepted keys for a dependent or remote list, or for another nonnumeric field. Empty and unlisted parameters are ignored. An invalid submitted value returns `WP_Error` with `parameter` in the error data. For an ambiguous field, pass the container ID to the parser and in `carbon_fields['container_id']`.
 
+When both inclusive price bounds are supplied for the same numeric field, `where` contains one `BETWEEN` with the two decimal strings. Both form values remain available in `values`. A missing bound leaves the other comparison in place. The query builder also combines a single pair of inclusive bounds provided directly to `WP_Query`.
+
 ## Get facet counts and price ranges
 
 `carbon_get_post_facets( $args, $facets )` uses the same post type, status, search, taxonomy and field filters as the catalog query. Each facet excludes its own `carbon_fields['where']` conditions. For example, with pickup selected, the delivery counts still include courier options. A price range ignores the selected minimum and maximum while keeping the delivery filter. Pagination and sorting are omitted so the counts cover the whole result set.
@@ -60,7 +62,23 @@ if ( ! is_wp_error( $facets ) ) {
 
 `choices` returns a count per saved key, counting each post once per key. Supply labels from the catalog's options when rendering the filter. `range` is available for declared numeric fields. It returns `minimum` and `maximum` as decimal strings, or `null` when no numeric values match. A saved zero is included. Empty, missing and nonnumeric prices are excluded. A PHP default takes effect for this query once saved.
 
-Pass the native `WP_Query` arguments and its `carbon_fields` rules. Filters in native `meta_query` always stay in effect. Facets use one database aggregation per requested field. Search integrations that replace the native SQL query with a separate result set return a `WP_Error`.
+Pass the native `WP_Query` arguments and its `carbon_fields` rules. Filters in native `meta_query` always stay in effect. A cache miss runs one database aggregation for that field. A repeated effective query reuses that facet's counts or range, including when the user changes the page or changes a filter that the facet excludes from its own query. Search integrations that replace the native SQL query with a separate result set return a `WP_Error`.
+
+`carbon_get_post_facets( $args, $facets, $cache_ttl = 300 )` stores results in WordPress transients for five minutes by default. Pass seconds to use another lifetime, or pass `0` to calculate results on every call. The key uses the effective SQL, site, user and language. Post, post metadata, term and taxonomy relationship changes invalidate the site's cached facets. Writes through Carbon Fields invalidate after a successful save. A failed batch leaves the previous cached results available.
+
+After a direct SQL import that bypasses WordPress hooks, call `clean_post_cache( $post_id )` after the import commits to invalidate the old facet results.
+
+### Benchmark with 20,000 posts
+
+These local measurements use WordPress 7.1.4, PHP 8.4.4 and MySQL 8.0.43 with the standard WordPress indexes. The fixture contained 20,000 posts and 200,000 post metadata rows. Each figure is a median from warmed database runs. The WordPress runtime object cache was cleared before each measured call. The list returned 24 IDs and the facet request calculated two sets of counts and one price range.
+
+| Operation | 3.6.11.32 | With a combined range and facet cache |
+| --- | ---: | ---: |
+| Filter and sort the list | 401 ms | 311 ms |
+| Calculate three facets on a cache miss | 1,568 ms | 1,192 ms |
+| Repeat the facet request | 1,568 ms | 3.85 ms |
+
+The selected IDs, option counts and price bounds matched before and after. The list used three metadata joins instead of four. A cache hit ran zero facet aggregation queries. The time still includes WordPress loading the cache entries. Changing a price through WordPress immediately produced the new maximum of `1500.25`.
 
 ## Create a post with validated fields
 
