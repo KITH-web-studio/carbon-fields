@@ -41,6 +41,8 @@ namespace Carbon_Fields;
  * @method static \Carbon_Fields\Field\Set_Field make_set( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Sidebar_Field make_sidebar( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Text_Field make_text( string $name, string $label = null )
+ * @method static \Carbon_Fields\Field\Text_List_Field make_text_list( string $name, string $label = null )
+ * @method static \Carbon_Fields\Field\Text_Template_Field make_text_template( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Textarea_Field make_textarea( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Number_With_Unit_Field make_number_with_unit( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Typography_Field make_typography( string $name, string $label = null )

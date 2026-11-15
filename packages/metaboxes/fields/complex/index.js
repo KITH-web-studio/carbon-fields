@@ -185,12 +185,17 @@ class ComplexField extends Component {
 	 * @return {Object}
 	 */
 	handleGroupSetup = ( group, props ) => {
+		const { field, groupValues, onChange } = this.props;
+		const status = field.row_disabling && group.fields.find( ( child ) => child.base_name === '_disabled' );
+		const disabled = !! status && groupValues[ props.index ][ 1 ]._disabled === '1';
 		return assign( {}, props, {
 			id: group.id,
 			name: group.name,
 			prefix: `${ this.props.name }[${ props.index }]`,
 			fields: group.fields,
 			collapsed: group.collapsed,
+			rowDisabled: disabled,
+			onToggleRowVisibility: status ? () => onChange( status.id, disabled ? '0' : '1' ) : undefined,
 			context: 'metabox'
 		} );
 	}

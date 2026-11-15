@@ -2,13 +2,15 @@
 
 [Русский](ru/kith-features.md) · [Documentation index](index.md)
 
-## Large post forms
+## Large forms
 
 Compatible tabbed complexes render the selected row and open nested rows on demand. Values from the entire complex are included when you save. With browser support for the `formdata` event, post containers send a packed payload so that hundreds of nested inputs can travel in one form value. The editor can use native form controls where needed.
 
 A vertical layout makes a long collection easier to navigate. A short header generated from the row's own value helps identify the selected row. The [repeatable sections example](complex-fields.md) shows both options.
 
 When using the standard post-meta datastore and compatible hooks, saves compare submitted values against stored metadata and write the differences. This applies to the WordPress storage keys for nested fields as well as regular fields.
+
+Theme options also use a packed payload when the browser supports the `formdata` event. This keeps large forms within PHP's `max_input_vars` limit. Carbon Fields rejects an incomplete submission before updating the saved options.
 
 ## Media previews
 

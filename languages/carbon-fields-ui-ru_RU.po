@@ -668,3 +668,34 @@ msgstr "Предлагаемое значение"
 
 msgid "Apply changes"
 msgstr "Применить изменения"
+
+msgid "Hidden on the site"
+msgstr "Скрыто на сайте"
+
+msgid "Show on the site"
+msgstr "Показать на сайте"
+
+msgid "Hide on the site"
+msgstr "Скрыть на сайте"
+
+msgid "Insert variable"
+msgstr "Вставить переменную"
+
+msgid "Unknown template variables"
+msgstr "Неизвестные переменные шаблона"
+
+msgid "Preview"
+msgstr "Предпросмотр"
+
+msgid "Add item"
+msgstr "Добавить пункт"
+
+#, javascript-format
+msgid "List item %d"
+msgstr "Пункт списка %d"
+
+msgid "Choose icon"
+msgstr "Выбрать иконку"
+
+msgid "Remove icon"
+msgstr "Убрать иконку"

@@ -414,3 +414,13 @@ msgstr ""
 
 msgid "The field action received or returned invalid values."
 msgstr ""
+
+msgid "Unnamed item"
+msgstr ""
+
+msgid "%s (archived)"
+msgstr ""
+
+msgid ""
+"Carbon Fields received an incomplete form. Reload the editor and try again."
+msgstr ""

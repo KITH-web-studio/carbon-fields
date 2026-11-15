@@ -2,6 +2,14 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.29
+
+- Source select options from shared theme-option rows using UUIDs.
+- Let editors hide individual complex rows from site output while retaining their content.
+- Pack large theme options forms into a validated payload.
+- Add text template fields with declared variables, live previews and PHP rendering helpers.
+- Add a compact text list with keyboard insertion, row actions and optional Media Library icons.
+
 ## 3.6.11.28
 
 - Read selected fields for one or many posts in batches, with optional attachment preloading.

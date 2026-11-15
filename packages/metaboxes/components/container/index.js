@@ -217,7 +217,7 @@ class Container extends Component {
 		const mainFields = sidebarSections.length && ! hasTabs
 			? container.fields.filter( ( field ) => ! sidebarSections.some( ( section ) => section.fields.includes( field.name ) ) )
 			: container.fields;
-		const protectedForm = container.type === 'post_meta';
+		const protectedForm = container.type === 'post_meta' || container.type === 'theme_options' && !! container.settings.packed_nonce;
 
 		const classes = cx( [
 			'cf-container',
@@ -235,7 +235,7 @@ class Container extends Component {
 				<input
 					type="hidden"
 					name={ container.nonce.name }
-					value={ protectedForm ? 'cf1:' + container.nonce.value : container.nonce.value }
+					value={ protectedForm ? 'cf1:' + ( container.settings.packed_nonce || container.nonce.value ) : container.nonce.value }
 				/>
 				{ protectedForm && (
 					<input type="hidden" name={ container.nonce.name + '_mode' } value={ supportsPackedPostMeta ? 'packed' : 'native' } />

@@ -2,9 +2,56 @@
 
 [Русский](ru/structured-fields.md) · [Documentation](index.md)
 
-Declare these fields in `carbon_fields_register_fields`. Existing field formats are unchanged. The seven new structured field types store one JSON string per field in the existing datastore; `carbon_get_post_meta()` and the other Carbon getters return PHP arrays. They can also be nested inside a complex row. Arrays, not JSON strings, are the preferred input to PHP setters and REST.
+Declare these fields in `carbon_fields_register_fields`. Structured fields store one JSON string per field in the existing datastore. `carbon_get_post_meta()` and the other Carbon getters return PHP arrays. These fields can also be nested inside a complex row. Use arrays with PHP setters and REST.
 
 Use new field names when adopting a different field type on an existing site, or write an explicit data migration; changing a complex field into a table does not convert its old metadata.
+
+## Text lists
+
+Use `text_list` for benefits, package contents or short instructions. Press Enter in a filled item to insert and focus a new item below it. The arrow icons change the order, and the trash icon removes an item. Saving skips empty items and returns the remaining strings in their displayed order.
+
+```php
+use Carbon_Fields\Container;
+use Carbon_Fields\Field;
+
+add_action( 'carbon_fields_register_fields', function () {
+    Container::make( 'post_meta', 'Benefits' )
+        ->where( 'post_type', '=', 'page' )
+        ->add_fields( array(
+            Field::make( 'text_list', 'benefits', 'Benefits' ),
+        ) );
+} );
+```
+
+Render the list in a theme template.
+
+```php
+$benefits = carbon_get_post_meta( get_the_ID(), 'benefits' );
+if ( $benefits ) {
+    echo '<ul>';
+    foreach ( $benefits as $benefit ) {
+        echo '<li>' . esc_html( $benefit ) . '</li>';
+    }
+    echo '</ul>';
+}
+```
+
+### Optional item icons
+
+Enable image selection for a particular list in its PHP declaration.
+
+```php
+Field::make( 'text_list', 'benefits_with_icons', 'Benefits' )->set_icons_enabled();
+```
+
+Editors can select or upload an image using the icon button in each row. The × next to the thumbnail clears the selection and keeps the text. Enabling the option for an existing list keeps its text and order. With icons enabled, the getter returns rows with `text` and `icon_id`. An unassigned icon has ID `0`. The standard text-only field returns strings.
+
+```php
+foreach ( carbon_get_post_meta( get_the_ID(), 'benefits_with_icons' ) as $item ) {
+    echo '<li>' . carbon_image( $item['icon_id'], 'thumbnail', array( 'alt' => '' ) )
+        . esc_html( $item['text'] ) . '</li>';
+}
+```
 
 ## Declarations
 

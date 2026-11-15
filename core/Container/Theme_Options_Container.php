@@ -14,6 +14,7 @@ use Carbon_Fields\Helper\Field_Validation;
  */
 class Theme_Options_Container extends Container {
 	use \Carbon_Fields\Helper\Conditional_Logic;
+	const FORM_NONCE_PREFIX = 'cf1:';
 	protected $multilingual = true;
 	protected $page_capability = null;
 	protected $default_access_condition = null;
@@ -52,7 +53,66 @@ class Theme_Options_Container extends Container {
 	protected function verified_nonce_in_request() {
 		$input = Helper::input();
 		$name = $this->get_nonce_name();
-		return isset( $input[ $name ] ) && is_string( $input[ $name ] ) && wp_verify_nonce( $input[ $name ], $this->editor_nonce_action() );
+		$nonce = $input[ $name ] ?? '';
+		if ( ! is_string( $nonce ) ) {
+			return false;
+		}
+		$action = $this->editor_nonce_action();
+		if ( $this->is_protected_editor_form( $input ) ) {
+			$nonce = substr( $nonce, strlen( self::FORM_NONCE_PREFIX ) );
+			$action .= ':' . self::FORM_NONCE_PREFIX;
+		}
+		return wp_verify_nonce( $nonce, $action );
+	}
+
+	private function is_protected_editor_form( array $input ) {
+		$nonce = $input[ $this->get_nonce_name() ] ?? null;
+		return 'theme_options' === $this->type && is_string( $nonce ) && 0 === strpos( $nonce, self::FORM_NONCE_PREFIX );
+	}
+
+	private function get_editor_form_input() {
+		$input = Helper::input();
+		if ( ! $this->is_protected_editor_form( $input ) ) {
+			return $input;
+		}
+		$name = $this->get_nonce_name();
+		$mode = $input[ $name . '_mode' ] ?? null;
+		$complete = $input[ $name . '_complete' ] ?? null;
+		$error = new \WP_Error( 'carbon_fields_incomplete_form', __( 'Carbon Fields received an incomplete form. Reload the editor and try again.', 'carbon-fields' ) );
+		if ( $mode !== $complete || ! in_array( $mode, array( 'native', 'packed' ), true ) ) {
+			return $error;
+		}
+		if ( 'native' === $mode ) {
+			return $input;
+		}
+		$raw = $input[ $name . '_payload' ] ?? null;
+		$payload = is_string( $raw ) ? json_decode( $raw, true ) : null;
+		$values = $payload['fields'] ?? null;
+		if ( ! is_array( $values ) ) {
+			return $error;
+		}
+		$denied = $this->restricted_option_names();
+		if ( $this->has_restricted_input( $values, $denied ) ) {
+			return $this->restricted_settings_error();
+		}
+		$fields = $this->get_editable_fields( $denied );
+		$expected = array_fill_keys( $this->editor_field_names( $fields ), true );
+		if ( array_diff_key( $values, $expected ) || array_diff_key( $expected, $values ) ) {
+			return $error;
+		}
+		$language = $this->is_multilingual() ? ( $input[ $this->language_input_name() ] ?? null ) : null;
+		if ( null !== $language && ! Polylang::valid_language( $language ) ) {
+			return $error;
+		}
+		return Polylang::with_language( $language, function() use ( $fields, $values, $input, $error ) {
+			foreach ( $fields as $field ) {
+				$value = $values[ $field->get_name() ];
+				if ( null !== $value && ! $field->is_valid_form_value( $value ) ) {
+					return $error;
+				}
+			}
+			return array_replace( $input, $values );
+		} );
 	}
 
 	protected function editor_nonce_action() {
@@ -328,6 +388,9 @@ class Theme_Options_Container extends Container {
 	public function to_json( $load ) {
 		$denied = $this->restricted_option_names();
 		$settings = $this->settings;
+		if ( 'theme_options' === $this->type ) {
+			$settings['packed_nonce'] = wp_create_nonce( $this->editor_nonce_action() . ':' . self::FORM_NONCE_PREFIX );
+		}
 		$fields = $this->get_editable_fields( $denied );
 		$field_names = $this->editor_field_names( $fields );
 		if ( $denied && isset( $settings['tabs'] ) ) {
@@ -493,7 +556,11 @@ class Theme_Options_Container extends Container {
 			$this->errors[] = esc_html__( 'The settings language could not be verified. Reload the page and try again.', 'carbon-fields' );
 			return false;
 		}
-		$input = Helper::input();
+		$input = $this->get_editor_form_input();
+		if ( is_wp_error( $input ) ) {
+			$this->errors[] = esc_html( $input->get_error_message() );
+			return false;
+		}
 		$denied = $this->restricted_option_names();
 		if ( $this->has_restricted_input( $input, $denied ) ) {
 			$this->errors[] = esc_html( $this->restricted_settings_error()->get_error_message() );
@@ -538,7 +605,10 @@ class Theme_Options_Container extends Container {
 			return new \WP_Error( 'carbon_fields_invalid_form', $message );
 		}
 
-		$input = Helper::input();
+		$input = $this->get_editor_form_input();
+		if ( is_wp_error( $input ) ) {
+			return $input;
+		}
 		$language = $this->is_multilingual() ? $input[ $this->language_input_name() ] : null;
 		return Polylang::with_language( $language, function() use ( $input ) {
 			return $this->validate_editor_input( $input, true );
@@ -571,7 +641,10 @@ class Theme_Options_Container extends Container {
 	 * @param mixed $user_data
 	 */
 	public function save( $user_data = null ) {
-		$input = Helper::input();
+		$input = $this->get_editor_form_input();
+		if ( is_wp_error( $input ) ) {
+			return $input;
+		}
 		$denied = $this->restricted_option_names();
 		if ( ( $this->page_capability && ! current_user_can( $this->page_capability ) ) || $this->has_restricted_input( $input, $denied ) ) {
 			return $this->restricted_settings_error();

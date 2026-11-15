@@ -10,6 +10,7 @@ import { addFilter } from '@wordpress/hooks';
 import withFilters from '../hocs/with-filters';
 import BusinessHoursField from './structured/business-hours';
 import TableField from './structured/table';
+import TextListField from './structured/text-list';
 import TreeField from './structured/tree';
 import { ImageHotspots, ResponsiveImage } from './structured/images';
 import GeofenceField from './structured/geofence';
@@ -43,6 +44,7 @@ import SetField from './set';
 import SidebarField from './sidebar';
 import TaxonomyField from './taxonomy';
 import TextField from './text';
+import TextTemplateField from './text-template';
 import TextareaField from './textarea';
 import TimeField from './time';
 import TypographyField from './typography';
@@ -101,6 +103,8 @@ addFilter( 'carbon-fields.register-field-type', 'carbon-fields/core', ( type, co
 	[ 'sidebar', SidebarField ],
 	[ 'taxonomy', TaxonomyField ],
 	[ 'text', TextField ],
+	[ 'text_list', TextListField ],
+	[ 'text_template', TextTemplateField ],
 	[ 'textarea', TextareaField ],
 	[ 'time', TimeField ],
 	[ 'typography', TypographyField ],

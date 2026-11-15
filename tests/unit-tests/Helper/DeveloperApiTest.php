@@ -178,6 +178,73 @@ class DeveloperApiTest extends WP_UnitTestCase {
 		$this->assertSame( $rows, carbon_get_theme_option( $name, $id ) );
 	}
 
+	public function testThemeDictionaryUsesRowIdsAndRetainsArchivedSelections() {
+		$name = $this->prefix . '_branches';
+		$container = Container::make( 'theme_options', 'Dictionary ' . $this->prefix )->set_multilingual( false )->add_fields( array(
+			Field::make( 'complex', $name )->set_row_ids()->set_row_disabling()->add_fields( array(
+				Field::make( 'text', 'title' ), Field::make( 'text', 'address' ),
+			) ),
+		) );
+		$container_id = $container->get_id();
+		carbon_set_theme_option( $name, array(
+			array( 'title' => 'Kyiv', 'address' => 'Partner Street' ),
+			array( 'title' => 'Lviv', 'address' => 'Market Square' ),
+		), $container_id );
+		$rows = carbon_get_theme_option( $name, $container_id );
+		$uuid = $rows[0]['_row_id'];
+		$select = Field::make( 'select', $this->prefix . '_branch' )->set_options_from_theme_option( $name, 'title', $container_id );
+		$this->container->add_fields( array( $select ) );
+		$this->assertSame( array( array( 'value' => $uuid, 'label' => 'Kyiv' ) ), $select->search_options( 'kyiv', 1 )['options'] );
+		$this->assertTrue( carbon_update_fields( $this->id, array( $select->get_base_name() => $uuid ) ) );
+		$rows[0]['title'] = 'New Kyiv';
+		$rows[0]['_disabled'] = true;
+		carbon_set_theme_option( $name, array_reverse( $rows ), $container_id );
+		$this->assertSame( $uuid, carbon_get_post_meta( $this->id, $select->get_base_name() ) );
+		$this->assertSame( 'Partner Street', carbon_get_theme_option_row( $name, $uuid, $container_id )['address'] );
+		$this->assertSame( array(), $select->search_options( 'kyiv', 1 )['options'] );
+		$this->assertStringContainsString( 'New Kyiv', $select->resolve_option( $uuid ) );
+		$this->assertTrue( $select->is_valid_form_value( $uuid ) );
+		$this->assertFalse( $select->is_valid_form_value( wp_generate_uuid4() ) );
+	}
+
+	public function testDisabledComplexRowsKeepValuesAndAreSkippedByTheRenderer() {
+		$name = $this->prefix . '_sections';
+		$children = Field::make( 'complex', 'children' )->add_fields( array( Field::make( 'text', 'title' ) ) );
+		$field = Field::make( 'complex', $name )->set_row_ids()->add_fields( array( Field::make( 'text', 'title' ), $children ) )->set_row_disabling();
+		$this->container->add_fields( array( $field ) );
+		$renderer = array( '_' => static function( $row, $position ) { return $position . ':' . $row['title']; } );
+		$this->assertTrue( carbon_update_fields( $this->id, array( $name => array(
+			array( 'title' => 'Hidden', '_disabled' => true, 'children' => array( array( 'title' => 'Nested' ) ) ),
+			array( 'title' => 'Visible' ),
+		) ) ) );
+		$rows = carbon_get_post_meta( $this->id, $name );
+		$this->assertSame( 'Nested', $rows[0]['children'][0]['title'] );
+		$this->assertTrue( $rows[0]['_disabled'] );
+		$this->assertSame( '1:Visible', carbon_render_complex( $this->id, $name, $renderer ) );
+		$this->assertSame( array( 1 => $rows[1] ), carbon_active_complex_rows( $rows ) );
+		$this->assertTrue( carbon_update_row( $this->id, $name, $rows[0]['_row_id'], array( '_disabled' => false ) ) );
+		$this->assertSame( '0:Hidden1:Visible', carbon_render_complex( $this->id, $name, $renderer ) );
+		$this->assertSame( $rows[0]['_row_id'], carbon_get_post_meta( $this->id, $name )[0]['_row_id'] );
+	}
+
+	public function testTextTemplateUsesAllowedVariablesAndReturnsPlainText() {
+		$name = $this->prefix . '_template';
+		$service = $this->prefix . '_service_name';
+		$city = $this->prefix . '_city';
+		$this->container->add_fields( array(
+			Field::make( 'text', $service ), Field::make( 'text', $city ),
+			Field::make( 'text_template', $name )->set_template_variables( array( 'service_name' => $service, 'city' => $city ) ),
+		) );
+		$template = 'Записаться на {{service_name}} в {{ city }}';
+		$this->assertTrue( carbon_update_fields( $this->id, array( $name => $template, $service => 'курс', $city => 'Києві' ) ) );
+		$this->assertSame( $template, carbon_get_post_meta( $this->id, $name ) );
+		$this->assertSame( 'Записаться на курс в Києві', carbon_render_text_template( $template, array( 'service_name' => 'курс', 'city' => 'Києві' ) ) );
+		$this->assertSame( 'Записаться на курс в Києві', carbon_render_post_text_template( $this->id, $name ) );
+		$this->assertSame( '{{city}} <b> {{missing}}', carbon_render_text_template( '{{name}} {{city}} {{missing}}', array( 'name' => '{{city}}', 'city' => '<b>' ) ) );
+		$this->assertWPError( carbon_update_fields( $this->id, array( $name => '{{unknown}}' ) ) );
+		$this->assertSame( $template, carbon_get_post_meta( $this->id, $name ) );
+	}
+
 	public function testReadingSelectedFieldsPrimesTheSameCacheAsIndividualReads() {
 		global $wpdb;
 		$title = $this->prefix . '_title';

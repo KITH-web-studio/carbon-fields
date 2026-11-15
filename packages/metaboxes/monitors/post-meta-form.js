@@ -26,7 +26,8 @@ function packPostMeta( { formData } ) {
 
 	for ( const container of Object.values( getContainers() ) ) {
 		const { name: nonceName, value: nonce } = container.nonce;
-		if ( container.type !== 'post_meta' || formData.get( nonceName ) !== 'cf1:' + nonce || formData.get( nonceName + '_mode' ) !== 'packed' ) {
+		const protectedForm = container.type === 'post_meta' || container.type === 'theme_options' && !! container.settings.packed_nonce;
+		if ( ! protectedForm || formData.get( nonceName ) !== 'cf1:' + ( container.settings.packed_nonce || nonce ) || formData.get( nonceName + '_mode' ) !== 'packed' ) {
 			continue;
 		}
 		// Wizards validate only the current step while moving forward; final saves

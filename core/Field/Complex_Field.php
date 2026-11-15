@@ -15,6 +15,7 @@ use Carbon_Fields\Exception\Incorrect_Syntax_Exception;
 class Complex_Field extends Field {
 	private $internal_values = false;
 	private $row_ids = false;
+	private $row_disabling = false;
 
 	public function load() {
 		$this->set_internal_value( $this->get_value_from_datastore() );
@@ -41,6 +42,7 @@ class Complex_Field extends Field {
 
 	const TYPE_PROPERTY = '_type';
 	const ROW_ID_PROPERTY = '_row_id';
+	const ROW_DISABLED_PROPERTY = '_disabled';
 
 	/**
 	 * Enable stable identifiers for rows in this field.
@@ -49,20 +51,36 @@ class Complex_Field extends Field {
 		if ( $this->row_ids ) {
 			return $this;
 		}
+		$this->register_row_property( static::ROW_ID_PROPERTY, Complex_Row_Id_Field::class );
+		$this->row_ids = true;
+		return $this;
+	}
+
+	public function set_row_disabling() {
+		if ( ! $this->row_disabling ) {
+			$this->register_row_property( static::ROW_DISABLED_PROPERTY, Complex_Row_Visibility_Field::class );
+			$this->row_disabling = true;
+		}
+		return $this;
+	}
+
+	public function allows_row_disabling() {
+		return $this->row_disabling;
+	}
+
+	private function register_row_property( $name, $class ) {
 		foreach ( $this->get_fields() as $field ) {
-			if ( static::ROW_ID_PROPERTY === $field->get_base_name() ) {
-				throw new \InvalidArgumentException( '_row_id is reserved when complex row IDs are enabled.' );
+			if ( $name === $field->get_base_name() ) {
+				throw new \InvalidArgumentException( $name . ' is reserved for a complex row property.' );
 			}
 		}
-		$this->row_ids = true;
 		foreach ( $this->groups as $group ) {
-			$group->add_fields( array( new Complex_Row_Id_Field() ) );
+			$group->add_fields( array( new $class() ) );
 		}
 		$this->update_child_hierarchy();
 		if ( $this->get_datastore() ) {
 			$this->update_child_datastore( $this->get_datastore(), true );
 		}
-		return $this;
 	}
 
 	public function has_row_ids() {
@@ -295,6 +313,9 @@ class Complex_Field extends Field {
 		if ( $this->row_ids ) {
 			$reserved_names[] = static::ROW_ID_PROPERTY;
 		}
+		if ( $this->row_disabling ) {
+			$reserved_names[] = static::ROW_DISABLED_PROPERTY;
+		}
 		foreach ( $fields as $field ) {
 			/** @var Field $field */
 			if ( in_array( $field->get_base_name(), $reserved_names ) ) {
@@ -305,6 +326,9 @@ class Complex_Field extends Field {
 
 		if ( $this->row_ids ) {
 			$fields[] = new Complex_Row_Id_Field();
+		}
+		if ( $this->row_disabling ) {
+			$fields[] = new Complex_Row_Visibility_Field();
 		}
 		$group = new Group_Field( $name, $label, $fields );
 		$this->groups[ $group->get_name() ] = $group;
@@ -754,6 +778,7 @@ class Complex_Field extends Field {
 
 		$complex_data = array_merge( $complex_data, array(
 			'duplicate_groups_allowed' => $this->get_duplicate_groups_allowed(),
+			'row_disabling' => $this->row_disabling,
 			'group_types' => $group_types,
 			'layout' => $this->layout,
 			'labels' => $this->labels,

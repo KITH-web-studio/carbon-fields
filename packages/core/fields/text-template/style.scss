@@ -1,0 +1,25 @@
+.cf-text-template {
+	display: grid;
+	gap: 8px;
+}
+
+.cf-text-template textarea {
+	width: 100%;
+}
+
+.cf-text-template__variables {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px;
+}
+
+.cf-text-template__preview {
+	border: 1px solid var(--cf-dialog-border, #dcdcde);
+	border-radius: 3px;
+	padding: 8px 10px;
+}
+
+.cf-text-template__output {
+	overflow-wrap: anywhere;
+	white-space: pre-wrap;
+}

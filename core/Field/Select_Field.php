@@ -4,6 +4,7 @@ namespace Carbon_Fields\Field;
 
 use Carbon_Fields\Exception\Incorrect_Syntax_Exception;
 use Carbon_Fields\Helper\Helper;
+use Carbon_Fields\Helper\Theme_Option_Dictionary;
 
 /**
  * Select dropdown field class.
@@ -14,6 +15,12 @@ class Select_Field extends Predefined_Options_Field {
 	protected $searchable = false;
 	protected $remote_search;
 	protected $remote_resolve;
+
+	/** Use rows of a shared theme option as the choices for this field. */
+	public function set_options_from_theme_option( $name, $label_field, $container_id = '' ) {
+		$dictionary = new Theme_Option_Dictionary( $name, $label_field, $container_id );
+		return $this->set_remote_options( array( $dictionary, 'search' ), array( $dictionary, 'resolve' ) );
+	}
 
 	public function set_remote_options( callable $search, callable $resolve ) {
 		if ( '' !== $this->options_source ) { throw new \InvalidArgumentException( 'Remote and dependent select options are alternative modes.' ); }

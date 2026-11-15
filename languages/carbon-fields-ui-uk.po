@@ -669,3 +669,34 @@ msgstr "Запропоноване значення"
 
 msgid "Apply changes"
 msgstr "Застосувати зміни"
+
+msgid "Hidden on the site"
+msgstr "Приховано на сайті"
+
+msgid "Show on the site"
+msgstr "Показати на сайті"
+
+msgid "Hide on the site"
+msgstr "Приховати на сайті"
+
+msgid "Insert variable"
+msgstr "Вставити змінну"
+
+msgid "Unknown template variables"
+msgstr "Невідомі змінні шаблону"
+
+msgid "Preview"
+msgstr "Попередній перегляд"
+
+msgid "Add item"
+msgstr "Додати пункт"
+
+#, javascript-format
+msgid "List item %d"
+msgstr "Пункт списку %d"
+
+msgid "Choose icon"
+msgstr "Вибрати іконку"
+
+msgid "Remove icon"
+msgstr "Прибрати іконку"

@@ -6,6 +6,58 @@
 
 Методы доступны после загрузки Carbon Fields; определения полей должны быть зарегистрированы. В примерах используются `use Carbon_Fields\Field;` и `use Carbon_Fields\Container;`.
 
+## Общие справочники для списков выбора
+
+Сохраните филиалы, услуги или другие варианты в общем комплексе настроек темы с постоянными ID строк. Поле выбора хранит UUID. Подпись берётся из текущей строки после её переименования или перестановки.
+
+```php
+add_action( 'carbon_fields_register_fields', function () {
+    $directory = Container::make( 'theme_options', 'Справочник' )
+        ->set_multilingual( false )
+        ->add_fields( array(
+            Field::make( 'complex', 'branches', 'Филиалы' )->set_row_ids()->set_row_disabling()
+                ->add_fields( array(
+                    Field::make( 'text', 'name', 'Название' ),
+                    Field::make( 'text', 'address', 'Адрес' ),
+                ) ),
+        ) );
+    Container::make( 'post_meta', 'Филиал' )->where( 'post_type', '=', 'page' )
+        ->add_fields( array(
+            Field::make( 'select', 'branch', 'Филиал' )
+                ->set_options_from_theme_option( 'branches', 'name', $directory->get_id() ),
+        ) );
+} );
+
+$branch = carbon_get_theme_option_row( 'branches', carbon_get_post_meta( get_the_ID(), 'branch' ) );
+echo esc_html( $branch['address'] ?? '' );
+```
+
+Источником служит корневой комплекс в общих настройках темы. Сохраните справочник, чтобы его существующие строки получили ID. Редактор с доступом к полю выбора видит объявленную подпись и UUID. Для архивации скройте строку справочника. Её по-прежнему можно прочитать по сохранённому UUID, а поиск предлагает активные строки.
+
+## Текстовые шаблоны со значениями полей
+
+Тип `text_template` хранит текст с подстановками. В PHP сопоставьте имена переменных с соседними полями в том же контейнере или той же строке комплекса. Редактор может вставить переменную кнопкой и сразу увидеть результат при изменении соседнего поля.
+
+```php
+add_action( 'carbon_fields_register_fields', function () {
+    Container::make( 'post_meta', 'Запись на услугу' )->add_fields( array(
+        Field::make( 'text', 'service_name', 'Услуга' ),
+        Field::make( 'text', 'city', 'Город' ),
+        Field::make( 'text_template', 'booking_label', 'Текст кнопки' )
+            ->set_template_variables( array( 'service_name' => 'service_name', 'city' => 'city' ) )
+            ->set_default_value( 'Записаться на {{service_name}} в {{city}}' ),
+    ) );
+} );
+```
+
+Выведите готовый текст в теме.
+
+```php
+echo esc_html( carbon_render_post_text_template( get_the_ID(), 'booking_label' ) );
+```
+
+Для вложенной строки, настройки темы или уведомления передавайте значения явно через `carbon_render_text_template( $template, $values )`. Например, адрес из справочника можно передать как `array( 'branch.address' => $branch['address'] )`. Если значение переменной отсутствует, в результате остаётся её подстановка. Функции возвращают обычный текст, экранируйте его с учётом места вывода.
+
 ## Пакетное чтение выбранных полей
 
 Используйте `carbon_get_post_meta_fields()`, когда шаблону нужны несколько полей одной записи. Результат — массив с именами полей в качестве ключей.

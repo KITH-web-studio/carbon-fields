@@ -9,6 +9,7 @@ import { __ } from '@wordpress/i18n';
  * Internal dependencies.
  */
 import { getFieldType } from '../../registry/fields';
+import IconAction from '../../components/icon-action';
 import { getTitle } from './tab-search';
 import { ComplexValidationContext } from './validation';
 
@@ -185,6 +186,8 @@ class ComplexGroup extends Component {
 			dragged,
 			collapsed,
 			allowClone,
+			rowDisabled,
+			onToggleRowVisibility,
 			complexId,
 			validation,
 			onMove
@@ -250,6 +253,14 @@ class ComplexGroup extends Component {
 				) }
 
 				<div className={ actionsClasses }>
+					{ rowDisabled && <span className="cf-complex__row-status">{ __( 'Hidden on the site', 'carbon-fields-ui' ) }</span> }
+					{ onToggleRowVisibility && (
+						<IconAction
+							icon={ rowDisabled ? 'visibility' : 'hidden' }
+							label={ rowDisabled ? __( 'Show on the site', 'carbon-fields-ui' ) : __( 'Hide on the site', 'carbon-fields-ui' ) }
+							onClick={ onToggleRowVisibility }
+						/>
+					) }
 					{ onMove && (
 						<button type="button" className="button button-small cf-complex__move-button" onClick={ ( event ) => onMove( id, event.currentTarget ) }>
 							{ __( 'Move row', 'carbon-fields-ui' ) }

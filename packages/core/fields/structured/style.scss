@@ -14,6 +14,56 @@
 	vertical-align: middle;
 }
 .cf-structured-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+.cf-text-list__items {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 4px;
+	margin: 0 0 6px;
+	padding: 0;
+	list-style: none;
+}
+.cf-text-list__item {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	margin: 0;
+
+	> input {
+		flex: 1 1 0;
+		width: 0;
+		min-width: 0;
+		margin: 0;
+	}
+}
+.cf-text-list__icons {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 2px;
+
+	.cf-icon-action + .cf-icon-action {
+		width: 26px;
+
+		&:disabled { visibility: hidden; }
+	}
+}
+.cf-text-list__icon.cf-icon-action {
+	box-shadow: inset 0 0 0 1px #dcdcde;
+
+	img {
+		display: block;
+		width: 22px;
+		height: 22px;
+		object-fit: contain;
+	}
+}
+.cf-text-list__add.button-link {
+	padding: 4px 0;
+	text-decoration: none;
+
+	&:hover:not(:disabled) { text-decoration: underline; }
+	&:disabled { color: #646970; cursor: default; }
+}
 .cf-hours-timezone {
 	display: flex;
 	flex-wrap: wrap;

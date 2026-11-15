@@ -93,6 +93,9 @@ function handler( props ) {
 				break;
 			case 'OPEN':
 				if ( mediaBrowser ) {
+					if ( props.resetSelection ) {
+						mediaBrowser.state()?.get( 'selection' )?.reset();
+					}
 					mediaBrowser.open();
 				}
 

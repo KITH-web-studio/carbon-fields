@@ -40,6 +40,49 @@ class StructuredFieldsTest extends WP_UnitTestCase {
 		$rows[999]['price'] = '1'; $rows[999]['title'] = ''; $this->assertFalse( $field->validate_data( $rows ) );
 	}
 
+	public function testTextListPreservesOrderAndRejectsInvalidItems() {
+		$field = Field::make( 'text_list', 'benefits' );
+		$id = self::factory()->post->create();
+		$store = new Post_Meta_Datastore();
+		$store->set_object_id( $id );
+		$field->set_datastore( $store );
+		$items = array( 'Українська', 'Русский', '0', 'Русский' );
+
+		$this->assertTrue( $field->set_value( array_merge( array( '' ), $items, array( '  ' ) ) )->save() );
+		$field->load();
+		$this->assertSame( $items, $field->get_formatted_value() );
+		$this->assertFalse( $field->is_valid_form_value( '["Valid",42]' ) );
+		$this->assertFalse( $field->validate_data( array( "Two\nlines" ) ) );
+		$this->assertFalse( $field->validate_data( array( 'key' => 'Not a list' ) ) );
+		$this->assertFalse( $field->set_required()->set_value( array( ' ' ) )->save() );
+		$field->load();
+		$this->assertSame( $items, $field->get_formatted_value() );
+	}
+
+	public function testTextListIconsAreOptionalAndKeepAttachmentIdsWithTheirText() {
+		$field = Field::make( 'text_list', 'icon_benefits' );
+		$post = self::factory()->post->create();
+		$store = new Post_Meta_Datastore();
+		$store->set_object_id( $post );
+		$field->set_datastore( $store );
+		$image = self::factory()->attachment->create( array( 'post_mime_type' => 'image/png', 'file' => 'icon.png' ) );
+		$video = self::factory()->attachment->create( array( 'post_mime_type' => 'video/mp4', 'file' => 'video.mp4' ) );
+		$list = array( array( 'text' => 'Warranty', 'icon_id' => $image ), array( 'text' => 'Delivery', 'icon_id' => 0 ) );
+
+		$this->assertTrue( $field->set_value( array( 'Delivery', 'Warranty' ) )->save() );
+		$this->assertFalse( $field->validate_data( $list ) );
+		$field->set_icons_enabled()->load();
+		$this->assertSame( array(
+			array( 'text' => 'Delivery', 'icon_id' => 0 ), array( 'text' => 'Warranty', 'icon_id' => 0 ),
+		), $field->get_formatted_value() );
+		$this->assertFalse( $field->validate_data( array( array( 'text' => 'Invalid', 'icon_id' => $video ) ) ) );
+		$this->assertFalse( $field->validate_data( array( array( 'text' => 'Invalid', 'icon_id' => $post ) ) ) );
+		$this->assertTrue( $field->set_value( $list )->save() );
+		$field->load();
+		$this->assertSame( $list, $field->get_formatted_value() );
+		$this->assertSame( array( 'Warranty', 'Delivery' ), $field->set_icons_enabled( false )->get_formatted_value() );
+	}
+
 	public function testTreeRejectsCyclesOrphansAndExcessiveDepth() {
 		$field = Field::make( 'tree', 'tree' )->set_max_depth( 2 );
 		$rows = array( array( 'id' => 'a', 'parent' => null, 'label' => 'A' ), array( 'id' => 'b', 'parent' => 'a', 'label' => 'B' ) );

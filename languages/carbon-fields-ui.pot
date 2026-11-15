@@ -72,3 +72,34 @@ msgstr ""
 
 msgid "Cancel"
 msgstr ""
+
+msgid "Hidden on the site"
+msgstr ""
+
+msgid "Show on the site"
+msgstr ""
+
+msgid "Hide on the site"
+msgstr ""
+
+msgid "Insert variable"
+msgstr ""
+
+msgid "Unknown template variables"
+msgstr ""
+
+msgid "Preview"
+msgstr ""
+
+msgid "Add item"
+msgstr ""
+
+#, javascript-format
+msgid "List item %d"
+msgstr ""
+
+msgid "Choose icon"
+msgstr ""
+
+msgid "Remove icon"
+msgstr ""

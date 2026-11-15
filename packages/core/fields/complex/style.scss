@@ -543,3 +543,16 @@
 .cf-layout-picker__description {
 	color: var(--cf-dialog-muted);
 }
+
+.cf-complex__row-status {
+	margin-inline-end: 4px;
+	font-size: 12px;
+}
+
+.cf-complex__tabs-item > .dashicons-hidden {
+	flex: none;
+	margin-inline-start: 5px;
+	font-size: 15px;
+	width: 15px;
+	height: 15px;
+}

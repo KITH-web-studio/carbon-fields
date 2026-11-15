@@ -476,6 +476,7 @@ class ComplexField extends Component {
 			validation,
 			groupIdKey,
 			groupFilterKey,
+			groupValues,
 			allGroupsAreCollapsed,
 			onGroupSetup,
 			onGroupFieldSetup,
@@ -501,7 +502,8 @@ class ComplexField extends Component {
 
 			return {
 				id,
-				label
+				label,
+				disabled: field.row_disabling && groupValues[ index ]?.[ 1 ]._disabled === '1'
 			};
 		} );
 		const sourceIndex = movingGroupId === null ? -1 : tabs.findIndex( ( tab ) => tab.id === movingGroupId );

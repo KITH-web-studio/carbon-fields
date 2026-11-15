@@ -3,6 +3,7 @@
  */
 import cx from 'classnames';
 import { forwardRef } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 import sanitizePreviewHtml from '../../utils/sanitize-preview-html';
 
 /**
@@ -56,6 +57,11 @@ function ComplexTabs( {
 										</span>
 									)
 							}
+							{ item.disabled && (
+								<span className="dashicons dashicons-hidden" title={ __( 'Hidden on the site', 'carbon-fields-ui' ) }>
+									<span className="screen-reader-text">{ __( 'Hidden on the site', 'carbon-fields-ui' ) }</span>
+								</span>
+							) }
 						</li>
 					);
 				} ) }

@@ -144,6 +144,67 @@
   margin: 8px 0;
 }
 
+.cf-text-list__items {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-gap: 4px;
+  gap: 4px;
+  margin: 0 0 6px;
+  padding: 0;
+  list-style: none;
+}
+
+.cf-text-list__item {
+  display: flex;
+  align-items: center;
+  grid-gap: 4px;
+  gap: 4px;
+  margin: 0;
+}
+.cf-text-list__item > input {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  margin: 0;
+}
+
+.cf-text-list__icons {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  grid-gap: 2px;
+  gap: 2px;
+}
+.cf-text-list__icons .cf-icon-action + .cf-icon-action {
+  width: 26px;
+}
+.cf-text-list__icons .cf-icon-action + .cf-icon-action:disabled {
+  visibility: hidden;
+}
+
+.cf-text-list__icon.cf-icon-action {
+  box-shadow: inset 0 0 0 1px #dcdcde;
+}
+.cf-text-list__icon.cf-icon-action img {
+  display: block;
+  width: 22px;
+  height: 22px;
+  -o-object-fit: contain;
+     object-fit: contain;
+}
+
+.cf-text-list__add.button-link {
+  padding: 4px 0;
+  text-decoration: none;
+}
+.cf-text-list__add.button-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+.cf-text-list__add.button-link:disabled {
+  color: #646970;
+  cursor: default;
+}
+
 .cf-hours-timezone {
   display: flex;
   flex-wrap: wrap;
@@ -1810,6 +1871,33 @@
 
 .cf-layout-picker__description {
   color: var(--cf-dialog-muted);
+}
+
+[dir="ltr"] .cf-complex__row-status {
+  margin-right: 4px;
+}
+
+[dir="rtl"] .cf-complex__row-status {
+  margin-left: 4px;
+}
+
+.cf-complex__row-status {
+  font-size: 12px;
+}
+
+[dir="ltr"] .cf-complex__tabs-item > .dashicons-hidden {
+  margin-left: 5px;
+}
+
+[dir="rtl"] .cf-complex__tabs-item > .dashicons-hidden {
+  margin-right: 5px;
+}
+
+.cf-complex__tabs-item > .dashicons-hidden {
+  flex: none;
+  font-size: 15px;
+  width: 15px;
+  height: 15px;
 }
 /* ==========================================================================
    Colors
@@ -4405,6 +4493,61 @@ span.flatpickr-weekday {
   box-shadow: 0 0 0 1.5px #3858e9;
   box-shadow: 0 0 0 var(--wp-admin-border-width-focus, 1.5px) var(--wp-admin-theme-color, #3858e9);
   outline: 2px solid transparent;
+}
+/* ==========================================================================
+   Colors
+   ========================================================================== */
+/* ==========================================================================
+   WordPress Colors - https://make.wordpress.org/design/handbook/design-guide/foundations/colors/
+   ========================================================================== */
+/* ==========================================================================
+   Gutenberg Colors - https://github.com/WordPress/gutenberg/blob/master/assets/stylesheets/_colors.scss
+   ========================================================================== */
+/* ==========================================================================
+   Fonts
+   ========================================================================== */
+/* ==========================================================================
+   Variables
+   ========================================================================== */
+/* ==========================================================================
+   WordPress Variables
+   ========================================================================== */
+/* ==========================================================================
+   Gutenberg Variables - https://github.com/WordPress/gutenberg/blob/master/assets/stylesheets/_variables.scss
+   ========================================================================== */
+/* ==========================================================================
+   WP Admin CSS Custom Properties - https://github.com/WordPress/wordpress-develop/blob/trunk/src/wp-admin/css/common.css
+   ========================================================================== */
+/* ==========================================================================
+   Mixins
+   ========================================================================== */
+.cf-text-template {
+  display: grid;
+  grid-gap: 8px;
+  gap: 8px;
+}
+
+.cf-text-template textarea {
+  width: 100%;
+}
+
+.cf-text-template__variables {
+  display: flex;
+  flex-wrap: wrap;
+  grid-gap: 5px;
+  gap: 5px;
+}
+
+.cf-text-template__preview {
+  border: 1px solid #dcdcde;
+  border: 1px solid var(--cf-dialog-border, #dcdcde);
+  border-radius: 3px;
+  padding: 8px 10px;
+}
+
+.cf-text-template__output {
+  word-wrap: anywhere;
+  white-space: pre-wrap;
 }
 /* ==========================================================================
    Colors

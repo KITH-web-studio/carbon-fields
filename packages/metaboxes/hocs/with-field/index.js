@@ -38,7 +38,9 @@ export default createHigherOrderComponent( ( Component ) => {
 			field,
 			name,
 			value,
-			optionsSourceValue
+			optionsSourceValue,
+			templateValues: field?.templateSourceIds && Object.fromEntries( Object.entries( field.templateSourceIds )
+				.map( ( [ key, id ] ) => [ key, getFieldById( id )?.value ] ) )
 		};
 	} );
 

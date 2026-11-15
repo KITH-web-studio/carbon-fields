@@ -57,5 +57,15 @@ export default function flattenFields( fields, containerId, accumulator, isLazy 
 			}
 		}
 	}
+	if ( flat.some( ( field ) => field.template_variables ) ) {
+		const ids = new Map( flat.map( ( field ) => [ field.base_name, field.id ] ) );
+		for ( const field of flat ) {
+			if ( field.template_variables ) {
+				field.templateSourceIds = Object.fromEntries( Object.entries( field.template_variables )
+					.filter( ( [ , source ] ) => ids.has( source ) )
+					.map( ( [ variable, source ] ) => [ variable, ids.get( source ) ] ) );
+			}
+		}
+	}
 	return flat.map( ( field ) => pick( field, [ 'id', 'type', 'name', 'base_name' ] ) );
 }

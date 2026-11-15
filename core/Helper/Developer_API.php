@@ -189,7 +189,11 @@ final class Developer_API {
 		$field = Helper::get_field_clone( $post_id, 'post_meta', $container_id, $name );
 		if ( ! $field instanceof Complex_Field ) { return ''; }
 		$field->load();
-		foreach ( $field->get_formatted_value() as $position => $row ) {
+		$rows = $field->get_formatted_value();
+		if ( $field->allows_row_disabling() ) {
+			$rows = self::active_complex_rows( $rows );
+		}
+		foreach ( $rows as $position => $row ) {
 			$type = $row[ Complex_Field::TYPE_PROPERTY ] ?? '';
 			if ( ! isset( $templates[ $type ] ) ) {
 				continue;
@@ -207,5 +211,11 @@ final class Developer_API {
 			}
 		}
 		return $html;
+	}
+
+	public static function active_complex_rows( array $rows ) {
+		return array_filter( $rows, static function( $row ) {
+			return true !== ( $row[ Complex_Field::ROW_DISABLED_PROPERTY ] ?? false );
+		} );
 	}
 }

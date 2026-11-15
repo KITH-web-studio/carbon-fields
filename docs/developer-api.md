@@ -6,6 +6,58 @@ See the [verification record](developer-verification.md) for exercised scenarios
 
 All helpers are available after Carbon Fields boots. Register definitions before calling field helpers. Examples assume `use Carbon_Fields\Field;` and `use Carbon_Fields\Container;`.
 
+## Shared dictionaries for select fields
+
+Use a shared theme option with stable row IDs when editors need to maintain a list of branches, services or other choices. The select stores the row's UUID. The label follows the row when it is renamed or moved.
+
+```php
+add_action( 'carbon_fields_register_fields', function () {
+    $directory = Container::make( 'theme_options', 'Directory' )
+        ->set_multilingual( false )
+        ->add_fields( array(
+            Field::make( 'complex', 'branches', 'Branches' )->set_row_ids()->set_row_disabling()
+                ->add_fields( array(
+                    Field::make( 'text', 'name', 'Name' ),
+                    Field::make( 'text', 'address', 'Address' ),
+                ) ),
+        ) );
+    Container::make( 'post_meta', 'Branch details' )->where( 'post_type', '=', 'page' )
+        ->add_fields( array(
+            Field::make( 'select', 'branch', 'Branch' )
+                ->set_options_from_theme_option( 'branches', 'name', $directory->get_id() ),
+        ) );
+} );
+
+$branch = carbon_get_theme_option_row( 'branches', carbon_get_post_meta( get_the_ID(), 'branch' ) );
+echo esc_html( $branch['address'] ?? '' );
+```
+
+The source is a root complex field in shared theme options. Saving the dictionary assigns IDs to existing rows. The select exposes the declared label and UUID to editors who can use the target field. Hide a dictionary row to archive it. Existing choices can still resolve to an archived row, and searches show active rows.
+
+## Text templates with field variables
+
+Use `text_template` for plain text with placeholders. Declare a map from variable names to scalar sibling fields in the same container or the same complex row. The editor can insert variables and preview changes as those fields are edited.
+
+```php
+add_action( 'carbon_fields_register_fields', function () {
+    Container::make( 'post_meta', 'Booking text' )->add_fields( array(
+        Field::make( 'text', 'service_name', 'Service' ),
+        Field::make( 'text', 'city', 'City' ),
+        Field::make( 'text_template', 'booking_label', 'Button label' )
+            ->set_template_variables( array( 'service_name' => 'service_name', 'city' => 'city' ) )
+            ->set_default_value( 'Book {{service_name}} in {{city}}' ),
+    ) );
+} );
+```
+
+Render the configured template in the theme.
+
+```php
+echo esc_html( carbon_render_post_text_template( get_the_ID(), 'booking_label' ) );
+```
+
+For nested rows, theme options or notifications, pass values explicitly with `carbon_render_text_template( $template, $values )`. For example, a dictionary address can be supplied as `array( 'branch.address' => $branch['address'] )`. A placeholder whose value is missing stays visible in the result. Escape the plain-text result for the output context.
+
 ## Read selected post fields in batches
 
 Use `carbon_get_post_meta_fields()` when a template needs several fields from one post. The returned array is keyed by field name.

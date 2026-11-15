@@ -185,6 +185,11 @@ export function fields( state = {}, action ) {
 					if ( field.dependentSelectIds ) {
 						field.dependentSelectIds = field.dependentSelectIds.map( ( id ) => clonedIds.get( id ) ).filter( Boolean );
 					}
+					if ( field.templateSourceIds ) {
+						field.templateSourceIds = Object.fromEntries( Object.entries( field.templateSourceIds )
+							.filter( ( [ , id ] ) => clonedIds.has( id ) )
+							.map( ( [ key, id ] ) => [ key, clonedIds.get( id ) ] ) );
+					}
 				}
 				assign( draft, keyBy( clonedFields, 'id' ) );
 			} );

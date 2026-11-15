@@ -3,6 +3,8 @@
 use Carbon_Fields\Helper\Developer_API;
 use Carbon_Fields\Helper\Media;
 use Carbon_Fields\Helper\Post_Meta_Batch;
+use Carbon_Fields\Helper\Theme_Option_Dictionary;
+use Carbon_Fields\Helper\Text_Template;
 
 /** @return array Formatted field values keyed by field name. */
 function carbon_get_post_meta_fields( $post_id, array $field_names, array $options = array() ) {
@@ -13,6 +15,21 @@ function carbon_get_post_meta_fields( $post_id, array $field_names, array $optio
 /** @return array Formatted field values keyed by post ID and field name. */
 function carbon_get_post_meta_batch( array $post_ids, array $field_names, array $options = array() ) {
 	return Post_Meta_Batch::read( $post_ids, $field_names, $options );
+}
+
+/** @return array|null The selected row of a shared theme option. */
+function carbon_get_theme_option_row( $name, $id, $container_id = '' ) {
+	return Theme_Option_Dictionary::get_row( $name, $id, $container_id );
+}
+
+/** @return string Plain text with explicitly supplied values substituted. */
+function carbon_render_text_template( $template, array $values ) {
+	return Text_Template::render( $template, $values );
+}
+
+/** @return string Render a root post template using its declared source fields. */
+function carbon_render_post_text_template( $post_id, $name, $container_id = '' ) {
+	return Text_Template::render_post_field( $post_id, $name, $container_id );
 }
 
 /** @return true|WP_Error */
@@ -57,6 +74,11 @@ function carbon_field_set( $name, $prefix = '' ) {
 /** @return string Template HTML; values must be escaped by each template. */
 function carbon_render_complex( $post_id, $name, array $templates, $container_id = '' ) {
 	return Developer_API::render_complex( $post_id, $name, $templates, $container_id );
+}
+
+/** @return array Enabled complex rows with their original indexes. */
+function carbon_active_complex_rows( array $rows ) {
+	return Developer_API::active_complex_rows( $rows );
 }
 
 function carbon_match_complex_row( $name, array $conditions, $group = '' ) {

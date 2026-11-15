@@ -15,6 +15,14 @@ import { Field, withFilters } from '@carbon-fields/core';
 import './style.scss';
 import withField from '../../hocs/with-field';
 
+function MetaboxField( props ) {
+	// Row metadata needs a native form control even when the field has no visible wrapper.
+	if ( props.field?.complex_row_id || props.field?.complex_row_visibility ) {
+		return props.children;
+	}
+	return <Field { ...props } />;
+}
+
 export default compose(
 	withField,
 	withSelect( ( select, { id, field } ) => {
@@ -22,4 +30,4 @@ export default compose(
 		return { serverError: error?.fieldId === id ? error.message : null };
 	} ),
 	withFilters( 'carbon-fields.field-wrapper.metabox' )
-)( Field );
+)( MetaboxField );

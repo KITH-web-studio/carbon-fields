@@ -10,6 +10,7 @@ use Carbon_Fields\Field\Group_Field;
 use Carbon_Fields\Field\Image_Hotspots_Field;
 use Carbon_Fields\Field\Media_Gallery_Field;
 use Carbon_Fields\Field\Responsive_Image_Field;
+use Carbon_Fields\Field\Text_List_Field;
 
 final class Post_Meta_Batch {
 	public static function read( array $post_ids, array $field_names, array $options ) {
@@ -92,6 +93,8 @@ final class Post_Meta_Batch {
 			$values = (array) $value;
 		} elseif ( $field instanceof Image_Hotspots_Field && is_array( $value ) ) {
 			$values = array( $value['image'] ?? null );
+		} elseif ( $field instanceof Text_List_Field && is_array( $value ) ) {
+			$values = array_column( $value, 'icon_id' );
 		}
 		foreach ( $values as $attachment ) {
 			if ( self::is_id( $attachment ) ) {
