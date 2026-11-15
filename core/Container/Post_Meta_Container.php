@@ -43,6 +43,7 @@ class Post_Meta_Container extends Container {
 	protected $revisions_disabled = false;
 
 	protected $admin_columns = array();
+	protected $admin_search = array();
 
 	private $woocommerce_placement;
 	private $field_actions = array();
@@ -255,7 +256,8 @@ class Post_Meta_Container extends Container {
 		$names = array();
 		foreach ( $this->fields as $field ) {
 			$datastore = $field->get_datastore();
-			if ( 'sync' === $field->get_translation() && $datastore && get_class( $datastore ) === Post_Meta_Datastore::class ) {
+			if ( \Carbon_Fields\Integration\Polylang_Post_Meta::is_synchronized_field( $field ) &&
+				$datastore && get_class( $datastore ) === Post_Meta_Datastore::class ) {
 				$names[] = $field->get_name();
 			}
 		}
@@ -455,6 +457,22 @@ class Post_Meta_Container extends Container {
 
 	public function get_admin_columns() {
 		return $this->admin_columns;
+	}
+
+	/** Include selected root text fields in the search box on the post list. */
+	public function add_admin_search( array $fields ) {
+		foreach ( $fields as $name => $mode ) {
+			if ( ! is_string( $name ) || ! Helper::is_valid_entity_id( $name ) || ! in_array( $mode, array( 'exact', 'prefix' ), true ) ) {
+				Incorrect_Syntax_Exception::raise( 'Admin search requires root field names mapped to exact or prefix.' );
+				return $this;
+			}
+		}
+		$this->admin_search = array_replace( $this->admin_search, $fields );
+		return $this;
+	}
+
+	public function get_admin_search() {
+		return $this->admin_search;
 	}
 
 	/**

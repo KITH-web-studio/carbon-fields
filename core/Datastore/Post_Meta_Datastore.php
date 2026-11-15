@@ -9,6 +9,8 @@ use Carbon_Fields\Field\Complex_Field;
 use Carbon_Fields\Field\Field;
 use Carbon_Fields\Field\Association_Field;
 use Carbon_Fields\Integration\Bidirectional_Associations;
+use Carbon_Fields\Integration\Polylang_Post_Meta;
+use Carbon_Fields\Integration\Translated_Relationships;
 
 /**
  * Post meta (custom fields) datastore class.
@@ -131,7 +133,8 @@ class Post_Meta_Datastore extends Meta_Datastore {
 	public function save_changes( Field $root_field, $fields ) {
 		global $wpdb;
 		$this->last_validation_error = null;
-		$sync = 'sync' === $root_field->get_translation() && \Carbon_Fields\Integration\Polylang::active();
+		$sync = Polylang_Post_Meta::is_synchronized_field( $root_field ) && \Carbon_Fields\Integration\Polylang::active();
+		$mapped = $sync && Translated_Relationships::handles( $root_field );
 		$bidirectional = $root_field instanceof Association_Field && $root_field->get_bidirectional();
 
 		$post_id = (int) $this->get_object_id();
@@ -167,6 +170,23 @@ class Post_Meta_Datastore extends Meta_Datastore {
 				$desired[ $key ] = $value;
 			}
 		}
+		if ( $mapped && ! wp_is_post_revision( $post_id ) && ( $language = pll_get_post_language( $post_id ) ) ) {
+			foreach ( Translated_Relationships::links( $root_field ) as list( $link ) ) {
+				$local = clone $link;
+				if ( null === Translated_Relationships::map( $link, $local, $language ) ||
+					( $link->get_options_dependency() && Translated_Relationships::ids( $link ) !== Translated_Relationships::ids( $local ) ) ) {
+					$this->last_validation_error = new \WP_Error( 'carbon_fields_link_language',
+						__( 'Choose related records available in the language of this post.', 'carbon-fields' ) );
+					return false;
+				}
+				foreach ( $this->get_storage_pairs( $link ) as $key => $value ) {
+					unset( $desired[ $key ] );
+				}
+				foreach ( $this->get_storage_pairs( $local ) as $key => $value ) {
+					$desired[ $key ] = $value;
+				}
+			}
+		}
 
 		$patterns = $this->key_toolset->get_storage_key_deleter_patterns(
 			$root_field instanceof Complex_Field,
@@ -175,7 +195,7 @@ class Post_Meta_Datastore extends Meta_Datastore {
 			$this->get_full_hierarchy_index_for_field( $root_field )
 		);
 		$where = $this->key_toolset->storage_key_patterns_to_sql( 'meta_key', $patterns );
-		$targets = $sync ? \Carbon_Fields\Integration\Polylang_Post_Meta::synchronization_targets( $post_id, $root_field ) : array();
+		$targets = $sync ? Polylang_Post_Meta::synchronization_targets( $post_id, $root_field ) : array();
 		if ( false === $targets ) {
 			return false;
 		}
@@ -183,7 +203,7 @@ class Post_Meta_Datastore extends Meta_Datastore {
 		sort( $post_ids, SORT_NUMERIC );
 		$queries = array();
 		$matches = true;
-		foreach ( $post_ids as $id ) {
+		foreach ( $mapped ? array( $post_id ) : $post_ids as $id ) {
 			$query = "SELECT meta_id, meta_key, meta_value FROM {$wpdb->postmeta} WHERE post_id = {$id} AND {$where}";
 			$queries[ $id ] = $query;
 			$current = $this->read_current_rows( $query );
@@ -195,10 +215,11 @@ class Post_Meta_Datastore extends Meta_Datastore {
 		if ( $matches ) {
 			return true;
 		}
-		return Post_Meta_Transaction::run( $post_ids, function() use ( $queries, $desired, $root_field ) {
+		return Post_Meta_Transaction::run( $post_ids, function() use ( $queries, $desired, $root_field, $mapped, $targets, $post_id ) {
 			if ( ! \Carbon_Fields\Helper\Field_Rules::lock_unique( $root_field ) ) {
 				return false;
 			}
+			$old_root = $mapped && $targets ? $this->loaded_root( $root_field, $post_id ) : null;
 			foreach ( $queries as $id => $query ) {
 				$event_field = clone $root_field;
 				$event_field->set_datastore( clone $this, $root_field->has_default_datastore() );
@@ -219,11 +240,117 @@ class Post_Meta_Datastore extends Meta_Datastore {
 					return false;
 				}
 				if ( $emit ) {
-					\Carbon_Fields\Helper\Field_Events::changed( $root_field, $id, $before, $root_field->get_formatted_value() );
+					$after = $mapped ? $this->loaded_root( $root_field, $id ) : $root_field;
+					\Carbon_Fields\Helper\Field_Events::changed( $root_field, $id, $before, $after->get_formatted_value() );
 				}
 			}
-			return true;
+			return ! $old_root || $this->synchronize_mapped_locked( $root_field, $targets, $old_root );
 		} );
+	}
+
+	private function loaded_root( Field $field, $id ) {
+		$loaded = clone $field;
+		$datastore = clone $this;
+		$datastore->set_object_id( $id );
+		$loaded->set_datastore( $datastore, $field->has_default_datastore() );
+		$loaded->load();
+		return $loaded;
+	}
+
+	/** Override existing keys during Polylang's initial copy, including nested links. */
+	public function initial_translated_pairs( Field $definition, $language ) {
+		$source = $this->loaded_root( $definition, $this->get_object_id() );
+		$excluded = array();
+		$values = array();
+		foreach ( Translated_Relationships::links( $source ) as list( $link ) ) {
+			$target = clone $link;
+			if ( null === Translated_Relationships::map( $link, $target, $language ) ) {
+				$excluded += array_fill_keys( array_keys( iterator_to_array( $this->get_storage_pairs( $link ) ) ), true );
+				continue;
+			}
+			$values += iterator_to_array( $this->get_storage_pairs( $target ) );
+			$old_keys = iterator_to_array( $this->get_storage_pairs( $link ) );
+			$excluded += array_fill_keys( array_keys( array_diff_key( $old_keys, $values ) ), true );
+		}
+		return array( $excluded, $values );
+	}
+
+	/** Update matched translation fields while the source and destination post rows are locked. */
+	public function synchronize_mapped_locked( Field $source, array $targets, Field $previous = null ) {
+		if ( ! $targets ) {
+			return true;
+		}
+		self::invalidate_storage_cache();
+		$post_id = $this->get_object_id();
+		$source = $this->loaded_root( $source, $post_id );
+		$links = Translated_Relationships::links( $source );
+		foreach ( $previous ? Translated_Relationships::links( $previous ) : array() as $path => list( $old ) ) {
+			if ( isset( $links[ $path ] ) && Translated_Relationships::ids( $old ) === Translated_Relationships::ids( $links[ $path ][0] ) ) {
+				unset( $links[ $path ] );
+			}
+		}
+		if ( ! $links ) {
+			return true;
+		}
+		foreach ( $targets as $target_id ) {
+			$language = pll_get_post_language( $target_id );
+			if ( ! $language ) {
+				continue;
+			}
+			$target = $this->loaded_root( $source, $target_id );
+			foreach ( array_intersect_key( Translated_Relationships::links( $target ), $links ) as $path => list( $link, $siblings ) ) {
+				$before = $link->get_formatted_value();
+				if ( null === $this->translate_link( $links[ $path ][0], $link, $language, $siblings, $source, $target_id ) ) {
+					Translated_Relationships::note( $post_id, $language );
+					continue;
+				}
+				if ( ! $this->write_translated_link( $target_id, $link, $before ) ) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	private function translate_link( Field $source, Field $target, $language, array $siblings, Field $root, $target_id ) {
+		$translated = Translated_Relationships::map( $source, $target, $language );
+		$dependency = $target->get_options_dependency();
+		if ( ! $dependency || ! $translated ) {
+			return $translated;
+		}
+		$sibling = $siblings[ $dependency['source'] ] ?? ( ! $target->get_hierarchy()
+			? Polylang_Post_Meta::load_dependency( $root, $dependency['source'], $target_id ) : null );
+		$choices = $target instanceof \Carbon_Fields\Field\Relationship_Field ? array_map( static function( $item ) {
+			return array( 'id' => $item['id'], 'type' => 'post' );
+		}, $translated ) : $translated;
+		return $sibling && $target->choices_match_source( $choices, $sibling->get_formatted_value() ) ? $translated : null;
+	}
+
+	private function write_translated_link( $id, Field $field, $before ) {
+		global $wpdb;
+		$desired = iterator_to_array( $this->get_storage_pairs( $field ) );
+		$subtype = get_object_subtype( 'post', $id );
+		foreach ( $desired as $key => $value ) {
+			if ( ! is_scalar( $value ) || has_filter( "sanitize_post_meta_{$key}" ) ||
+				( $subtype && has_filter( "sanitize_post_meta_{$key}_for_{$subtype}" ) ) ) {
+				return false;
+			}
+		}
+		$error = \Carbon_Fields\Helper\Field_Rules::validate( $field, $field->get_value() );
+		if ( $error ) {
+			$this->last_validation_error = $error;
+			return false;
+		}
+		$patterns = $this->key_toolset->get_storage_key_deleter_patterns( false, $field->is_simple_root_field(),
+			$this->get_full_hierarchy_for_field( $field ), $this->get_full_hierarchy_index_for_field( $field ) );
+		$where = $this->key_toolset->storage_key_patterns_to_sql( 'meta_key', $patterns );
+		$rows = $this->read_current_rows( "SELECT meta_id, meta_key, meta_value FROM {$wpdb->postmeta}
+			WHERE post_id = " . (int) $id . " AND {$where} FOR UPDATE" );
+		if ( ! is_array( $rows ) || ! $this->apply_changes( $id, $rows, $desired ) ) {
+			return false;
+		}
+		\Carbon_Fields\Helper\Field_Events::changed( $field, $id, $before, $field->get_formatted_value() );
+		return true;
 	}
 
 	/**

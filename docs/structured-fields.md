@@ -127,6 +127,25 @@ Field::make( 'complex', 'teams', 'Teams' )->add_fields( array(
 
 Declare the actual post meta keys for `set_options_dependency()` and `set_option_search_fields()`. Declared search values appear alongside the title. Changing the source refreshes choices immediately. If an existing choice becomes incompatible, remove it or select a matching item before saving. The server checks the submitted pairs. Use `carbon_update_fields()` to save related post values together from PHP.
 
+## Create a related post from a field
+
+Call `set_inline_creation()` on an `association` or `relationship` in a post meta container. Choose one of the field's allowed post types and explicitly list the root fields to show in the dialog. The title is included automatically. The short form supports text, textarea and static select fields. Define fields required on creation in the target post's container and include them in the list or supply suitable defaults.
+
+```php
+Field::make( 'association', 'specialists', 'Specialists' )
+    ->set_types( array( array( 'type' => 'post', 'post_type' => 'specialist' ) ) )
+    ->set_layout( 'multiselect' )
+    ->set_inline_creation( 'specialist', array(
+        'fields'       => array( 'position', 'branch' ),
+        'container_id' => 'carbon_fields_container_specialist_details',
+        'status'       => 'draft',
+    ) );
+```
+
+The optional `container_id` selects the target field container. The default status is `draft`. Use `publish` to publish immediately for users with the WordPress capability. Creating the related post saves it immediately. Saving the parent publishes or updates its selected links. Closing the form before submitting leaves the editor's current selections intact.
+
+For a translated target type, the draft uses the saved language of the parent post or the language selected in the classic editor for a new post. Choose **Create a translation** in the dialog to find an original post in another language. An existing translation is selected directly. When creating a translation, the title starts with the source title and you enter the localized field values. See [localized links](polylang.md#synchronize-localized-links).
+
 ## Gallery item details and media scope
 
 Enable details for a gallery to store a caption and link with each selected item. The gallery keeps its order and recognizes existing IDs. With details enabled, the getter returns rows with `id`, `caption` and `link`. The standard gallery returns its usual list of IDs. To reorder items horizontally or between rows, drag a card by its filename. Its caption and link move with it and are saved in the new order when you update the post.

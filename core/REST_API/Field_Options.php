@@ -66,6 +66,10 @@ final class Field_Options {
 					return new \WP_Error( 'carbon_fields_invalid_dependency', __( 'Invalid association request.', 'carbon-fields' ), array( 'status' => 400 ) );
 				}
 				$args = $field->post_choice_query_args( $args, $values );
+				$language = $field->post_choice_language( $id );
+				if ( $language && function_exists( 'pll_is_translated_post_type' ) && pll_is_translated_post_type( $field->get_post_type() ) ) {
+					$args['lang'] = $language;
+				}
 				$search_fields = $field->get_option_search_fields();
 			}
 			$query = Post_Choice_Query::query( $args, $search_fields );

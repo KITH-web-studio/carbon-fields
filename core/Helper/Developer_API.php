@@ -46,7 +46,7 @@ final class Developer_API {
 				if ( $field instanceof \Carbon_Fields\Field\Association_Field && $field->get_bidirectional() ) {
 					return new \WP_Error( 'carbon_fields_storage_unsupported', 'Atomic field batches do not support bidirectional associations; use the association setter.' );
 				}
-				if ( 'sync' === $field->get_translation() && \Carbon_Fields\Integration\Polylang::active() ) {
+				if ( \Carbon_Fields\Integration\Polylang_Post_Meta::is_synchronized_field( $field ) && \Carbon_Fields\Integration\Polylang::active() ) {
 					$targets = \Carbon_Fields\Integration\Polylang_Post_Meta::synchronization_targets( $post_id, $field );
 					if ( false === $targets ) { return new \WP_Error( 'carbon_fields_forbidden', 'A synchronized translation is not editable.' ); }
 					$lock_ids = array_merge( $lock_ids, $targets );

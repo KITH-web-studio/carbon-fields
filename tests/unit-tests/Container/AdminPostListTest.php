@@ -1,6 +1,7 @@
 <?php
 
 use Carbon_Fields\Admin\Post_List;
+use Carbon_Fields\Admin\Post_List_Search;
 use Carbon_Fields\Carbon_Fields;
 use Carbon_Fields\Container\Post_Meta_Container;
 use Carbon_Fields\Container\Repository;
@@ -68,6 +69,57 @@ class AdminPostListTest extends WP_UnitTestCase {
 			$wp_the_query = $original_query;
 			$GLOBALS['current_screen'] = $original_screen;
 			unregister_post_type( 'cf_column_fixture' );
+		}
+	}
+
+	public function testSearchMatchesDeclaredTextAndKeepsProtectedValuesOutOfResults() {
+		global $wp_the_query;
+		$type = 'cf_search_fixture';
+		$original_query = $wp_the_query;
+		$original_screen = get_current_screen();
+		$admin = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $admin );
+		register_post_type( $type, array( 'public' => true ) );
+		set_current_screen( 'edit-' . $type );
+		$repository = new Repository();
+		$search = new Post_List_Search( $repository, $type );
+		try {
+			$repository->register_container( $this->make_container( 'admin_search_fixture' )
+				->where( 'post_type', '=', $type )->add_fields( array(
+					Field::make( 'text', 'cf_search_id' ),
+					Field::make( 'text', 'cf_search_phone' )->set_normalizer( 'digits' ),
+					Field::make( 'text', 'cf_search_sku' ),
+				) )->add_admin_search( array( 'cf_search_id' => 'exact', 'cf_search_phone' => 'exact', 'cf_search_sku' => 'prefix' ) ) );
+			$repository->register_container( $this->make_container( 'private_search_fixture' )
+				->where( 'post_type', '=', $type )->where( 'current_user_capability', '=', 'manage_options' )
+				->add_fields( array( Field::make( 'text', 'cf_search_secret' ) ) )
+				->add_admin_search( array( 'cf_search_secret' => 'exact' ) ) );
+			list( $first, $second ) = self::factory()->post->create_many( 2, array( 'post_type' => $type, 'post_status' => 'publish' ) );
+			update_post_meta( $first, '_cf_search_id', '0042' );
+			update_post_meta( $second, '_cf_search_id', '42' );
+			update_post_meta( $first, '_cf_search_phone', '38099123' );
+			update_post_meta( $first, '_cf_search_sku', 'SKU_100' );
+			update_post_meta( $second, '_cf_search_sku', 'SKUX100' );
+			update_post_meta( $first, '_cf_search_secret', 'private-code' );
+			add_filter( 'posts_search', array( $search, 'filter' ), 10, 2 );
+			$find = static function( $term, $main = true ) use ( $type ) {
+				$query = new WP_Query();
+				if ( $main ) { $GLOBALS['wp_the_query'] = $query; }
+				return $query->query( array( 'post_type' => $type, 's' => $term, 'fields' => 'ids' ) );
+			};
+			$this->assertSame( array( $first ), $find( '0042' ) );
+			$this->assertSame( array( $second ), $find( '42' ) );
+			$this->assertSame( array( $first ), $find( '+380 99 123' ) );
+			$this->assertSame( array( $first ), $find( 'SKU_' ) );
+			$this->assertSame( array(), $find( '0042', false ) );
+			$this->assertSame( array( $first ), $find( 'private-code' ) );
+			wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+			$this->assertSame( array(), $find( 'private-code' ) );
+		} finally {
+			remove_filter( 'posts_search', array( $search, 'filter' ), 10 );
+			$wp_the_query = $original_query;
+			$GLOBALS['current_screen'] = $original_screen;
+			unregister_post_type( $type );
 		}
 	}
 

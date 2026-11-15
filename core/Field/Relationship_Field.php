@@ -49,6 +49,7 @@ class Relationship_Field extends Table_Field {
 		$data = parent::to_json( $load );
 		$data['post_type'] = $this->post_type;
 		$data['options_dependency'] = $this->get_options_dependency()['source'] ?? '';
+		$data['inline_creation'] = (bool) $this->get_inline_creation();
 		$data['selected_posts'] = array();
 		$this->prime_posts( array_map( function( $row ) { return is_array( $row ) ? ( $row['id'] ?? 0 ) : 0; }, $data['value'] ) );
 		foreach ( $data['value'] as $row ) {

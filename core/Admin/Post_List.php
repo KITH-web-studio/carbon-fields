@@ -25,6 +25,8 @@ final class Post_List {
 		if ( ! $screen || 'edit' !== $screen->base ) {
 			return;
 		}
+		$search = new Post_List_Search( $this->repository, $screen->post_type );
+		add_filter( 'posts_search', array( $search, 'filter' ), 10, 2 );
 		if ( ! $this->register_columns( $screen->post_type ) ) {
 			return;
 		}

@@ -714,3 +714,33 @@ msgstr "Переместить раньше"
 
 msgid "Move later"
 msgstr "Переместить позже"
+
+msgid "Could not save the related record. Try again."
+msgstr "Не удалось сохранить связанную запись. Повторите попытку."
+
+msgid "Create related record"
+msgstr "Создать связанную запись"
+
+msgid "Loading…"
+msgstr "Загрузка…"
+
+msgid "Back to new record"
+msgstr "Назад к новой записи"
+
+msgid "Create a translation"
+msgstr "Создать перевод"
+
+msgid "Find the original record"
+msgstr "Найти исходную запись"
+
+msgid "Change source"
+msgstr "Выбрать другой оригинал"
+
+msgid "Title"
+msgstr "Заголовок"
+
+msgid "Use existing translation"
+msgstr "Выбрать готовый перевод"
+
+msgid "Create and select"
+msgstr "Создать и выбрать"

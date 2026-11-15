@@ -35,6 +35,7 @@ import './style.scss';
 import SearchInput from '../../components/search-input';
 import Sortable from '../../components/sortable';
 import { associationRequest } from './request';
+import InlinePost from '../../components/inline-post';
 import AssociationMultiselect from './multiselect';
 import { dependencyRequest } from '../../utils/post-choice-context';
 
@@ -522,5 +523,16 @@ const AssociationColumns = compose(
 
 export default function Association( props ) {
 	const Edit = props.field.association_layout === 'multiselect' ? AssociationMultiselect : AssociationColumns;
-	return <Edit key={ dependencyRequest( props.field, props.optionsDependencyValue ) } { ...props } />;
+	const { field, value, id, onChange } = props;
+	const disabled = field.max >= 0 && value.length >= field.max;
+	return <>
+		<Edit key={ dependencyRequest( field, props.optionsDependencyValue ) } { ...props } />
+		{ field.inline_creation && <InlinePost { ...props } disabled={ disabled } onChoose={ ( option ) => {
+			const { type, subtype, id: postId } = option;
+			if ( ! disabled && ( field.duplicates_allowed || ! value.some( ( item ) =>
+				Number( item.id ) === postId && item.type === type && item.subtype === subtype ) ) ) {
+				onChange( id, [ ...value, { id: postId, type, subtype } ] );
+			}
+		} } /> }
+	</>;
 }

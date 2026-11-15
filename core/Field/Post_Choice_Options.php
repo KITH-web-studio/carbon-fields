@@ -8,6 +8,49 @@ use Carbon_Fields\Helper\Post_Choice_Query;
 trait Post_Choice_Options {
 	private $options_dependency = array();
 	private $option_search_fields = array();
+	private $inline_creation = array();
+	private $translate_linked_ids = false;
+
+	public function set_inline_creation( $post_type, array $options = array() ) {
+		$options += array( 'fields' => array(), 'status' => 'draft', 'container_id' => '' );
+		if ( ! is_string( $post_type ) || ! Helper::is_valid_entity_id( $post_type ) ||
+			! is_array( $options['fields'] ) || ! is_string( $options['container_id'] ) ||
+			! in_array( $options['status'], array( 'draft', 'publish' ), true ) ) {
+			throw new \InvalidArgumentException( 'Inline creation needs a post type, an optional field list and a draft or publish status.' );
+		}
+		foreach ( $options['fields'] as $name ) {
+			if ( ! is_string( $name ) || ! Helper::is_valid_entity_id( $name ) ) {
+				throw new \InvalidArgumentException( 'Inline creation fields must be root field names.' );
+			}
+		}
+		$this->inline_creation = array( 'post_type' => $post_type ) + $options;
+		return $this;
+	}
+
+	public function get_inline_creation() {
+		$type = get_post_type_object( $this->inline_creation['post_type'] ?? '' );
+		if ( ! $type || in_array( $type->name, array( 'attachment', 'revision' ), true ) ||
+			! ( $this instanceof Association_Field ? $this->supports_post_type( $type->name ) : $this->get_post_type() === $type->name ) ||
+			! current_user_can( $type->cap->create_posts ) ||
+			( 'publish' === $this->inline_creation['status'] && ! current_user_can( $type->cap->publish_posts ) ) ) {
+			return array();
+		}
+		return $this->inline_creation;
+	}
+
+	public function set_translate_linked_ids( $enabled = true ) {
+		$this->translate_linked_ids = (bool) $enabled;
+		return $this;
+	}
+
+	public function translates_linked_ids() {
+		return $this->translate_linked_ids;
+	}
+
+	public function post_choice_language( $id ) {
+		return $this->translate_linked_ids && $id && function_exists( 'pll_get_post_language' )
+			? (string) pll_get_post_language( $id ) : '';
+	}
 
 	/** Filter post choices by a sibling field and an exact target meta value or term ID. */
 	public function set_options_dependency( $source, $key, $type = 'meta' ) {

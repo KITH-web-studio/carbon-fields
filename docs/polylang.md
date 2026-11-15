@@ -109,3 +109,33 @@ The editor compares the submitted value with the value the tab opened with or la
 ### Requirements for synchronization
 
 The post field must use the standard Carbon Fields post-meta datastore and apply to the participating posts. The current WordPress user must be able to edit those posts. Shared writes use a transaction across the source and target posts. This requires InnoDB for the WordPress posts and post meta tables, a MySQLi connection, and compatible metadata write hooks. If a synchronized write fails, the shared field write rolls back across translations.
+
+## Synchronize localized links
+
+Enable `set_translate_linked_ids()` on an `association` or `relationship` to use the Polylang IDs of linked posts or terms. At the root, add `set_translation( 'sync' )` to propagate later selection changes. The default `copy_once` maps IDs during the initial copy of a translation. Shared post types, shared taxonomies and other association types use their existing ID.
+
+```php
+Field::make( 'association', 'specialists', 'Specialists' )
+    ->set_types( array( array( 'type' => 'post', 'post_type' => 'specialist' ) ) )
+    ->set_translation( 'sync' )
+    ->set_translate_linked_ids()
+    ->set_inline_creation( 'specialist' );
+```
+
+For example, if Russian specialist `#120` and Ukrainian specialist `#347` are linked in Polylang, Russian and Ukrainian translations of a service store `#120` and `#347` respectively. When a linked record has no usable translation, the current selection saves and the affected language keeps the previous field value. The editor reports the affected language. After adding the missing translation, select it in the corresponding editor and save. Existing target entries in a relationship keep their local per-link data.
+
+For independently edited complex fields, enable persistent row IDs on every complex level leading to the link. Add `set_translate_linked_ids()` to the child field. A new translation created by the normal Polylang copy receives the same row IDs. On later saves, only the link in the matched row is synchronized, even if the target language uses a different sort order.
+
+```php
+Field::make( 'complex', 'branches', 'Branches' )
+    ->set_row_ids()
+    ->add_fields( array(
+        Field::make( 'text', 'description', 'Local description' ),
+        Field::make( 'relationship', 'specialists', 'Specialists' )
+            ->set_post_type( 'specialist' )
+            ->set_columns( array( Field::make( 'text', 'note', 'Local note' ) ) )
+            ->set_translate_linked_ids(),
+    ) );
+```
+
+The user needs permission to edit the translations and read the linked items. The synchronization uses standard post metadata and the existing transactional save. Use this mode with one-way associations. See [inline creation](structured-fields.md#create-a-related-post-from-a-field) for creating new translated targets from the editor.

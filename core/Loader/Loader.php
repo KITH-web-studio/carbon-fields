@@ -49,6 +49,7 @@ class Loader {
 		\Carbon_Fields\Helper\Post_Facet_Cache::register();
 		add_action( 'rest_api_init', array( new \Carbon_Fields\REST_API\Field_Options(), 'register_routes' ) );
 		add_action( 'rest_api_init', array( new \Carbon_Fields\Admin\Field_Actions(), 'register_routes' ) );
+		add_action( 'rest_api_init', array( new \Carbon_Fields\Admin\Inline_Posts(), 'register_routes' ) );
 
 		add_action( 'after_setup_theme', array( $this, 'load_textdomain' ), 9999 );
 		add_action( 'init', array( $this, 'trigger_fields_register' ), 0 );

@@ -463,3 +463,34 @@ msgstr "Неприпустиме значення фільтра."
 
 msgid "The database could not calculate the requested facets."
 msgstr "Не вдалося розрахувати варіанти в базі даних."
+
+msgid "Select a value in the controlling field first."
+msgstr "Спочатку виберіть значення в керівному полі."
+
+msgid "Enter a title and check the field values."
+msgstr "Уведіть заголовок і перевірте значення полів."
+
+msgid "Could not assign the language of the related record."
+msgstr "Не вдалося призначити мову пов’язаного запису."
+
+msgid "Could not link the new translation."
+msgstr "Не вдалося пов’язати новий переклад."
+
+msgid "Save the language of this record before creating a related record."
+msgstr "Збережіть мову цього запису перед створенням пов’язаного."
+
+msgid "The related record does not match this field."
+msgstr "Пов’язаний запис не відповідає умовам поля."
+
+msgid "This translation is being edited. Try again."
+msgstr "Цей переклад зараз редагують. Спробуйте ще раз."
+
+msgid ""
+"Some related records could not be synchronized in %s. Check their "
+"translations and field restrictions."
+msgstr ""
+"Частину зв’язків не вдалося синхронізувати для мов: %s. Перевірте переклади "
+"пов’язаних записів та умови поля."
+
+msgid "Choose related records available in the language of this post."
+msgstr "Виберіть пов’язані записи, доступні мовою цього запису."

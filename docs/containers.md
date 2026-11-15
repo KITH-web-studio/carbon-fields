@@ -235,6 +235,27 @@ Quick Edit fills in the saved value and submits changed inputs. In Bulk Edit, ti
 
 Editing supports top-level `text` and independent `select` fields in the standard post meta datastore. It omits read-only fields, fields with conditional logic, and fields involved in dependent selects.
 
+### Search by custom fields
+
+Use `add_admin_search()` to include declared root text fields in the standard search box for a post type. Use `exact` for external IDs or phone numbers and `prefix` for codes with a known start. Both modes compare strings case-sensitively. Values such as `00042` keep their leading zeroes. An existing field normalizer also processes the search term.
+
+```php
+Container::make( 'post_meta', 'Service details' )
+    ->where( 'post_type', '=', 'service' )
+    ->add_fields( array(
+        Field::make( 'text', 'external_id' ),
+        Field::make( 'text', 'phone' )->set_normalizer( 'digits' ),
+        Field::make( 'text', 'sku' ),
+    ) )
+    ->add_admin_search( array(
+        'external_id' => 'exact',
+        'phone'       => 'exact',
+        'sku'         => 'prefix',
+    ) );
+```
+
+Title, content, and field matches appear together. The search uses standard post metadata and checks container access before using a field. Object-specific container rules, conditional fields and storage keys declared by multiple applicable containers are excluded. A search field can be used without a list column.
+
 ## Conditions
 
 Chain `where()` calls when every condition must match. Use `or_where()` to add an alternative condition group. For posts, common conditions include `post_type`, `post_id`, `post_template`, `post_parent_id`, and `post_term`. For terms, use `term_taxonomy` to target a taxonomy. For users, `user_role` checks the edited user. `current_user_role` and `current_user_capability` check the current editor.

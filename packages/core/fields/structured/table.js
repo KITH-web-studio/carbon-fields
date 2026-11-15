@@ -4,6 +4,7 @@ import { Cell, JsonInput, rowDefaults, moveRow } from './shared';
 import RemoteSelect from '../select/remote';
 import IconAction, { RemoveAction } from '../../components/icon-action';
 import { dependencyRequest } from '../../utils/post-choice-context';
+import InlinePost from '../../components/inline-post';
 
 export default function TableField( props ) {
 	const { id, name, field, onChange } = props;
@@ -70,6 +71,8 @@ export default function TableField( props ) {
 			</div>
 			{ relation && rows.length < field.max_rows && <RemoteSelect key={ dependencyRequest( field, props.optionsDependencyValue ) }
 				{ ...props } id={ id + '-target' } name={ null } value="" onChoose={ add } /> }
+			{ relation && field.inline_creation && <InlinePost { ...props } disabled={ rows.length >= field.max_rows }
+				onChoose={ ( option ) => add( { value: option.id, label: option.title } ) } /> }
 			<JsonInput name={ name } value={ rows } />
 		</div>
 	);

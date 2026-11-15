@@ -2,6 +2,13 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.35
+
+- Create and select related posts or their Polylang translations directly in association and relationship fields.
+- Search declared text fields from the WordPress post list with exact or prefix matching and container access checks.
+- Synchronize localized linked IDs through Polylang, including links in complex rows with persistent IDs.
+- Add Russian and Ukrainian dialog translations and English and Russian examples for the three APIs.
+
 ## 3.6.11.34
 
 - Extend registered field definitions, including fields in nested complex groups, through PHP. Inserted fields inherit the anchor's tab or settings section and its access rules.

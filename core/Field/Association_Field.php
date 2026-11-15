@@ -257,6 +257,9 @@ class Association_Field extends Field {
 			if ( 'post' === $type['type'] ) {
 				$type_args['dependency'] = $args['dependency'] ?? array();
 			}
+			if ( 'post' === $type['type'] || 'term' === $type['type'] ) {
+				$type_args['choice_language'] = $args['choice_language'] ?? '';
+			}
 
 			$callback = "get_{$type['type']}_options_sql";
 
@@ -481,12 +484,16 @@ class Association_Field extends Field {
 
 		$field_data = array_merge( $field_data, array(
 			'value'              => $this->value_to_json(),
-			'options'            => $this->get_options(),
+			'options'            => $this->get_options( array(
+				'choice_language' => $this->get_datastore() instanceof Post_Meta_Datastore
+					? $this->post_choice_language( $this->get_datastore()->get_object_id() ) : '',
+			) ),
 			'min'                => $this->get_min(),
 			'max'                => $this->get_max(),
 			'duplicates_allowed' => $this->duplicates_allowed,
 			'association_layout' => $this->association_layout,
 			'options_dependency' => $this->get_options_dependency()['source'] ?? '',
+			'inline_creation' => (bool) $this->get_inline_creation(),
 		) );
 
 		return $field_data;
@@ -518,6 +525,7 @@ class Association_Field extends Field {
 		$post_type   = $args['post_type'];
 		$search_term = $args['term'];
 		$dependency = $args['dependency'] ?? array();
+		$language = $args['choice_language'] ?? '';
 
 		unset( $args['type'], $args['post_type'], $args['term'] );
 
@@ -535,6 +543,9 @@ class Association_Field extends Field {
 			'suppress_filters' => false,
 			's'                => $search_term,
 		) );
+		if ( $language && function_exists( 'pll_is_translated_post_type' ) && pll_is_translated_post_type( $post_type ) ) {
+			$args['lang'] = $language;
+		}
 
 		add_filter( 'posts_fields_request', array( $this, 'get_post_options_sql_select_clause' ) );
 
@@ -582,6 +593,7 @@ class Association_Field extends Field {
 		$type        = $args['type'];
 		$taxonomy    = $args['taxonomy'];
 		$search_term = $args['term'];
+		$language = $args['choice_language'] ?? '';
 
 		unset( $args['type'], $args['taxonomy'], $args['term'] );
 
@@ -600,6 +612,9 @@ class Association_Field extends Field {
 			'search'                 => $search_term,
 			'update_term_meta_cache' => false,
 		) );
+		if ( $language && function_exists( 'pll_is_translated_taxonomy' ) && pll_is_translated_taxonomy( $taxonomy ) ) {
+			$args['lang'] = $language;
+		}
 
 		add_filter( 'get_terms_fields', array( $this, 'get_term_options_sql_select_clause' ) );
 		add_filter( 'terms_clauses', array( $this, 'get_term_options_sql_clauses' ) );

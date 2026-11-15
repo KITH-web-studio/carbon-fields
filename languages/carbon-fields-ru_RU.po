@@ -458,3 +458,34 @@ msgstr "Недопустимое значение фильтра."
 
 msgid "The database could not calculate the requested facets."
 msgstr "Не удалось рассчитать варианты в базе данных."
+
+msgid "Select a value in the controlling field first."
+msgstr "Сначала выберите значение в управляющем поле."
+
+msgid "Enter a title and check the field values."
+msgstr "Введите заголовок и проверьте значения полей."
+
+msgid "Could not assign the language of the related record."
+msgstr "Не удалось назначить язык связанной записи."
+
+msgid "Could not link the new translation."
+msgstr "Не удалось связать новый перевод."
+
+msgid "Save the language of this record before creating a related record."
+msgstr "Сохраните язык этой записи перед созданием связанной."
+
+msgid "The related record does not match this field."
+msgstr "Связанная запись не соответствует условиям поля."
+
+msgid "This translation is being edited. Try again."
+msgstr "Этот перевод сейчас редактируется. Повторите попытку."
+
+msgid ""
+"Some related records could not be synchronized in %s. Check their "
+"translations and field restrictions."
+msgstr ""
+"Часть связей не удалось синхронизировать для языков: %s. Проверьте переводы "
+"связанных записей и условия поля."
+
+msgid "Choose related records available in the language of this post."
+msgstr "Выберите связанные записи, доступные на языке этой записи."

@@ -1,0 +1,68 @@
+.cf-inline-post {
+	margin-top: $size-base * 2;
+}
+
+.cf-inline-post__dialog {
+	max-width: 460px;
+
+	@media (prefers-color-scheme: dark) {
+		.button-link,
+		.button:not(.button-primary) {
+			color: var(--cf-dialog-text);
+		}
+
+		.button:not(.button-primary) {
+			background-color: var(--cf-dialog-surface);
+			border-color: var(--cf-dialog-border);
+
+			&:hover {
+				background-color: var(--cf-dialog-hover);
+			}
+		}
+	}
+}
+
+.cf-inline-post__form {
+	display: grid;
+	gap: $size-base * 3;
+
+	label {
+		display: block;
+	}
+
+	input[type='text'], input[type='search'], textarea, select {
+		display: block;
+		width: 100%;
+		max-width: none;
+		margin-top: $size-base;
+		background-color: var(--cf-dialog-surface);
+		color: var(--cf-dialog-text);
+		border-color: var(--cf-dialog-border);
+	}
+}
+
+.cf-inline-post__sources {
+	display: grid;
+	gap: $size-base;
+	margin-top: $size-base * 2;
+	max-height: 160px;
+	overflow: auto;
+
+	.button {
+		text-align: start;
+		white-space: normal;
+	}
+}
+
+.cf-inline-post__translation,
+.cf-inline-post__actions {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: $size-base * 2;
+}
+
+.cf-inline-post__error {
+	padding-inline-start: $size-base * 2;
+	border-inline-start: 3px solid #d63638;
+}

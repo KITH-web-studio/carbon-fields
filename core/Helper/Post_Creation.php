@@ -25,7 +25,7 @@ final class Post_Creation {
 		return $type;
 	}
 
-	public static function insert( array $post, array $fields, $container_id = '' ) {
+	public static function insert( array $post, array $fields, $container_id = '', array $callbacks = array() ) {
 		$type = self::validate_attributes( $post, true );
 		if ( is_wp_error( $type ) ) {
 			return $type;
@@ -44,7 +44,13 @@ final class Post_Creation {
 		$complete = false;
 		Field_Events::begin();
 		try {
-			$result = Developer_API::update_fields( $post_id, $fields, $container_id, true );
+			$result = isset( $callbacks['prepare'] ) ? $callbacks['prepare']( $post_id ) : true;
+			if ( ! is_wp_error( $result ) ) {
+				$result = Developer_API::update_fields( $post_id, $fields, $container_id, true );
+			}
+			if ( ! is_wp_error( $result ) && isset( $callbacks['before_publish'] ) ) {
+				$result = $callbacks['before_publish']( $post_id );
+			}
 			if ( ! is_wp_error( $result ) && 'draft' !== $status ) {
 				$result = wp_update_post( array( 'ID' => $post_id, 'post_status' => $status ), true, false );
 			}

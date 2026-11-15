@@ -118,3 +118,33 @@ msgstr ""
 
 msgid "Move later"
 msgstr ""
+
+msgid "Could not save the related record. Try again."
+msgstr ""
+
+msgid "Create related record"
+msgstr ""
+
+msgid "Loading…"
+msgstr ""
+
+msgid "Back to new record"
+msgstr ""
+
+msgid "Create a translation"
+msgstr ""
+
+msgid "Find the original record"
+msgstr ""
+
+msgid "Change source"
+msgstr ""
+
+msgid "Title"
+msgstr ""
+
+msgid "Use existing translation"
+msgstr ""
+
+msgid "Create and select"
+msgstr ""

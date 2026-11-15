@@ -360,17 +360,21 @@ class Revisions_Service extends Service {
 			return true;
 		}
 
-		$translation_targets = $restoring ? \Carbon_Fields\Integration\Polylang_Post_Meta::revision_targets( $targets[0], array_keys( $patterns ) ) : array();
+		$mapped_translations = array();
+		$translation_targets = $restoring ? \Carbon_Fields\Integration\Polylang_Post_Meta::revision_targets( $targets[0], array_keys( $patterns ), $mapped_translations ) : array();
 		if ( false === $translation_targets ) {
 			return false;
 		}
 		$post_ids = array_merge( array( $from_id ), $targets, array_keys( $translation_targets ) );
 		$association_plan = $restoring ? \Carbon_Fields\Integration\Bidirectional_Associations::revision_plan( $targets[0], $from_id, array_keys( $patterns ) ) : array();
 		$locked_ids = $post_ids;
+		foreach ( $mapped_translations as $mapped ) {
+			$locked_ids = array_merge( $locked_ids, $mapped[1] );
+		}
 		foreach ( $association_plan as $association ) {
 			$locked_ids = array_merge( $locked_ids, $association[2] );
 		}
-		return Post_Meta_Transaction::run( $locked_ids, function() use ( $from_id, $targets, $restoring, $post_ids, $patterns, $translation_targets, $association_plan ) {
+		return Post_Meta_Transaction::run( $locked_ids, function() use ( $from_id, $targets, $restoring, $post_ids, $patterns, $translation_targets, $association_plan, $mapped_translations ) {
 			$meta = $this->read_snapshot_rows( $post_ids, $patterns );
 			if ( false === $meta ) {
 				return false;
@@ -434,6 +438,13 @@ class Revisions_Service extends Service {
 				$shared_scope = array_intersect( $scope, $roots );
 				$current = isset( $meta[ $target ] ) ? $meta[ $target ] : array();
 				if ( ! $this->apply_snapshot( $target, $this->collect_snapshot_keys( $current, $shared_scope ), $this->collect_snapshot_keys( $source, $shared_scope ) ) ) {
+					return false;
+				}
+			}
+			foreach ( array_intersect_key( $mapped_translations, array_fill_keys( $scope, true ) ) as list( $field, $translated_posts ) ) {
+				$datastore = clone $field->get_datastore();
+				$datastore->set_object_id( $targets[0] );
+				if ( ! $datastore->synchronize_mapped_locked( $field, $translated_posts ) ) {
 					return false;
 				}
 			}

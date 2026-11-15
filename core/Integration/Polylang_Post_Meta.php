@@ -4,6 +4,7 @@ namespace Carbon_Fields\Integration;
 
 use Carbon_Fields\Carbon_Fields;
 use Carbon_Fields\Field\Field;
+use Carbon_Fields\Field\Complex_Field;
 use Carbon_Fields\Datastore\Post_Meta_Datastore;
 use Carbon_Fields\Service\Revisions_Service;
 
@@ -11,10 +12,28 @@ use Carbon_Fields\Service\Revisions_Service;
  * Native initial copies plus transactional, field-level translation synchronization.
  */
 final class Polylang_Post_Meta {
+	private static $initial_values = array();
+
 	public static function boot() {
 		add_filter( 'pll_copy_post_metas', array( __CLASS__, 'copy_meta_keys' ), 99, 5 );
+		add_filter( 'pll_translate_post_meta', array( __CLASS__, 'initial_value' ), 99, 5 );
 		add_action( 'pll_save_post', array( __CLASS__, 'synchronize_post' ), 99 );
 		add_action( 'add_meta_boxes', array( __CLASS__, 'prepare_new_post_editor' ), 99, 2 );
+		add_action( 'admin_notices', array( Translated_Relationships::class, 'notice' ) );
+	}
+
+	public static function is_synchronized_field( Field $field ) {
+		return 'sync' === $field->get_translation() ||
+			( $field instanceof Complex_Field && Translated_Relationships::handles( $field ) );
+	}
+
+	public static function load_dependency( Field $root, $name, $post_id ) {
+		$entry = self::fields()[ $root->get_name() ] ?? null;
+		$field = $entry ? \Carbon_Fields\Helper\Helper::get_field_clone( $post_id, 'post_meta', $entry[1]->get_id(), $name ) : null;
+		if ( $field ) {
+			$field->load();
+		}
+		return $field;
 	}
 
 	/**
@@ -66,6 +85,8 @@ final class Polylang_Post_Meta {
 		$existing = get_post_meta( $to );
 		$occupied = array_fill_keys( array_map( array( __CLASS__, 'root_key' ), array_keys( $existing ) ), true );
 		$copy_roots = array();
+		$skip = array();
+		$localized = array();
 		foreach ( $fields as $root => $entry ) {
 			list( $field, $container ) = $entry;
 			if ( $field instanceof \Carbon_Fields\Field\Association_Field && $field->get_bidirectional() ) {
@@ -74,21 +95,37 @@ final class Polylang_Post_Meta {
 			if ( 'independent' !== $field->get_translation() && ! isset( $occupied[ $root ] ) &&
 				$container->is_valid_attach_for_object( $from ) && $container->is_valid_attach_for_object( $to ) ) {
 				$copy_roots[ $root ] = true;
+				if ( $language && Translated_Relationships::handles( $field ) ) {
+					$datastore = clone $field->get_datastore();
+					$datastore->set_object_id( $from );
+					list( $excluded, $values ) = $datastore->initial_translated_pairs( $field, $language );
+					$skip += $excluded;
+					$localized += $values;
+				}
 			}
 		}
+		self::$initial_values[ self::copy_context( $from, $to, $language ) ] = $localized;
 		foreach ( array_keys( $source ) as $key ) {
-			if ( isset( $copy_roots[ self::root_key( $key ) ] ) ) {
+			if ( isset( $copy_roots[ self::root_key( $key ) ] ) && ! isset( $skip[ $key ] ) ) {
 				$keys[] = $key;
 			}
 		}
 		return array_values( array_unique( $keys ) );
 	}
 
+	public static function initial_value( $value, $key, $language, $from, $to ) {
+		return self::$initial_values[ self::copy_context( $from, $to, $language ) ][ $key ] ?? $value;
+	}
+
+	private static function copy_context( $from, $to, $language ) {
+		return get_current_blog_id() . ':' . $from . ':' . $to . ':' . $language;
+	}
+
 	/**
 	 * False means that the entire source write must fail, rather than sync partially.
 	 */
 	public static function synchronization_targets( $post_id, Field $field ) {
-		if ( 'sync' !== $field->get_translation() || ! Polylang::active() ||
+		if ( ! self::is_synchronized_field( $field ) || ! Polylang::active() ||
 			! function_exists( 'pll_get_post_translations' ) || wp_is_post_revision( $post_id ) ) {
 			return array();
 		}
@@ -125,7 +162,8 @@ final class Polylang_Post_Meta {
 		$roots = array_fill_keys( array_map( array( __CLASS__, 'root_key' ), array_keys( $meta ) ), true );
 		foreach ( self::fields() as $root => $entry ) {
 			list( $field, $container ) = $entry;
-			if ( 'sync' !== $field->get_translation() || ! isset( $roots[ $root ] ) || ! $container->is_valid_attach_for_object( $post_id ) ) {
+			if ( 'sync' !== $field->get_translation() || Translated_Relationships::handles( $field ) ||
+				! isset( $roots[ $root ] ) || ! $container->is_valid_attach_for_object( $post_id ) ) {
 				continue;
 			}
 			// Read raw keys with a private datastore. A shallow complex clone still
@@ -142,8 +180,9 @@ final class Polylang_Post_Meta {
 	 * Include synchronized roots in the revision service's existing transaction.
 	 * The map scopes each translation to its shared roots only.
 	 */
-	public static function revision_targets( $post_id, $roots ) {
+	public static function revision_targets( $post_id, $roots, &$mapped = null ) {
 		$targets = array();
+		$mapped = array();
 		if ( ! Polylang::active() ) {
 			return $targets;
 		}
@@ -154,6 +193,10 @@ final class Polylang_Post_Meta {
 			$ids = self::synchronization_targets( $post_id, $entry[0] );
 			if ( false === $ids ) {
 				return false;
+			}
+			if ( $ids && Translated_Relationships::handles( $entry[0] ) ) {
+				$mapped[ $root ] = array( $entry[0], $ids );
+				continue;
 			}
 			foreach ( $ids as $id ) {
 				$targets[ $id ][] = $root;

@@ -457,3 +457,32 @@ msgstr ""
 
 msgid "The database could not calculate the requested facets."
 msgstr ""
+
+msgid "Select a value in the controlling field first."
+msgstr ""
+
+msgid "Enter a title and check the field values."
+msgstr ""
+
+msgid "Could not assign the language of the related record."
+msgstr ""
+
+msgid "Could not link the new translation."
+msgstr ""
+
+msgid "Save the language of this record before creating a related record."
+msgstr ""
+
+msgid "The related record does not match this field."
+msgstr ""
+
+msgid "This translation is being edited. Try again."
+msgstr ""
+
+msgid ""
+"Some related records could not be synchronized in %s. Check their "
+"translations and field restrictions."
+msgstr ""
+
+msgid "Choose related records available in the language of this post."
+msgstr ""

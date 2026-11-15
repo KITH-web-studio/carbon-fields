@@ -715,3 +715,33 @@ msgstr "Перемістити раніше"
 
 msgid "Move later"
 msgstr "Перемістити пізніше"
+
+msgid "Could not save the related record. Try again."
+msgstr "Не вдалося зберегти пов’язаний запис. Спробуйте ще раз."
+
+msgid "Create related record"
+msgstr "Створити пов’язаний запис"
+
+msgid "Loading…"
+msgstr "Завантаження…"
+
+msgid "Back to new record"
+msgstr "Назад до нового запису"
+
+msgid "Create a translation"
+msgstr "Створити переклад"
+
+msgid "Find the original record"
+msgstr "Знайти вихідний запис"
+
+msgid "Change source"
+msgstr "Вибрати інший оригінал"
+
+msgid "Title"
+msgstr "Заголовок"
+
+msgid "Use existing translation"
+msgstr "Вибрати готовий переклад"
+
+msgid "Create and select"
+msgstr "Створити й вибрати"
