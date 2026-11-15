@@ -12,6 +12,50 @@ class Select_Field extends Predefined_Options_Field {
 	protected $options_source = '';
 	protected $dependent_options = array();
 	protected $searchable = false;
+	protected $remote_search;
+	protected $remote_resolve;
+
+	public function set_remote_options( callable $search, callable $resolve ) {
+		if ( '' !== $this->options_source ) { throw new \InvalidArgumentException( 'Remote and dependent select options are alternative modes.' ); }
+		$this->remote_search = $search;
+		$this->remote_resolve = $resolve;
+		$this->searchable = true;
+		return $this;
+	}
+
+	public function has_remote_options() {
+		return null !== $this->remote_search;
+	}
+
+	private function remote_context() {
+		return array( 'object_id' => $this->get_datastore() ? $this->get_datastore()->get_object_id() : 0, 'user_id' => get_current_user_id(), 'field' => $this );
+	}
+
+	public function search_options( $term, $page ) {
+		$result = call_user_func( $this->remote_search, $term, $page, $this->remote_context() );
+		if ( is_wp_error( $result ) ) { return $result; }
+		if ( ! is_array( $result ) ) { return new \WP_Error( 'carbon_fields_invalid_options', 'The options provider returned an invalid response.', array( 'status' => 500 ) ); }
+		$options = array();
+		foreach ( array_slice( (array) ( $result['options'] ?? array() ), 0, 100, true ) as $value => $label ) {
+			if ( is_array( $label ) && is_scalar( $label['value'] ?? null ) && is_scalar( $label['label'] ?? null ) ) {
+				$options[] = array( 'value' => (string) $label['value'], 'label' => (string) $label['label'] );
+				continue;
+			}
+			if ( is_scalar( $label ) ) {
+				$options[] = array( 'value' => (string) $value, 'label' => (string) $label );
+			}
+		}
+		return array( 'options' => $options, 'has_more' => ! empty( $result['has_more'] ) );
+	}
+
+	public function resolve_option( $value ) {
+		return $this->remote_resolve ? call_user_func( $this->remote_resolve, $value, $this->remote_context() ) : false;
+	}
+
+	public function is_valid_form_value( $value ) {
+		$label = $this->has_remote_options() && is_string( $value ) && '' !== $value ? $this->resolve_option( $value ) : '';
+		return parent::is_valid_form_value( $value ) && ( ! $this->has_remote_options() || '' === $value || is_string( $label ) || is_numeric( $label ) );
+	}
 
 	/**
 	 * Enable search in this select's editor control.
@@ -32,6 +76,7 @@ class Select_Field extends Predefined_Options_Field {
 	 * @return self
 	 */
 	public function set_dependent_options( $source, array $choices ) {
+		if ( $this->has_remote_options() ) { throw new \InvalidArgumentException( 'Remote and dependent select options are alternative modes.' ); }
 		if ( ! is_string( $source ) || ! Helper::is_valid_entity_id( $source ) || $source === $this->get_base_name() ) {
 			Incorrect_Syntax_Exception::raise( 'Dependent select options need the base name of another field.' );
 			return $this;
@@ -63,6 +108,9 @@ class Select_Field extends Predefined_Options_Field {
 	 * {@inheritDoc}
 	 */
 	public function set_value_from_input( $input ) {
+		if ( $this->has_remote_options() ) {
+			return $this->set_value( $input[ $this->get_name() ] ?? '' );
+		}
 		if ( $this->options_source !== '' ) {
 			$prefix = $this->get_name_prefix();
 			$source_name = $prefix === '' || strpos( $this->options_source, $prefix ) === 0 ? $this->options_source : $prefix . $this->options_source;
@@ -96,6 +144,14 @@ class Select_Field extends Predefined_Options_Field {
 	 */
 	public function to_json( $load ) {
 		$field_data = parent::to_json( $load );
+		if ( $this->has_remote_options() ) {
+			$value = (string) $this->get_value();
+			$label = '' !== $value ? $this->resolve_option( $value ) : '';
+			$field_data['remote_options'] = true;
+			$field_data['value'] = $value;
+			$field_data['options'] = '' !== $value && ( is_string( $label ) || is_numeric( $label ) ) ? array( array( 'value' => $value, 'label' => (string) $label ) ) : array();
+			return $field_data;
+		}
 		if ( $this->searchable ) {
 			$field_data['searchable'] = true;
 		}
@@ -129,6 +185,9 @@ class Select_Field extends Predefined_Options_Field {
 	 * {@inheritDoc}
 	 */
 	public function get_formatted_value() {
+		if ( $this->has_remote_options() ) {
+			return (string) $this->get_value();
+		}
 		if ( $this->options_source !== '' ) {
 			$value = $this->get_value();
 			return is_scalar( $value ) ? $value : '';

@@ -2,6 +2,7 @@
  * External dependencies.
  */
 import { Component } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 import { get } from 'lodash';
 
 /**
@@ -185,7 +186,9 @@ class FileField extends Component {
 									<div className="cf-file__preview">
 										{ preview }
 
-										<button type="button" className="cf-file__remove dashicons-before dashicons-no-alt" onClick={ this.handleClear }></button>
+									<button type="button" className="cf-file__remove dashicons-before dashicons-trash"
+										aria-label={ __( 'Remove', 'carbon-fields-ui' ) } title={ __( 'Remove', 'carbon-fields-ui' ) }
+										onClick={ this.handleClear } />
 									</div>
 
 									<span className="cf-file__name" title={ this.getFileName() }>

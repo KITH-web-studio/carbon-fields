@@ -6,7 +6,8 @@ export const ComplexRevealContext = createContext( null );
 
 const supportedTypes = new Set( [
 	'checkbox', 'color', 'file', 'hidden', 'icon', 'image', 'media_gallery',
-	'multiselect', 'rich_text', 'select', 'set', 'text', 'textarea'
+	'multiselect', 'rich_text', 'select', 'set', 'text', 'textarea',
+	'business_hours', 'table', 'relationship', 'tree', 'image_hotspots', 'responsive_image', 'geofence'
 ] );
 
 export const supportsPackedPostMeta = 'onformdata' in document.createElement( 'form' );
@@ -33,6 +34,8 @@ export function getComplexInput( field, fields ) {
 			const { type, value } = child;
 			if ( type === 'complex' ) {
 				input[ name ] = getComplexInput( child, fields );
+			} else if ( child.structured ) {
+				input[ name ] = JSON.stringify( value );
 			} else if ( type === 'checkbox' ) {
 				input[ name ] = value ? String( child.option_value ) : '';
 			} else if ( type === 'select' ) {

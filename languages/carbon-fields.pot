@@ -245,3 +245,163 @@ msgstr ""
 
 msgid "Could not save the field."
 msgstr ""
+
+msgid "Check the value for “%s”."
+msgstr ""
+
+msgid "Variation #%1$d: %2$s"
+msgstr ""
+
+msgid "Monday"
+msgstr ""
+
+msgid "Tuesday"
+msgstr ""
+
+msgid "Wednesday"
+msgstr ""
+
+msgid "Thursday"
+msgstr ""
+
+msgid "Friday"
+msgstr ""
+
+msgid "Saturday"
+msgstr ""
+
+msgid "Sunday"
+msgstr ""
+
+msgid "Add exception"
+msgstr ""
+
+msgid "Add interval"
+msgstr ""
+
+msgid "Closed"
+msgstr ""
+
+msgid "Closing time"
+msgstr ""
+
+msgid "Date exceptions"
+msgstr ""
+
+msgid "Exception date"
+msgstr ""
+
+msgid "Next day"
+msgstr ""
+
+msgid "Opening time"
+msgstr ""
+
+msgid "Time zone"
+msgstr ""
+
+msgid "Add vertex"
+msgstr ""
+
+msgid "Click the map to add polygon vertices"
+msgstr ""
+
+
+msgid "Latitude"
+msgstr ""
+
+msgid "Longitude"
+msgstr ""
+
+msgid "Add marker"
+msgstr ""
+
+msgid "Click to add a marker"
+msgstr ""
+
+msgid "Label"
+msgstr ""
+
+msgid "Link"
+msgstr ""
+
+msgid "Marker"
+msgstr ""
+
+msgid "Select a marker"
+msgstr ""
+
+msgid "Select image"
+msgstr ""
+
+msgid "Add row"
+msgstr ""
+
+msgid "Move down"
+msgstr ""
+
+msgid "Move up"
+msgstr ""
+
+msgid "Next"
+msgstr ""
+
+msgid "Page %1$d of %2$d"
+msgstr ""
+
+msgid "Previous"
+msgstr ""
+
+msgid "Related post"
+msgstr ""
+
+msgid "Row"
+msgstr ""
+
+msgid "Add node"
+msgstr ""
+
+msgid "Change parent"
+msgstr ""
+
+msgid "Node label"
+msgstr ""
+
+msgid "Parent node"
+msgstr ""
+
+msgid "Root level"
+msgstr ""
+
+msgid "Open conflicting post"
+msgstr ""
+
+msgid "Could not load options. Try again."
+msgstr ""
+
+msgid "Load more"
+msgstr ""
+
+msgid "This field is required."
+msgstr ""
+
+msgid "This value is already used by another post."
+msgstr ""
+
+msgid "Media could not be found."
+msgstr ""
+
+msgid "The file size cannot be verified or exceeds the limit."
+msgstr ""
+
+msgid "The image aspect ratio does not match the requirements."
+msgstr ""
+
+msgid "The image dimensions do not match the requirements."
+msgstr ""
+
+msgid "This file type is not allowed."
+msgstr ""
+
+msgid "This field is not available."
+msgstr ""

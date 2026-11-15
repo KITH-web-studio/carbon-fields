@@ -13,6 +13,9 @@ use Carbon_Fields\Integration\Bidirectional_Associations;
  * Post meta (custom fields) datastore class.
  */
 class Post_Meta_Datastore extends Meta_Datastore {
+	private $last_validation_error;
+
+	public function get_last_validation_error() { return $this->last_validation_error; }
 
 	/**
 	 * Invalidate cached rows for WordPress metadata writes.
@@ -48,12 +51,13 @@ class Post_Meta_Datastore extends Meta_Datastore {
 	 */
 	public function save_changes( Field $root_field, $fields ) {
 		global $wpdb;
+		$this->last_validation_error = null;
 		$sync = 'sync' === $root_field->get_translation() && \Carbon_Fields\Integration\Polylang::active();
 		$bidirectional = $root_field instanceof Association_Field && $root_field->get_bidirectional();
 
 		$post_id = (int) $this->get_object_id();
 		if ( get_class( $this ) !== __CLASS__ || $post_id < 1 || $this->has_save_filters() ) {
-			return ( $sync || $bidirectional ) ? false : null;
+			return ( $sync || $bidirectional || $root_field->get_unique() ) ? false : null;
 		}
 		// A preview writes only to the revision, without changing real relationships.
 		if ( $bidirectional && ! wp_is_post_revision( $post_id ) ) {
@@ -63,17 +67,21 @@ class Post_Meta_Datastore extends Meta_Datastore {
 		$subtype = get_object_subtype( 'post', $post_id );
 		$desired = array();
 		foreach ( $fields as $field ) {
+			if ( $field->has_value_rules() && ( ! $field instanceof Complex_Field && ! $field->is_valid_form_value( $field->get_value() ) || \Carbon_Fields\Helper\Field_Rules::validate( $field, $field->get_value() ) ) ) {
+				return false;
+			}
 			$save_method = new \ReflectionMethod( $field, 'save' );
 			$delete_method = new \ReflectionMethod( $field, 'delete' );
-			$save_class = $field instanceof Complex_Field ? Complex_Field::class :
-				( $field instanceof Association_Field ? Association_Field::class : Field::class );
+			$save_class = $field instanceof \Carbon_Fields\Field\Structured_Field ? \Carbon_Fields\Field\Structured_Field::class :
+				( $field instanceof Complex_Field ? Complex_Field::class :
+				( $field instanceof Association_Field ? Association_Field::class : Field::class ) );
 			if ( $field->get_datastore() !== $this || $save_method->getDeclaringClass()->getName() !== $save_class ||
 				$delete_method->getDeclaringClass()->getName() !== Field::class ) {
 				return $sync ? false : null;
 			}
 
 			foreach ( $this->get_storage_pairs( $field ) as $key => $value ) {
-				if ( ! is_scalar( $value ) || has_filter( "sanitize_post_meta_{$key}" ) ||
+				if ( ! is_scalar( $value ) || is_float( $value ) && class_exists( 'WC_Post_Data' ) || has_filter( "sanitize_post_meta_{$key}" ) ||
 					( $subtype && has_filter( "sanitize_post_meta_{$key}_for_{$subtype}" ) ) ) {
 					return $sync ? false : null;
 				}
@@ -108,11 +116,31 @@ class Post_Meta_Datastore extends Meta_Datastore {
 		if ( $matches ) {
 			return true;
 		}
-		return Post_Meta_Transaction::run( $post_ids, function() use ( $queries, $desired ) {
+		return Post_Meta_Transaction::run( $post_ids, function() use ( $queries, $desired, $root_field ) {
+			if ( ! \Carbon_Fields\Helper\Field_Rules::lock_unique( $root_field ) ) {
+				return false;
+			}
 			foreach ( $queries as $id => $query ) {
+				$event_field = clone $root_field;
+				$event_field->set_datastore( clone $this, $root_field->has_default_datastore() );
+				$event_field->get_datastore()->set_object_id( $id );
+				$error = \Carbon_Fields\Helper\Field_Rules::validate( $event_field, $root_field->get_value() );
+				if ( $error ) {
+					$this->last_validation_error = $error;
+					return false;
+				}
+				$before = null;
+				$emit = $root_field->get_change_callback() || has_action( 'carbon_fields_field_changed' );
+				if ( $emit ) {
+					$event_field->load();
+					$before = $event_field->get_formatted_value();
+				}
 				$current = $this->read_current_rows( $query . ' FOR UPDATE' );
 				if ( ! is_array( $current ) || ! $this->apply_changes( $id, $current, $desired ) ) {
 					return false;
+				}
+				if ( $emit ) {
+					\Carbon_Fields\Helper\Field_Events::changed( $root_field, $id, $before, $root_field->get_formatted_value() );
 				}
 			}
 			return true;
@@ -140,7 +168,14 @@ class Post_Meta_Datastore extends Meta_Datastore {
 		$where = $this->key_toolset->storage_key_patterns_to_sql( 'meta_key', $patterns );
 		$rows = $this->read_current_rows( "SELECT meta_id, meta_key, meta_value FROM {$wpdb->postmeta}
 			WHERE post_id = " . (int) $post_id . " AND {$where} FOR UPDATE" );
-		return is_array( $rows ) && $this->apply_changes( $post_id, $rows, $desired );
+		$before = \Carbon_Fields\Helper\Field_Events::snapshot( $field );
+		$saved = is_array( $rows ) && $this->apply_changes( $post_id, $rows, $desired );
+		if ( $saved ) {
+			self::invalidate_storage_cache();
+			wp_cache_delete( $post_id, 'post_meta' );
+			\Carbon_Fields\Helper\Field_Events::saved( $field, $before );
+		}
+		return $saved;
 	}
 
 	private function matches_desired( $current, $desired ) {
@@ -318,14 +353,18 @@ class Post_Meta_Datastore extends Meta_Datastore {
 	private function only_polylang_filters( $hook ) {
 		global $wp_filter;
 		if ( ! in_array( $hook, array( 'add_post_metadata', 'update_post_metadata', 'delete_post_metadata' ), true ) ||
-			! \Carbon_Fields\Integration\Polylang::active() || empty( $wp_filter[ $hook ]->callbacks ) ) {
+			empty( $wp_filter[ $hook ]->callbacks ) ) {
 			return false;
 		}
 		foreach ( $wp_filter[ $hook ]->callbacks as $callbacks ) {
 			foreach ( $callbacks as $callback ) {
 				$fn = $callback['function'];
+				// WooCommerce's core guard transforms only floats. Those use the fallback above.
+				if ( 'update_post_metadata' === $hook && array( 'WC_Post_Data', 'update_post_metadata' ) === $fn ) {
+					continue;
+				}
 				if ( ! is_array( $fn ) || ! is_object( $fn[0] ) || get_class( $fn[0] ) !== 'PLL_Sync_Post_Metas' ||
-					! in_array( $fn[1], array( 'can_synchronize_metadata', 'update_metadata' ), true ) ) {
+					! \Carbon_Fields\Integration\Polylang::active() || ! in_array( $fn[1], array( 'can_synchronize_metadata', 'update_metadata' ), true ) ) {
 					return false;
 				}
 			}

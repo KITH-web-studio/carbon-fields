@@ -25,6 +25,7 @@ import Field from '../field';
 import { ComplexRevealContext, findLazyFieldError, supportsPackedPostMeta } from '../../utils/lazy-complex';
 import isGutenberg from '../../utils/is-gutenberg';
 import SettingsPanel from './settings-panel';
+import { validate as validateServerFields } from '../../monitors/field-validation';
 
 class Container extends Component {
 	node = createRef();
@@ -36,6 +37,7 @@ class Container extends Component {
 	 */
 	state = {
 		currentTab: null,
+		validatingStep: false,
 		reveal: null
 	};
 
@@ -170,7 +172,29 @@ class Container extends Component {
 	 * @param  {string} tab
 	 * @return {void}
 	 */
-	handleTabClick = ( tab ) => {
+	handleTabClick = async ( tab ) => {
+		if ( this.validatingStep ) { return; }
+		const { container } = this.props;
+		const tabs = Object.keys( container.settings.tabs || {} );
+		if ( container.settings.wizard && tabs.indexOf( tab ) > tabs.indexOf( this.state.currentTab ) ) {
+			if ( this.validatingStep ) { return; }
+			const form = this.node.current.closest( 'form' );
+			if ( ! form ) { return; }
+			this.validatingStep = true;
+			this.setState( { validatingStep: true } );
+			try {
+				window.tinyMCE?.triggerSave();
+				for ( let index = tabs.indexOf( this.state.currentTab ); index < tabs.indexOf( tab ); index++ ) {
+					const body = new window.FormData( form );
+					body.set( '_cf_validation_step', tabs[ index ] );
+					const error = await validateServerFields( body, [ container ] );
+					if ( ! this.node.current ) { return; }
+					dispatch( 'carbon-fields/metaboxes' ).setServerError( error );
+					if ( error ) { return; }
+				}
+			} finally { this.validatingStep = false; if ( this.node.current ) { this.setState( { validatingStep: false } ); } }
+		}
+		if ( ! this.node.current ) { return; }
 		this.setState( {
 			currentTab: tab
 		} );
@@ -205,7 +229,7 @@ class Container extends Component {
 		] );
 
 		return (
-			<div className={ classes } ref={ this.node }>
+			<div className={ classes } ref={ this.node } aria-busy={ this.state.validatingStep || undefined }>
 				<input
 					type="hidden"
 					name={ container.nonce.name }
@@ -222,7 +246,7 @@ class Container extends Component {
 				) }
 
 				{ serverError && ! hasPanel && (
-					<div className="notice notice-error inline" role="alert"><p>{ serverError.label ? serverError.label + ' · ' : '' }{ serverError.message }</p></div>
+					<div className="notice notice-error inline" role="alert"><p>{ serverError.label ? serverError.label + ' · ' : '' }{ serverError.message } { serverError.conflictUrl && <a href={ serverError.conflictUrl }>{ __( 'Open conflicting post', 'carbon-fields-ui' ) }</a> }</p></div>
 				) }
 				{ hasPanel && <SettingsPanel container={ container } renderField={ this.renderField } serverError={ serverError } /> }
 				{ ! hasPanel && hasTabs && (
@@ -247,6 +271,7 @@ class Container extends Component {
 									>
 										<button
 											type="button"
+											disabled={ this.state.validatingStep }
 											onClick={ () => this.handleTabClick( tabName ) }
 											dangerouslySetInnerHTML={ { __html: tabName } }
 										/>
@@ -277,6 +302,13 @@ class Container extends Component {
 					</div>
 				) }
 				{ sidebarSections.map( this.renderSidebarSection ) }
+				{ container.settings.wizard && hasTabs && <div className="cf-wizard-nav">
+					<button type="button" className="button" disabled={ this.state.validatingStep || Object.keys( container.settings.tabs ).indexOf( currentTab ) <= 0 }
+						onClick={ () => this.handleTabClick( Object.keys( container.settings.tabs )[ Object.keys( container.settings.tabs ).indexOf( currentTab ) - 1 ] ) }>{ __( 'Previous', 'carbon-fields-ui' ) }</button>
+					<span>{ Object.keys( container.settings.tabs ).indexOf( currentTab ) + 1 } / { Object.keys( container.settings.tabs ).length }</span>
+					<button type="button" className="button button-primary" disabled={ this.state.validatingStep || Object.keys( container.settings.tabs ).indexOf( currentTab ) === Object.keys( container.settings.tabs ).length - 1 }
+						onClick={ () => this.handleTabClick( Object.keys( container.settings.tabs )[ Object.keys( container.settings.tabs ).indexOf( currentTab ) + 1 ] ) }>{ __( 'Next', 'carbon-fields-ui' ) }</button>
+				</div> }
 				{ protectedForm && (
 					<input type="hidden" name={ container.nonce.name + '_complete' } value="native" />
 				) }

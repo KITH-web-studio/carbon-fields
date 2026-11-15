@@ -10,6 +10,7 @@ import { __ } from '@wordpress/i18n';
 import './style.scss';
 import NoOptions from '../../components/no-options';
 import SearchableSelect from './searchable';
+import RemoteSelect from './remote';
 import { getDependentOptions, getSelectSourceValue, getSelectValue } from '../../utils/dependent-select';
 
 export class SelectField extends Component {
@@ -31,6 +32,9 @@ export class SelectField extends Component {
 	 * @return {Object}
 	 */
 	render() {
+		if ( this.props.field.remote_options ) {
+			return <RemoteSelect { ...this.props } />;
+		}
 		const {
 			id,
 			name,

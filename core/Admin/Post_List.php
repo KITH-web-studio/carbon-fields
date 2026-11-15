@@ -97,7 +97,7 @@ final class Post_List {
 				$can_query = $column['standard_storage'] && $container->allows_admin_column_queries( $this->post_type );
 				$column['sortable'] = $can_query ? $column['sortable'] : false;
 				$column['options'] = $can_query && $column['filter'] && $field instanceof Select_Field &&
-					'' === $field->get_options_source() ? $field->get_options() : array();
+					'' === $field->get_options_source() && ! $field->has_remote_options() ? $field->get_options() : array();
 				$columns[ 'cf_' . $name ] = $column;
 			}
 		}
@@ -137,7 +137,7 @@ final class Post_List {
 		}
 		$this->editor->render_row_value( $id, $post_id, $value );
 		if ( $field instanceof Select_Field && '' === $field->get_options_source() ) {
-			$value = $field->get_options()[ $value ] ?? $value;
+			$value = $field->has_remote_options() ? ( $field->resolve_option( $value ) ?: $value ) : ( $field->get_options()[ $value ] ?? $value );
 		}
 		echo esc_html( (string) $value );
 	}

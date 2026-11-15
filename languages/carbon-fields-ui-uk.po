@@ -470,3 +470,169 @@ msgstr "Введіть число в допустимому діапазоні."
 
 msgid "You are not allowed to assign these terms."
 msgstr "У вас немає прав призначати ці терміни."
+
+msgid "Monday"
+msgstr "Понеділок"
+
+msgid "Tuesday"
+msgstr "Вівторок"
+
+msgid "Wednesday"
+msgstr "Середа"
+
+msgid "Thursday"
+msgstr "Четвер"
+
+msgid "Friday"
+msgstr "Пʼятниця"
+
+msgid "Saturday"
+msgstr "Субота"
+
+msgid "Sunday"
+msgstr "Неділя"
+
+msgid "Add exception"
+msgstr "Додати виняток"
+
+msgid "Add interval"
+msgstr "Додати інтервал"
+
+msgid "Closed"
+msgstr "Вихідний"
+
+msgid "Closing time"
+msgstr "Час закриття"
+
+msgid "Date exceptions"
+msgstr "Винятки за датами"
+
+msgid "Exception date"
+msgstr "Дата винятку"
+
+msgid "Next day"
+msgstr "Наступний день"
+
+msgid "Opening time"
+msgstr "Час відкриття"
+
+msgid "Time zone"
+msgstr "Часовий пояс"
+
+msgid "Add vertex"
+msgstr "Додати вершину"
+
+msgid "Click the map to add polygon vertices"
+msgstr "Натисніть на карту, щоб додати вершини зони"
+
+
+msgid "Latitude"
+msgstr "Широта"
+
+msgid "Longitude"
+msgstr "Довгота"
+
+msgid "Add marker"
+msgstr "Додати мітку"
+
+msgid "Click to add a marker"
+msgstr "Натисніть, щоб додати мітку"
+
+msgid "Label"
+msgstr "Підпис"
+
+msgid "Link"
+msgstr "Посилання"
+
+msgid "Marker"
+msgstr "Мітка"
+
+msgid "Select a marker"
+msgstr "Виберіть мітку"
+
+msgid "Select image"
+msgstr "Вибрати зображення"
+
+msgid "Actions"
+msgstr "Дії"
+
+msgid "Add row"
+msgstr "Додати рядок"
+
+msgid "Move down"
+msgstr "Перемістити вниз"
+
+msgid "Move up"
+msgstr "Перемістити вгору"
+
+msgid "Next"
+msgstr "Далі"
+
+msgid "Page %1$d of %2$d"
+msgstr "Сторінка %1$d із %2$d"
+
+msgid "Previous"
+msgstr "Назад"
+
+msgid "Related post"
+msgstr "Пов’язаний запис"
+
+msgid "Row"
+msgstr "Рядок"
+
+msgid "Add node"
+msgstr "Додати вузол"
+
+msgid "Change parent"
+msgstr "Змінити батьківський вузол"
+
+msgid "Node label"
+msgstr "Назва вузла"
+
+msgid "Parent node"
+msgstr "Батьківський вузол"
+
+msgid "Root level"
+msgstr "Кореневий рівень"
+
+msgid "Open conflicting post"
+msgstr "Відкрити запис зі збігом"
+
+msgid "Could not load options. Try again."
+msgstr "Не вдалося завантажити варіанти. Спробуйте ще раз."
+
+msgid "Load more"
+msgstr "Завантажити ще"
+
+msgid "This value is already used by another post."
+msgstr "Це значення вже використовується в іншому записі."
+
+msgid "Media could not be found."
+msgstr "Медіафайл не знайдено."
+
+msgid "The file size cannot be verified or exceeds the limit."
+msgstr "Розмір файлу невідомий або перевищує обмеження."
+
+msgid "The image aspect ratio does not match the requirements."
+msgstr "Пропорції зображення не відповідають вимогам."
+
+msgid "The image dimensions do not match the requirements."
+msgstr "Розміри зображення не відповідають вимогам."
+
+msgid "This file type is not allowed."
+msgstr "Цей тип файлу не дозволений."
+
+msgid "This field is not available."
+msgstr "Це поле недоступне."
+
+msgid "Draw on map"
+msgstr "Малювати на карті"
+
+msgid "Geofence map"
+msgstr "Карта геозони"
+
+msgid "Vertex %d"
+msgstr "Вершина %d"
+
+msgid "Map tiles are unavailable. You can still edit the outline or enter coordinates."
+msgstr "Підкладка недоступна. Можна редагувати контур і вводити координати."

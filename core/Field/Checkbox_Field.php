@@ -82,7 +82,7 @@ class Checkbox_Field extends Field {
 
 		$field_data = array_merge( $field_data, array(
 			'option_value' => $this->get_option_value(),
-			'option_label' => parent::get_label(),
+			'option_label' => $this->get_option_label(),
 		) );
 
 		return $field_data;
@@ -96,5 +96,9 @@ class Checkbox_Field extends Field {
 	 */
 	public function get_label() {
 		return '';
+	}
+
+	public function get_option_label() {
+		return parent::get_label();
 	}
 }

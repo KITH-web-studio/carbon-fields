@@ -265,8 +265,9 @@ class ComplexGroup extends Component {
 						</button>
 					) }
 
-					<button type="button" title={ __( 'Remove', 'carbon-fields-ui' ) } className="cf-complex__group-action" onClick={ this.handleRemoveClick }>
-						<span className="dashicons-before dashicons-trash cf-complex__group-action-icon"></span>
+					<button type="button" title={ __( 'Remove', 'carbon-fields-ui' ) } aria-label={ __( 'Remove', 'carbon-fields-ui' ) }
+						className="cf-complex__group-action" onClick={ this.handleRemoveClick }>
+						<span className="dashicons-before dashicons-trash cf-complex__group-action-icon" aria-hidden="true" />
 
 						<span className="cf-complex__group-action-text">
 							{ __( 'Remove', 'carbon-fields-ui' ) }

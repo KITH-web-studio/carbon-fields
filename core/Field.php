@@ -7,6 +7,13 @@ namespace Carbon_Fields;
  * Used for shorter namespace access when creating a field.
  *
  * @method static \Carbon_Fields\Field\Association_Field make_association( string $name, string $label = null )
+ * @method static \Carbon_Fields\Field\Business_Hours_Field make_business_hours( string $name, string $label = null )
+ * @method static \Carbon_Fields\Field\Table_Field make_table( string $name, string $label = null )
+ * @method static \Carbon_Fields\Field\Relationship_Field make_relationship( string $name, string $label = null )
+ * @method static \Carbon_Fields\Field\Tree_Field make_tree( string $name, string $label = null )
+ * @method static \Carbon_Fields\Field\Image_Hotspots_Field make_image_hotspots( string $name, string $label = null )
+ * @method static \Carbon_Fields\Field\Responsive_Image_Field make_responsive_image( string $name, string $label = null )
+ * @method static \Carbon_Fields\Field\Geofence_Field make_geofence( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Checkbox_Field make_checkbox( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Code_Field make_code( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Link_Field make_link( string $name, string $label = null )

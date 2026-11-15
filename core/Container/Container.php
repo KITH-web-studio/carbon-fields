@@ -71,6 +71,43 @@ abstract class Container implements Datastore_Holder_Interface {
 	 */
 	protected $tabs = array();
 
+	/** Turn existing container tabs into validated steps. Call after add_tab(). */
+	public function set_wizard( $enabled = true ) {
+		if ( $enabled && ( ! $this->tabs || 'panel' === ( $this->settings['page_layout'] ?? '' ) ) ) {
+			throw new \InvalidArgumentException( 'Call set_wizard() after add_tab(), on a container using the standard layout.' );
+		}
+		$this->settings['wizard'] = (bool) $enabled;
+		$this->settings['server_validation'] = (bool) $enabled;
+		$visit = function( $fields ) use ( &$visit, $enabled ) {
+			foreach ( $fields as $field ) {
+				$field->set_server_required( $enabled && $field->is_required() );
+				if ( $field instanceof \Carbon_Fields\Field\Complex_Field ) {
+					$visit( $field->get_fields() );
+				}
+			}
+		};
+		$visit( $this->fields );
+		return $this;
+	}
+
+	public function is_wizard() {
+		return ! empty( $this->settings['wizard'] );
+	}
+
+	/** Used exclusively by the read-only validation endpoint, never by saving. */
+	protected function editor_step_fields( array $fields ) {
+		$step = \Carbon_Fields\Helper\Helper::input()['_cf_validation_step'] ?? null;
+		if ( empty( $this->settings['wizard'] ) || null === $step ) {
+			return $fields;
+		}
+		$tabs = $this->get_tabs_json();
+		if ( ! is_string( $step ) || ! isset( $tabs[ $step ] ) ) { return $fields; }
+		$names = is_string( $step ) && isset( $tabs[ $step ] ) ? $tabs[ $step ] : array();
+		return array_values( array_filter( $fields, function( $field ) use ( $names ) {
+			return in_array( $field->get_name(), $names, true );
+		} ) );
+	}
+
 	/**
 	 * List of default container settings
 	 *

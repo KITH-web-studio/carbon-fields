@@ -7,6 +7,9 @@ use Carbon_Fields\Datastore\Datastore_Interface;
 use Carbon_Fields\Exception\Incorrect_Syntax_Exception;
 
 class Group_Field {
+	public function __clone() {
+		$this->fields = array_map( function( $field ) { return clone $field; }, $this->fields );
+	}
 
 	/**
 	 * Default name to use for groups which have no name defined by the user

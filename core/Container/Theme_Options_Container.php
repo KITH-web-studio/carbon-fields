@@ -541,12 +541,15 @@ class Theme_Options_Container extends Container {
 		$input = Helper::input();
 		$language = $this->is_multilingual() ? $input[ $this->language_input_name() ] : null;
 		return Polylang::with_language( $language, function() use ( $input ) {
-			return $this->validate_editor_input( $input );
+			return $this->validate_editor_input( $input, true );
 		} );
 	}
 
-	protected function validate_editor_input( array $input ) {
+	protected function validate_editor_input( array $input, $step = false ) {
 		$fields = $this->get_editable_fields( $this->restricted_option_names() );
+		if ( $step ) {
+			$fields = $this->editor_step_fields( $fields );
+		}
 		$sections = $this->uses_settings_panel() ? $this->editable_sections( $this->editor_field_names( $fields ) ) : array();
 		return Field_Validation::validate( $fields, $input, $sections );
 	}

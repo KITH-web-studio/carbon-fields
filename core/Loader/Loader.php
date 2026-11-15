@@ -40,6 +40,9 @@ class Loader {
 
 		include_once( dirname( dirname( __DIR__ ) ) . '/config.php' );
 		include_once( \Carbon_Fields\DIR . '/core/functions.php' );
+		include_once( \Carbon_Fields\DIR . '/core/developer-functions.php' );
+		add_filter( 'posts_where', array( \Carbon_Fields\Helper\Complex_Row_Query::class, 'where' ), 10, 2 );
+		add_action( 'rest_api_init', array( new \Carbon_Fields\REST_API\Field_Options(), 'register_routes' ) );
 
 		add_action( 'after_setup_theme', array( $this, 'load_textdomain' ), 9999 );
 		add_action( 'init', array( $this, 'trigger_fields_register' ), 0 );
@@ -55,6 +58,8 @@ class Loader {
 		$post_list = new \Carbon_Fields\Admin\Post_List( $this->container_repository );
 		add_action( 'load-edit.php', array( $post_list, 'attach' ) );
 		add_action( 'wp_ajax_inline-save', array( $post_list, 'prepare_quick_edit' ), 0 );
+		$woocommerce = new \Carbon_Fields\Integration\WooCommerce_Product_Data( $this->container_repository );
+		add_action( 'woocommerce_init', array( $woocommerce, 'boot' ) );
 
 		# Enable the legacy storage service
 		\Carbon_Fields\Carbon_Fields::service( 'legacy_storage' )->enable();
@@ -254,6 +259,7 @@ class Loader {
 				'revisionsInputKey' => $revisions::CHANGE_KEY,
 				'sidebarNonce' => current_user_can( 'edit_theme_options' ) ? wp_create_nonce( Sidebar_Manager::NONCE_ACTION ) : '',
 				'codeEditors' => $code_editors,
+				'businessTimezones' => \Carbon_Fields\Field\Business_Hours_Field::editor_timezones(),
 				'validationPostRoute' => isset( $GLOBALS['post'] ) && function_exists( 'rest_get_route_for_post' ) ? rest_get_route_for_post( $GLOBALS['post'] ) : '',
 				'linkLanguage' => \Carbon_Fields\Integration\Polylang::current_language(),
 				'wp_version' => $wp_version,
@@ -430,7 +436,7 @@ class Loader {
 			foreach ( $this->container_repository->get_containers() as $container ) {
 				$id = $container->get_id();
 				if ( ! in_array( $id, $requested, true ) || ! in_array( $container->type, array( 'post_meta', 'theme_options' ), true ) ||
-					! Field_Validation::has_rules( $container->get_fields() ) ) {
+					( ! Field_Validation::has_rules( $container->get_fields() ) && ! $container->is_wizard() ) ) {
 					continue;
 				}
 				$error = 'post_meta' === $container->type ? $container->validate_editor_request( $post_id ) : $container->validate_editor_request();
@@ -439,6 +445,7 @@ class Loader {
 						'containerId' => $id,
 						'message' => $error->get_error_message(),
 						'path' => $error->get_error_data()['path'] ?? array(),
+						'conflictUrl' => $error->get_error_data()['conflict_url'] ?? '',
 					), 422 );
 				}
 				$checked[] = $id;

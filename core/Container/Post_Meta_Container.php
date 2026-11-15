@@ -11,6 +11,7 @@ use Carbon_Fields\Datastore\Datastore;
 use Carbon_Fields\Datastore\Post_Meta_Datastore;
 use Carbon_Fields\Exception\Incorrect_Syntax_Exception;
 use Carbon_Fields\Integration\Polylang;
+use Carbon_Fields\Integration\WooCommerce_Product_Data;
 
 /**
  * Field container designed to extend WordPress custom fields functionality,
@@ -43,6 +44,8 @@ class Post_Meta_Container extends Container {
 
 	protected $admin_columns = array();
 
+	private $woocommerce_placement;
+
 	/**
 	 * List of default container settings
 	 *
@@ -70,6 +73,9 @@ class Post_Meta_Container extends Container {
 	 * Bind attach() and save() to the appropriate WordPress actions.
 	 */
 	public function init() {
+		if ( $this->woocommerce_placement ) {
+			return;
+		}
 		$input = stripslashes_deep( $_GET );
 		$request_post_id = isset( $input['post'] ) ? intval( $input['post'] ) : 0;
 		if ( $request_post_id > 0 ) {
@@ -154,7 +160,7 @@ class Post_Meta_Container extends Container {
 	/**
 	 * Read protected editor data before any field or revision can be written.
 	 */
-	protected function get_save_input() {
+	protected function get_save_input( $validation_fields = null ) {
 		$input = Helper::input();
 		$name = $this->get_nonce_name();
 		if ( ! isset( $input[ $name ] ) || ! is_string( $input[ $name ] ) || strpos( $input[ $name ], static::FORM_NONCE_PREFIX ) !== 0 ) {
@@ -192,6 +198,7 @@ class Post_Meta_Container extends Container {
 			if ( null === $value ) {
 				continue;
 			}
+			if ( null !== $validation_fields && ! in_array( $field, $validation_fields, true ) ) { continue; }
 			if ( ! $field->is_valid_form_value( $value ) ) {
 				return $this->incomplete_form_error();
 			}
@@ -214,8 +221,9 @@ class Post_Meta_Container extends Container {
 		if ( ! $this->is_valid_attach_for_object( $post_id ) ) {
 			return new \WP_Error( 'carbon_fields_invalid_form', __( 'Check the form and try saving again.', 'carbon-fields' ) );
 		}
-		$input = $this->get_save_input();
-		return is_wp_error( $input ) ? $input : Field_Validation::validate( $this->fields, $input );
+		$fields = $this->editor_step_fields( $this->fields );
+		$input = $this->get_save_input( $fields );
+		return is_wp_error( $input ) ? $input : Field_Validation::validate( $fields, $input );
 	}
 
 	private function get_translation_sync_fields() {
@@ -382,7 +390,7 @@ class Post_Meta_Container extends Container {
 	public function is_valid_attach_for_object( $object_id = null ) {
 		$post = get_post( intval( $object_id ) );
 
-		if ( ! $post ) {
+		if ( ! $post || ( $this->woocommerce_placement && WooCommerce_Product_Data::post_type( $this->woocommerce_placement ) !== $post->post_type ) ) {
 			return false;
 		}
 
@@ -417,6 +425,26 @@ class Post_Meta_Container extends Container {
 
 	public function get_admin_columns() {
 		return $this->admin_columns;
+	}
+
+	/**
+	 * Display this container inside a WooCommerce Product data tab.
+	 */
+	public function set_woocommerce_product_tab( $tab, array $options = array() ) {
+		$this->woocommerce_placement = WooCommerce_Product_Data::product_placement( $tab, $options, $this->title );
+		return $this;
+	}
+
+	/**
+	 * Display these fields separately in each WooCommerce variation.
+	 */
+	public function set_woocommerce_variation_fields() {
+		$this->woocommerce_placement = array( 'variation' => true );
+		return $this;
+	}
+
+	public function get_woocommerce_placement() {
+		return $this->woocommerce_placement;
 	}
 
 	public function allows_admin_column_queries( $post_type ) {
@@ -486,6 +514,9 @@ class Post_Meta_Container extends Container {
 	 */
 	public function get_post_type_visibility() {
 		$all_post_types = get_post_types();
+		if ( $this->woocommerce_placement ) {
+			$all_post_types = array_intersect( $all_post_types, array( WooCommerce_Product_Data::post_type( $this->woocommerce_placement ) ) );
+		}
 		$evaluated_collection = $this->condition_collection->evaluate( array( 'post_type' ), true, array(), true );
 
 		$shown_on = array();

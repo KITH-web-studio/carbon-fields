@@ -18,5 +18,8 @@ export function isSelectSource( field ) {
 }
 
 export function getSelectSourceValue( field, value ) {
+	if ( field.remote_options ) {
+		return String( value ?? '' );
+	}
 	return getSelectValue( field.options, value, String( field.options[ 0 ]?.value ?? '' ) );
 }

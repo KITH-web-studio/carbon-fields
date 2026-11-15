@@ -28,7 +28,7 @@ function findFieldByName( fields, name ) {
 	} );
 }
 
-addFilter( 'carbon-fields.association.metabox', 'carbon-fields/metaboxes', withProps( ( props ) => {
+const withHierarchy = withProps( ( props ) => {
 	return {
 		hierarchyResolver() {
 			// Get all fields.
@@ -85,4 +85,7 @@ addFilter( 'carbon-fields.association.metabox', 'carbon-fields/metaboxes', withP
 			return hierarchy;
 		}
 	};
-} ) );
+} );
+[ 'association', 'select', 'relationship', 'image_hotspots' ].forEach( ( type ) => {
+	addFilter( `carbon-fields.${ type }.metabox`, 'carbon-fields/metaboxes', withHierarchy );
+} );

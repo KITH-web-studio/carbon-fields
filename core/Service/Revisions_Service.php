@@ -382,6 +382,27 @@ class Revisions_Service extends Service {
 			if ( empty( $scope ) ) {
 				return true;
 			}
+			$events = array();
+			if ( $restoring ) {
+				foreach ( Carbon_Fields::resolve( 'container_repository' )->get_containers( 'post_meta' ) as $container ) {
+					foreach ( $container->get_fields() as $definition ) {
+						if ( ! in_array( $definition->get_name(), $scope, true ) || ! ( $definition->has_value_rules() || $definition->get_change_callback() || has_action( 'carbon_fields_field_changed' ) ) ) { continue; }
+						$field = clone $definition;
+						$field->set_datastore( clone $definition->get_datastore(), $definition->has_default_datastore() );
+						$field->get_datastore()->set_object_id( $targets[0] );
+						if ( $field->has_value_rules() ) {
+							$source_field = clone $definition;
+							$source_field->set_datastore( clone $definition->get_datastore(), $definition->has_default_datastore() );
+							$source_field->get_datastore()->set_object_id( $from_id );
+							$source_field->load();
+							$field->set_value( $source_field->get_value() );
+							if ( ! \Carbon_Fields\Helper\Field_Rules::lock_unique( $field ) ||
+								\Carbon_Fields\Helper\Field_Rules::validate( $field, $field->get_value() ) || ! $field instanceof \Carbon_Fields\Field\Complex_Field && ! $field->is_valid_form_value( $field->get_value() ) ) { return false; }
+						}
+						$events[] = array( $field, \Carbon_Fields\Helper\Field_Events::snapshot( $field ) );
+					}
+				}
+			}
 			if ( $association_plan ) {
 				Post_Meta_Datastore::invalidate_storage_cache();
 				if ( ! \Carbon_Fields\Integration\Bidirectional_Associations::restore_locked( $targets[0], $association_plan, $scope ) ) {
@@ -415,6 +436,11 @@ class Revisions_Service extends Service {
 				if ( ! $this->apply_snapshot( $target, $this->collect_snapshot_keys( $current, $shared_scope ), $this->collect_snapshot_keys( $source, $shared_scope ) ) ) {
 					return false;
 				}
+			}
+			Post_Meta_Datastore::invalidate_storage_cache();
+			foreach ( $events as $event ) {
+				wp_cache_delete( $targets[0], 'post_meta' );
+				\Carbon_Fields\Helper\Field_Events::saved( $event[0], $event[1] );
 			}
 			return true;
 		} );

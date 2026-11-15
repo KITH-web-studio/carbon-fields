@@ -363,7 +363,9 @@ class AssociationField extends Component {
 											</div>
 
 											<div className="cf-association__option-actions">
-												<button type="button" className="cf-association__option-action dashicons dashicons-dismiss" aria-label={ __( 'Remove', 'carbon-fields-ui' ) } onClick={ () => this.handleRemoveItem( option ) }></button>
+											<button type="button" className="cf-association__option-action dashicons dashicons-trash"
+												aria-label={ __( 'Remove', 'carbon-fields-ui' ) } title={ __( 'Remove', 'carbon-fields-ui' ) }
+												onClick={ () => this.handleRemoveItem( option ) } />
 											</div>
 
 											<input

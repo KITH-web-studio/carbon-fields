@@ -2,6 +2,17 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.26
+
+- Add native WooCommerce Product data tabs/panels with configurable priority, variation fields and permission-aware saving.
+- Add business hours, tables, relationships with link data, trees, image hotspots, responsive images and regional geofences.
+- Draw geofences with bundled Leaflet and OpenStreetMap tiles, without an API key.
+- Use compact icons for removing field items and moving rows in tables and trees.
+- Keep the add-interval action below business hours on both open and closed days, and align responsive image previews and controls.
+- Add opt-in unique post values, committed field-change events, remote select search, input masks/normalization and validated container steps.
+- Add atomic post-field updates, complex row helpers and same-row queries, field-set factories, complex templates and media metadata/output/validation helpers.
+- Keep nested structured fields compatible with lazy complex rows and changed-only metadata saving; add English/Russian guides and regression coverage.
+
 ## 3.6.11.25
 
 - Add opt-in Quick Edit and Bulk Edit for text, numbers, and standalone select fields in the WordPress post list.

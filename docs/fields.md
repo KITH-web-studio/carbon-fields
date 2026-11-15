@@ -24,6 +24,8 @@ Create a field with `Field::make( $type, $name, $label )`. Use the same stable n
 | `sidebar` | Select or create a widget area. Use its ID with `dynamic_sidebar()`. |
 | `gravity_form` | Choose a form ID from an active Gravity Forms installation. |
 | `complex` | Repeat a group of fields, including nested groups. See [Complex fields](complex-fields.md). |
+| `business_hours`, `table`, `relationship`, `tree` | Working schedules, compact tables, per-link data and nested trees. See [Structured fields](structured-fields.md). |
+| `image_hotspots`, `responsive_image`, `geofence` | Image markers, art-directed banners and delivery polygons. See [Structured fields](structured-fields.md). |
 | `hidden` | A hidden input. Its value is still part of the form. |
 | `separator`, `html` | Organize the editor. `html` displays markup provided via `set_html()`. |
 | `header_scripts`, `footer_scripts` | Output saved snippets at `wp_head` or `wp_footer` from settings. Give access only to trusted users who can add code to the site. |
@@ -32,6 +34,8 @@ Create a field with `Field::make( $type, $name, $label )`. Use the same stable n
 Common settings include `set_default_value()`, `set_required()`, `set_width()`, `set_help_text()`, `set_classes()`, and `set_attribute()`. A default fills in an unset value. The width is a percentage where the editor layout supports it. Input attributes and required flags guide the editor. Validate values separately when writing data from your own code.
 
 ## Custom validation
+
+See [Structured fields and workflows](structured-fields.md) for unique values, remote select, input masks/normalization and validated form steps; [Developer helpers](developer-api.md) for atomic writes, row queries, events and media methods.
 
 Use `set_validation_callback()` in a `theme_options` or `post_meta` container to validate a field on the server. The callback receives the submitted value, an array of submitted values keyed by their base field names, and the field object. In a complex field, the array contains the values from the same row.
 

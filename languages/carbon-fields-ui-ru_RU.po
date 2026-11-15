@@ -469,3 +469,169 @@ msgstr "Введите число в допустимом диапазоне."
 
 msgid "You are not allowed to assign these terms."
 msgstr "У вас нет прав на назначение этих терминов."
+
+msgid "Monday"
+msgstr "Понедельник"
+
+msgid "Tuesday"
+msgstr "Вторник"
+
+msgid "Wednesday"
+msgstr "Среда"
+
+msgid "Thursday"
+msgstr "Четверг"
+
+msgid "Friday"
+msgstr "Пятница"
+
+msgid "Saturday"
+msgstr "Суббота"
+
+msgid "Sunday"
+msgstr "Воскресенье"
+
+msgid "Add exception"
+msgstr "Добавить исключение"
+
+msgid "Add interval"
+msgstr "Добавить интервал"
+
+msgid "Closed"
+msgstr "Выходной"
+
+msgid "Closing time"
+msgstr "Время закрытия"
+
+msgid "Date exceptions"
+msgstr "Исключения по датам"
+
+msgid "Exception date"
+msgstr "Дата исключения"
+
+msgid "Next day"
+msgstr "Следующий день"
+
+msgid "Opening time"
+msgstr "Время открытия"
+
+msgid "Time zone"
+msgstr "Часовая зона"
+
+msgid "Add vertex"
+msgstr "Добавить вершину"
+
+msgid "Click the map to add polygon vertices"
+msgstr "Нажмите на карту, чтобы добавить вершины зоны"
+
+
+msgid "Latitude"
+msgstr "Широта"
+
+msgid "Longitude"
+msgstr "Долгота"
+
+msgid "Add marker"
+msgstr "Добавить метку"
+
+msgid "Click to add a marker"
+msgstr "Нажмите, чтобы добавить метку"
+
+msgid "Label"
+msgstr "Подпись"
+
+msgid "Link"
+msgstr "Ссылка"
+
+msgid "Marker"
+msgstr "Метка"
+
+msgid "Select a marker"
+msgstr "Выберите метку"
+
+msgid "Select image"
+msgstr "Выбрать изображение"
+
+msgid "Actions"
+msgstr "Действия"
+
+msgid "Add row"
+msgstr "Добавить строку"
+
+msgid "Move down"
+msgstr "Переместить вниз"
+
+msgid "Move up"
+msgstr "Переместить вверх"
+
+msgid "Next"
+msgstr "Далее"
+
+msgid "Page %1$d of %2$d"
+msgstr "Страница %1$d из %2$d"
+
+msgid "Previous"
+msgstr "Назад"
+
+msgid "Related post"
+msgstr "Связанная запись"
+
+msgid "Row"
+msgstr "Строка"
+
+msgid "Add node"
+msgstr "Добавить узел"
+
+msgid "Change parent"
+msgstr "Изменить родителя"
+
+msgid "Node label"
+msgstr "Название узла"
+
+msgid "Parent node"
+msgstr "Родительский узел"
+
+msgid "Root level"
+msgstr "Корневой уровень"
+
+msgid "Open conflicting post"
+msgstr "Открыть запись с совпадением"
+
+msgid "Could not load options. Try again."
+msgstr "Не удалось загрузить варианты. Повторите попытку."
+
+msgid "Load more"
+msgstr "Загрузить ещё"
+
+msgid "This value is already used by another post."
+msgstr "Это значение уже используется в другой записи."
+
+msgid "Media could not be found."
+msgstr "Медиафайл не найден."
+
+msgid "The file size cannot be verified or exceeds the limit."
+msgstr "Размер файла неизвестен или превышает ограничение."
+
+msgid "The image aspect ratio does not match the requirements."
+msgstr "Пропорции изображения не соответствуют требованиям."
+
+msgid "The image dimensions do not match the requirements."
+msgstr "Размеры изображения не соответствуют требованиям."
+
+msgid "This file type is not allowed."
+msgstr "Этот тип файла не разрешён."
+
+msgid "This field is not available."
+msgstr "Это поле недоступно."
+
+msgid "Draw on map"
+msgstr "Рисовать на карте"
+
+msgid "Geofence map"
+msgstr "Карта геозоны"
+
+msgid "Vertex %d"
+msgstr "Вершина %d"
+
+msgid "Map tiles are unavailable. You can still edit the outline or enter coordinates."
+msgstr "Подложка недоступна. Можно редактировать контур и вводить координаты."

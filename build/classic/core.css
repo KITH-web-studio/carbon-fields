@@ -25,6 +25,480 @@
 /* ==========================================================================
    Mixins
    ========================================================================== */
+.cf-icon-action {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #82878c;
+  cursor: pointer;
+}
+.cf-icon-action .dashicons {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  line-height: 1;
+}
+.cf-icon-action:hover:not(:disabled) {
+  background-color: rgba(0, 0, 0, 0.06);
+  color: #23282d;
+}
+.cf-icon-action--remove:hover:not(:disabled) {
+  background-color: rgba(179, 45, 46, 0.08);
+  color: #b32d2e;
+}
+.cf-icon-action.focus-visible {
+  outline: 2px solid #2271b1;
+  outline: 2px solid var(--wp-admin-theme-color, #2271b1);
+  outline-offset: -2px;
+}
+.cf-icon-action:focus-visible {
+  outline: 2px solid #2271b1;
+  outline: 2px solid var(--wp-admin-theme-color, #2271b1);
+  outline-offset: -2px;
+}
+.cf-icon-action:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (pointer: coarse) {
+  .cf-icon-action {
+    width: 40px;
+    height: 40px;
+  }
+}
+/* ==========================================================================
+   Colors
+   ========================================================================== */
+/* ==========================================================================
+   WordPress Colors - https://make.wordpress.org/design/handbook/design-guide/foundations/colors/
+   ========================================================================== */
+/* ==========================================================================
+   Gutenberg Colors - https://github.com/WordPress/gutenberg/blob/master/assets/stylesheets/_colors.scss
+   ========================================================================== */
+/* ==========================================================================
+   Fonts
+   ========================================================================== */
+/* ==========================================================================
+   Variables
+   ========================================================================== */
+/* ==========================================================================
+   WordPress Variables
+   ========================================================================== */
+/* ==========================================================================
+   Gutenberg Variables - https://github.com/WordPress/gutenberg/blob/master/assets/stylesheets/_variables.scss
+   ========================================================================== */
+/* ==========================================================================
+   WP Admin CSS Custom Properties - https://github.com/WordPress/wordpress-develop/blob/trunk/src/wp-admin/css/common.css
+   ========================================================================== */
+/* ==========================================================================
+   Mixins
+   ========================================================================== */
+.cf-structured-table__scroll {
+  overflow-x: auto;
+}
+
+.cf-structured-table table {
+  border-collapse: collapse;
+  min-width: 420px;
+}
+
+.cf-structured-table td, .cf-structured-table th {
+  padding: 8px;
+  vertical-align: top;
+}
+
+.cf-structured-table input:not([type=checkbox]), .cf-structured-table select, .cf-structured-table textarea {
+  width: 100%;
+  min-width: 90px;
+  box-sizing: border-box;
+}
+
+.cf-structured-table .cf-structured-actions {
+  width: 1%;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.cf-structured-actions__buttons {
+  display: inline-flex;
+  align-items: center;
+  grid-gap: 2px;
+  gap: 2px;
+  vertical-align: middle;
+}
+
+.cf-structured-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  grid-gap: 8px;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.cf-hours-timezone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  grid-gap: 8px;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.cf-hours-timezone select {
+  max-width: 100%;
+  margin: 0;
+}
+
+.cf-hours-day {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  grid-gap: 8px 16px;
+  gap: 8px 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #dcdcde;
+}
+
+.cf-hours-day > strong {
+  flex: 0 0 100px;
+  padding-top: 4px;
+}
+
+.cf-hours-intervals {
+  display: flex;
+  flex: 1 1 220px;
+  flex-direction: column;
+  align-items: flex-start;
+  grid-gap: 6px;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cf-hours-interval {
+  margin: 0;
+}
+
+.cf-hours-closed {
+  padding-top: 4px;
+  color: #50575e;
+}
+
+.cf-hours-add-interval.button-link {
+  padding: 3px 0;
+  text-decoration: none;
+}
+.cf-hours-add-interval.button-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+.cf-hours-add-interval.button-link:disabled {
+  color: #646970;
+  cursor: default;
+}
+.cf-hours-add-interval.button-link.focus-visible {
+  outline: 2px solid #2271b1;
+  outline: 2px solid var(--wp-admin-theme-color, #2271b1);
+  outline-offset: 2px;
+}
+.cf-hours-add-interval.button-link:focus-visible {
+  outline: 2px solid #2271b1;
+  outline: 2px solid var(--wp-admin-theme-color, #2271b1);
+  outline-offset: 2px;
+}
+
+.cf-hours-exception-date {
+  display: flex;
+  align-items: center;
+  grid-gap: 8px;
+  gap: 8px;
+}
+
+.cf-business-hours-editor .cf-hours-add-exception.button {
+  margin-top: 12px;
+}
+
+.cf-structured-media {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  grid-gap: 8px;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cf-structured-media > img {
+  width: 100%;
+  max-width: 200px;
+  max-height: 150px;
+  -o-object-fit: contain;
+     object-fit: contain;
+}
+
+.cf-structured-media__actions, .cf-hotspot-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  grid-gap: 8px;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.cf-structured-media__preview {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 200px;
+  aspect-ratio: 2/1;
+  border: 1px solid #dcdcde;
+  background: #f6f7f7;
+}
+.cf-structured-media__preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  -o-object-fit: contain;
+     object-fit: contain;
+}
+
+.cf-responsive-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  grid-gap: 16px;
+  gap: 16px;
+}
+
+.cf-responsive-image {
+  display: grid;
+  align-content: start;
+  grid-gap: 8px;
+  gap: 8px;
+  min-width: 0;
+}
+@supports (grid-template-rows: subgrid) {
+  .cf-responsive-image {
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+  }
+}
+
+.cf-responsive-image__heading {
+  word-wrap: anywhere;
+}
+@supports not (grid-template-rows: subgrid) {
+  .cf-responsive-image__heading {
+    min-height: 3em;
+  }
+}
+.cf-responsive-image__heading p {
+  margin: 4px 0 0;
+  color: #50575e;
+}
+
+[dir="ltr"] .cf-tree-editor ul {
+  border-left: 1px solid #dcdcde;
+}
+
+[dir="rtl"] .cf-tree-editor ul {
+  border-right: 1px solid #dcdcde;
+}
+
+[dir="ltr"] .cf-tree-editor ul {
+  padding-left: 10px;
+}
+
+[dir="rtl"] .cf-tree-editor ul {
+  padding-right: 10px;
+}
+
+.cf-tree-editor ul {
+  margin: 6px 0 6px 20px;
+}
+
+.cf-tree-node {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  grid-gap: 6px;
+  gap: 6px;
+  padding: 6px;
+  background: #f6f7f7;
+}
+
+.cf-tree-node input {
+  flex: 1;
+  min-width: 100px;
+}
+
+.cf-tree-node select {
+  max-width: 180px;
+}
+
+.cf-tree-root {
+  padding: 10px;
+  border: 1px dashed #8c8f94;
+}
+
+.cf-hotspots {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  grid-gap: 12px;
+  gap: 12px;
+}
+
+.cf-hotspot-toolbar select {
+  max-width: 100%;
+  margin: 0;
+}
+
+.cf-hotspot-stage {
+  position: relative;
+  max-width: 100%;
+  cursor: crosshair;
+  line-height: 0;
+}
+
+.cf-hotspot-stage img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.cf-hotspot-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid white;
+  background: #2271b1;
+  color: white;
+  min-width: 28px;
+  height: 28px;
+  cursor: move;
+  line-height: 1;
+}
+
+.cf-hotspot-marker.is-selected {
+  outline: 3px solid #1d2327;
+}
+
+.cf-hotspot-details {
+  display: flex;
+  flex-wrap: wrap;
+  grid-gap: 10px;
+  gap: 10px;
+  align-items: end;
+}
+
+.cf-hotspot-details label {
+  display: flex;
+  flex-direction: column;
+}
+
+.cf-geofence-map {
+  height: 320px;
+  width: 100%;
+  background: #f0f0f1;
+  isolation: isolate;
+}
+
+.cf-geofence-map.is-drawing {
+  cursor: crosshair;
+}
+
+.cf-geofence-vertex {
+  box-sizing: border-box;
+  border: 2px solid #2271b1;
+  border-radius: 50%;
+  background: #fff;
+  cursor: grab;
+}
+
+.cf-geofence-points li {
+  display: flex;
+  flex-wrap: wrap;
+  grid-gap: 8px;
+  gap: 8px;
+  align-items: end;
+  margin: 10px 0;
+}
+
+.cf-geofence-points label {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 120px;
+}
+
+.cf-geofence-points input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.cf-wizard-nav {
+  display: flex;
+  align-items: center;
+  grid-gap: 12px;
+  gap: 12px;
+  padding: 12px;
+  border-top: 1px solid #dcdcde;
+}
+
+@media (max-width: 600px) {
+  .cf-hours-day > strong {
+    flex-basis: 100%;
+    padding-top: 0;
+  }
+  .cf-hours-day--exception > .cf-hours-intervals {
+    flex-basis: 100%;
+  }
+  [dir="ltr"] .cf-tree-editor ul {
+    margin-left: 8px;
+  }
+  [dir="rtl"] .cf-tree-editor ul {
+    margin-right: 8px;
+  }
+  [dir="ltr"] .cf-tree-editor ul {
+    padding-left: 6px;
+  }
+  [dir="rtl"] .cf-tree-editor ul {
+    padding-right: 6px;
+  }
+}
+/* ==========================================================================
+   Colors
+   ========================================================================== */
+/* ==========================================================================
+   WordPress Colors - https://make.wordpress.org/design/handbook/design-guide/foundations/colors/
+   ========================================================================== */
+/* ==========================================================================
+   Gutenberg Colors - https://github.com/WordPress/gutenberg/blob/master/assets/stylesheets/_colors.scss
+   ========================================================================== */
+/* ==========================================================================
+   Fonts
+   ========================================================================== */
+/* ==========================================================================
+   Variables
+   ========================================================================== */
+/* ==========================================================================
+   WordPress Variables
+   ========================================================================== */
+/* ==========================================================================
+   Gutenberg Variables - https://github.com/WordPress/gutenberg/blob/master/assets/stylesheets/_variables.scss
+   ========================================================================== */
+/* ==========================================================================
+   WP Admin CSS Custom Properties - https://github.com/WordPress/wordpress-develop/blob/trunk/src/wp-admin/css/common.css
+   ========================================================================== */
+/* ==========================================================================
+   Mixins
+   ========================================================================== */
 /* ==========================================================================
    Association
    ========================================================================== */

@@ -24,7 +24,7 @@ final class Post_List_Editor {
 			$field = $column['container']->get_root_field_by_name( $column['name'] );
 			$type = $field->get_attribute( 'type' );
 			$is_text = 'text' === $field->get_type() && in_array( $type, array( '', 'text', 'number' ), true );
-			$is_select = $field instanceof Select_Field && 'select' === $field->get_type() && '' === $field->get_options_source();
+			$is_select = $field instanceof Select_Field && 'select' === $field->get_type() && '' === $field->get_options_source() && ! $field->has_remote_options();
 			$logic = $field->get_conditional_logic();
 			if ( ( ! $is_text && ! $is_select ) || $field->get_attribute( 'readOnly' ) || ! empty( $logic['rules'] ) ) {
 				continue;

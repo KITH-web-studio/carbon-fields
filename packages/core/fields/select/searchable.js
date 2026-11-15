@@ -1,25 +1,26 @@
-import { useLayoutEffect, useMemo, useRef, useState } from '@wordpress/element';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import { createFilter } from 'react-select';
 
 const matchesLabel = createFilter( { stringify: ( { label } ) => label } );
 
-export default function SearchableSelect( { id, name, label, required, options, value, emptyLabel, onChange } ) {
+export default function SearchableSelect( { id, name, label, required, options, value, emptyLabel, onChange, onSearch, remote = false, status, footer, selectedLabel: displayLabel } ) {
 	const [ query, setQuery ] = useState( null );
 	const [ activeValue, setActiveValue ] = useState( null );
 	const inputRef = useRef( null );
 	const listRef = useRef( null );
 	const open = query !== null;
+	useEffect( () => { if ( onSearch && query !== null ) { onSearch( query ); } }, [ query, onSearch ] );
 	const listId = `${ id }-options`;
 	const searchLabel = __( 'Search...', 'carbon-fields-ui' );
-	const selectedLabel = options.find( ( option ) => option.value === value )?.label || '';
+	const selectedLabel = displayLabel ?? options.find( ( option ) => option.value === value )?.label ?? '';
 	const matches = useMemo( () => {
 		if ( query === null ) {
 			return [];
 		}
-		const matches = query.trim() ? options.filter( ( option ) => matchesLabel( option, query ) ) : options;
+		const matches = query.trim() && ! remote ? options.filter( ( option ) => matchesLabel( option, query ) ) : options;
 		return emptyLabel && options.length && ! query.trim() ? [ { value: '', label: emptyLabel }, ...matches ] : matches;
-	}, [ query, options, emptyLabel ] );
+	}, [ query, options, emptyLabel, remote ] );
 	const activeIndex = matches.findIndex( ( option ) => option.value === activeValue );
 
 	useLayoutEffect( () => {
@@ -89,7 +90,7 @@ export default function SearchableSelect( { id, name, label, required, options, 
 				className="cf-select__input"
 				type="text"
 				role="combobox"
-				aria-label={ label ? undefined : searchLabel }
+				aria-label={ label || searchLabel }
 				aria-autocomplete="list"
 				aria-expanded={ open }
 				aria-controls={ open ? listId : undefined }
@@ -116,8 +117,8 @@ export default function SearchableSelect( { id, name, label, required, options, 
 			{ open && (
 				<div className="cf-select__popup">
 					<div className="cf-select__status" role="status">
-						{ ! matches.length ? __( 'No matching options.', 'carbon-fields-ui' ) :
-							query.trim() ? sprintf( __( 'Results: %d', 'carbon-fields-ui' ), matches.length ) : '' }
+						{ status || ( ! matches.length ? __( 'No matching options.', 'carbon-fields-ui' ) :
+							query.trim() ? sprintf( __( 'Results: %d', 'carbon-fields-ui' ), matches.length ) : '' ) }
 					</div>
 					<ul id={ listId } ref={ listRef } className="cf-select__options" role="listbox" aria-label={ label || searchLabel }>
 						{ matches.map( ( option, index ) => (
@@ -134,6 +135,7 @@ export default function SearchableSelect( { id, name, label, required, options, 
 							</li>
 						) ) }
 					</ul>
+					{ footer }
 				</div>
 			) }
 		</div>

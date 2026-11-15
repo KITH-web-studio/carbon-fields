@@ -9,6 +9,7 @@ final class Post_Meta_Transaction {
 
 	private static $active = false;
 	private static $transactional_tables = array();
+	private static $depth = 0;
 
 	public static function is_active() {
 		return self::$active;
@@ -20,6 +21,19 @@ final class Post_Meta_Transaction {
 	 * @return bool
 	 */
 	public static function run( $post_ids, $write ) {
+		return self::execute( $post_ids, $write, true );
+	}
+
+	/**
+	 * Own an outer transaction while normal field saves use nested savepoints.
+	 * Each normal save retains its re-entrancy guard.
+	 */
+	public static function batch( array $post_ids, callable $write ) {
+		if ( self::$depth > 0 ) { return false; }
+		return self::execute( $post_ids, $write, false );
+	}
+
+	private static function execute( $post_ids, $write, $guard ) {
 		global $wpdb;
 
 		if ( self::$active || ! ( $wpdb->dbh instanceof \mysqli ) || ! self::supports_transactions() ) {
@@ -32,7 +46,9 @@ final class Post_Meta_Transaction {
 			return false;
 		}
 
-		self::$active = true;
+		self::$active = $guard;
+		++self::$depth;
+		\Carbon_Fields\Helper\Field_Events::begin();
 		$cache_was_suspended = wp_suspend_cache_addition();
 		wp_suspend_cache_addition( true );
 		// A reconnect can replay a write after the database has rolled back the transaction.
@@ -69,10 +85,18 @@ final class Post_Meta_Transaction {
 				$wpdb->reconnect_retries = $reconnect_retries;
 				wp_suspend_cache_addition( $cache_was_suspended );
 				self::$active = false;
+				--self::$depth;
 				foreach ( $post_ids as $post_id ) {
 					wp_cache_delete( $post_id, 'post_meta' );
+					if ( in_array( get_post_type( $post_id ), array( 'product', 'product_variation' ), true ) ) {
+						wp_cache_delete( 'product-' . $post_id, 'products' );
+					}
 				}
 				Post_Meta_Datastore::invalidate_storage_cache();
+				if ( 0 === self::$depth ) {
+					\Carbon_Fields\Helper\Field_Rules::release_locks();
+				}
+				\Carbon_Fields\Helper\Field_Events::finish( $committed );
 			}
 		}
 	}

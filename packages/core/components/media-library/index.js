@@ -98,6 +98,11 @@ function handler( props ) {
 
 				break;
 			case 'DESTROY':
+				if ( mediaBrowser ) {
+					mediaBrowser.off( 'select' );
+					mediaBrowser.close();
+					mediaBrowser.remove();
+				}
 				mediaBrowser = null;
 
 				break;

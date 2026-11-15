@@ -3,243 +3,36 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "X-Generator: babel-plugin-makepot\n"
 
-#: packages/core/fields/color/index.js:141
-msgid "Select a color"
+#: packages/core/fields/structured/geofence.js:147
+msgid "Draw on map"
 msgstr ""
 
-#: packages/core/fields/color/index.js:155
-msgid "Clear"
+#: packages/core/fields/structured/geofence.js:149
+msgid "Click the map to add polygon vertices"
 msgstr ""
 
-#: packages/metaboxes/components/container/index.js:195
-msgid "Show field"
+#: packages/core/fields/structured/geofence.js:152
+msgid "Geofence map"
 msgstr ""
 
-#: packages/core/fields/complex/index.js:391
-msgid "Entry removed."
-msgstr ""
-
-#: packages/core/fields/complex/index.js:393
-msgid "Undo removal"
-msgstr ""
-
-#: packages/core/fields/complex/tab-search.js:116
-msgid "Find a row"
-msgstr ""
-
-#: packages/core/fields/complex/tab-search.js:127
-msgid "Title or row number"
-msgstr ""
-
-#: packages/core/fields/complex/tab-search.js:143
-msgid "Matching rows"
-msgstr ""
-
-#: packages/core/fields/complex/tab-search.js:106
-msgid "No matching rows."
-msgstr ""
-
-#: packages/core/fields/complex/tab-search.js:108
-msgid "Showing %1$d of %2$d results."
-msgstr ""
-
-#: packages/core/fields/complex/tab-search.js:110
-msgid "Results: %d"
-msgstr ""
-
-#: packages/core/fields/complex/group.js:153
-msgid "Move row"
-msgstr ""
-
-#: packages/core/fields/complex/index.js:493
-msgid "Row moved."
-msgstr ""
-
-#: packages/core/fields/complex/index.js:495
-msgid "Undo move"
-msgstr ""
-
-#: packages/core/fields/complex/tab-move.js:30
-msgid "Destination for row #%d"
-msgstr ""
-
-#: packages/core/fields/complex/tab-move.js:42
-msgid "Move before"
-msgstr ""
-
-#: packages/core/fields/complex/tab-move.js:45
-msgid "Move after"
-msgstr ""
-
-#: packages/core/fields/complex/tab-move.js:35
-msgid "Cancel"
-msgstr ""
-
-#: packages/blocks/components/server-side-render/index.js:129
-msgid "Error loading block: %s"
-msgstr ""
-
-#: packages/blocks/components/server-side-render/index.js:135
-msgid "No results found."
-msgstr ""
-
-#: packages/core/fields/association/index.js:283
-msgid "Thumbnail"
-msgstr ""
-
-#: packages/core/fields/association/index.js:305
-msgid "Edit"
-msgstr ""
-
-#: packages/core/fields/association/index.js:313
-msgid "Add"
-msgstr ""
-
-#: packages/core/fields/complex/index.js:543
-msgid "There are no entries yet."
-msgstr ""
-
-#: packages/core/fields/rich-text/index.js:246
-msgid "Click to edit"
-msgstr ""
-
-#: packages/core/fields/rich-text/index.js:254
-msgid "Close"
-msgstr ""
-
-#: packages/core/fields/set/index.js:110
-msgid "Show All Options"
-msgstr ""
-
-#: packages/core/fields/set/index.js:111
-msgid "Show Less Options"
-msgstr ""
-
-#: packages/core/fields/select/index.js:55
-msgid "Select an option"
-msgstr ""
-
-#: packages/core/fields/select/searchable.js:119
-msgid "No matching options."
-msgstr ""
-
-msgid "Unit"
-msgstr ""
-
-msgid "Unitless"
-msgstr ""
-
-msgid "Enter a number within the allowed range and choose a supported unit."
-msgstr ""
-
-msgid "Inherit"
-msgstr ""
-
-msgid "Font family"
-msgstr ""
-
-msgid "Font size"
-msgstr ""
-
-msgid "Font weight"
-msgstr ""
-
-msgid "Line height"
-msgstr ""
-
-msgid "The quick brown fox jumps over the lazy dog."
-msgstr ""
-
-msgid "Item #%s"
-msgstr ""
-
-msgid "Load more results"
-msgstr ""
-
-msgid "Search and select…"
-msgstr ""
-
-msgid "General"
-msgstr ""
-
-msgid "Find a setting…"
-msgstr ""
-
-msgid "Find a setting"
-msgstr ""
-
-msgid "No settings found."
-msgstr ""
-
-msgid "Unsaved changes"
-msgstr ""
-
-msgid "Settings saved."
-msgstr ""
-
-msgid "Saving…"
-msgstr ""
-
-msgid "Settings sections"
-msgstr ""
-
-msgid "Check the required fields before saving."
-msgstr ""
-
-msgid "Enter a valid HTTP or HTTPS URL."
-msgstr ""
-
-msgid "Link type"
-msgstr ""
-
-msgid "External URL"
-msgstr ""
-
-msgid "Site content"
-msgstr ""
-
-msgid "URL"
-msgstr ""
-
-msgid "Search published content"
-msgstr ""
-
-msgid "Could not load links. Try again."
-msgstr ""
-
-msgid "Link text"
-msgstr ""
-
-msgid "Open in a new tab"
-msgstr ""
-
-msgid "Choose an icon"
-msgstr ""
-
-msgid "Search icons"
-msgstr ""
-
-msgid "Icons"
-msgstr ""
-
-msgid "No icons found."
-msgstr ""
-
-msgid "Check the form and try saving again."
-msgstr ""
-
+#: packages/core/fields/structured/geofence.js:153
 msgid ""
-"The fields changed during validation. Save again to check the new values."
+"Map tiles are unavailable. You can still edit the outline or enter "
+"coordinates."
 msgstr ""
 
-msgid "Find a row type"
+#: packages/core/fields/structured/geofence.js:159
+msgid "Latitude"
 msgstr ""
 
-msgid "Slider"
+#: packages/core/fields/structured/geofence.js:162
+msgid "Longitude"
 msgstr ""
 
-msgid "Enter a number within the allowed range."
+#: packages/core/fields/structured/geofence.js:171
+msgid "Add vertex"
 msgstr ""
 
-msgid "You are not allowed to assign these terms."
+#: packages/core/fields/structured/geofence.js:63
+msgid "Vertex %d"
 msgstr ""

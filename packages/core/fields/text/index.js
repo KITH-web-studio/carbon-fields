@@ -7,6 +7,7 @@ import { Component } from '@wordpress/element';
  * Internal dependencies.
  */
 import './style.scss';
+import MaskedText from './masked';
 
 class TextField extends Component {
 	/**
@@ -27,6 +28,9 @@ class TextField extends Component {
 	 * @return {Object}
 	 */
 	render() {
+		if ( this.props.field.input_mask ) {
+			return <MaskedText { ...this.props } />;
+		}
 		const {
 			id,
 			name,

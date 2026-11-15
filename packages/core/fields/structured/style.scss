@@ -1,0 +1,122 @@
+.cf-structured-table__scroll { overflow-x: auto; }
+.cf-structured-table table { border-collapse: collapse; min-width: 420px; }
+.cf-structured-table td, .cf-structured-table th { padding: 8px; vertical-align: top; }
+.cf-structured-table input:not([type=checkbox]), .cf-structured-table select, .cf-structured-table textarea { width: 100%; min-width: 90px; box-sizing: border-box; }
+.cf-structured-table .cf-structured-actions {
+	width: 1%;
+	vertical-align: middle;
+	white-space: nowrap;
+}
+.cf-structured-actions__buttons {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	vertical-align: middle;
+}
+.cf-structured-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+.cf-hours-timezone {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 4px;
+}
+.cf-hours-timezone select { max-width: 100%; margin: 0; }
+.cf-hours-day { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 16px; padding: 12px 0; border-bottom: 1px solid #dcdcde; }
+.cf-hours-day > strong { flex: 0 0 100px; padding-top: 4px; }
+.cf-hours-intervals {
+	display: flex;
+	flex: 1 1 220px;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
+	min-width: 0;
+}
+.cf-hours-interval { margin: 0; }
+.cf-hours-closed { padding-top: 4px; color: #50575e; }
+.cf-hours-add-interval.button-link {
+	padding: 3px 0;
+	text-decoration: none;
+
+	&:hover:not(:disabled) { text-decoration: underline; }
+	&:disabled { color: #646970; cursor: default; }
+	&:focus-visible {
+		outline: 2px solid var(--wp-admin-theme-color, #2271b1);
+		outline-offset: 2px;
+	}
+}
+.cf-hours-exception-date { display: flex; align-items: center; gap: 8px; }
+.cf-business-hours-editor .cf-hours-add-exception.button { margin-top: 12px; }
+.cf-structured-media { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
+.cf-structured-media > img { width: 100%; max-width: 200px; max-height: 150px; object-fit: contain; }
+.cf-structured-media__actions, .cf-hotspot-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	max-width: 100%;
+}
+.cf-structured-media__preview {
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 200px;
+	aspect-ratio: 2 / 1;
+	border: 1px solid #dcdcde;
+	background: #f6f7f7;
+
+	img { display: block; width: 100%; height: 100%; object-fit: contain; }
+}
+.cf-responsive-images {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+	gap: 16px;
+}
+.cf-responsive-image {
+	display: grid;
+	align-content: start;
+	gap: 8px;
+	min-width: 0;
+
+	@supports (grid-template-rows: subgrid) {
+		grid-row: span 2;
+		grid-template-rows: subgrid;
+	}
+}
+.cf-responsive-image__heading {
+	overflow-wrap: anywhere;
+
+	@supports not (grid-template-rows: subgrid) { min-height: 3em; }
+
+	p { margin: 4px 0 0; color: #50575e; }
+}
+.cf-tree-editor ul { margin: 6px 0 6px 20px; border-inline-start: 1px solid #dcdcde; padding-inline-start: 10px; }
+.cf-tree-node { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px; background: #f6f7f7; }
+.cf-tree-node input { flex: 1; min-width: 100px; }
+.cf-tree-node select { max-width: 180px; }
+.cf-tree-root { padding: 10px; border: 1px dashed #8c8f94; }
+.cf-hotspots { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.cf-hotspot-toolbar select { max-width: 100%; margin: 0; }
+.cf-hotspot-stage { position: relative; max-width: 100%; cursor: crosshair; line-height: 0; }
+.cf-hotspot-stage img { display: block; max-width: 100%; height: auto; }
+.cf-hotspot-marker { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; border: 2px solid white; background: #2271b1; color: white; min-width: 28px; height: 28px; cursor: move; line-height: 1; }
+.cf-hotspot-marker.is-selected { outline: 3px solid #1d2327; }
+.cf-hotspot-details { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.cf-hotspot-details label { display: flex; flex-direction: column; }
+.cf-geofence-map { height: 320px; width: 100%; background: #f0f0f1; isolation: isolate; }
+.cf-geofence-map.is-drawing { cursor: crosshair; }
+.cf-geofence-vertex {
+	box-sizing: border-box;
+	border: 2px solid #2271b1;
+	border-radius: 50%;
+	background: #fff;
+	cursor: grab;
+}
+.cf-geofence-points li { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin: 10px 0; }
+.cf-geofence-points label { display: flex; flex-direction: column; flex: 1; min-width: 120px; }
+.cf-geofence-points input { width: 100%; min-width: 0; box-sizing: border-box; }
+.cf-wizard-nav { display: flex; align-items: center; gap: 12px; padding: 12px; border-top: 1px solid #dcdcde; }
+@media (max-width: 600px) {
+	.cf-hours-day > strong { flex-basis: 100%; padding-top: 0; }
+	.cf-hours-day--exception > .cf-hours-intervals { flex-basis: 100%; }
+	.cf-tree-editor ul { margin-inline-start: 8px; padding-inline-start: 6px; }
+}

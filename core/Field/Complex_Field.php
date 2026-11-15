@@ -13,6 +13,21 @@ use Carbon_Fields\Exception\Incorrect_Syntax_Exception;
  * Allows nested repeaters with multiple field groups to be created.
  */
 class Complex_Field extends Field {
+	private $internal_values = false;
+
+	public function load() {
+		$this->set_internal_value( $this->get_value_from_datastore() );
+	}
+
+	public function set_internal_value( $value ) {
+		$this->set_value( $value );
+		$this->internal_values = true;
+		return $this;
+	}
+	public function __clone() {
+		parent::__clone();
+		$this->groups = array_map( function( $group ) { return clone $group; }, $this->groups );
+	}
 
 	/**
 	 * Visual layout type constants
@@ -363,7 +378,14 @@ class Complex_Field extends Field {
 		foreach ( $group_fields as $field ) {
 			$clone = $this->get_clone_under_field_in_hierarchy( $field, $this, $group_index );
 			if ( isset( $group_values[ $clone->get_base_name() ] ) ) {
-				$clone->set_value( $group_values[ $clone->get_base_name() ] );
+				$value = $group_values[ $clone->get_base_name() ];
+				if ( $this->internal_values && $clone instanceof Structured_Field ) {
+					$clone->get_value_set()->set( $value );
+				} elseif ( $this->internal_values && $clone instanceof Complex_Field ) {
+					$clone->set_internal_value( $value );
+				} else {
+					$clone->set_value( $value );
+				}
 			}
 			$fields[] = $clone;
 		}
@@ -442,7 +464,7 @@ class Complex_Field extends Field {
 			$input_group_index++;
 		}
 
-		$this->set_value( $value_tree );
+		$this->set_internal_value( $value_tree );
 		return $this;
 	}
 
@@ -479,6 +501,7 @@ class Complex_Field extends Field {
 		if ( null !== $saved ) {
 			return $saved;
 		}
+		$event_before = \Carbon_Fields\Helper\Field_Events::snapshot( $this );
 
 		// Only delete root field values as nested field values should be deleted in a cascading manner by the datastore
 		$hierarchy = $this->get_hierarchy();
@@ -501,6 +524,7 @@ class Complex_Field extends Field {
 				}
 			}
 		}
+		\Carbon_Fields\Helper\Field_Events::saved( $this, $event_before );
 	}
 
 	/**
@@ -578,6 +602,7 @@ class Complex_Field extends Field {
 	 * {@inheritDoc}
 	 */
 	public function set_value( $value ) {
+		$this->internal_values = false;
 		$value = array_map( array( $this, 'external_to_internal_value' ), $value );
 		$groups = array();
 		foreach ( $value as $values ) {

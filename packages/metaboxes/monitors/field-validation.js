@@ -27,7 +27,7 @@ function locateField( path, fieldsInScope, fields ) {
 }
 
 // Send the same values the editor is about to save, including packed complex rows.
-async function validate( body, containers ) {
+export async function validate( body, containers ) {
 	const entries = containers.filter( ( { nonce } ) => body.has( nonce.name ) );
 	if ( ! entries.length ) {
 		return null;
@@ -57,7 +57,7 @@ async function validate( body, containers ) {
 	}
 	const container = entries.find( ( { id } ) => id === error.containerId ) || entries[ 0 ];
 	const location = Array.isArray( error.path ) ? locateField( error.path, container.fields, submitted ) : {};
-	return { ...location, containerId: container.id, message: typeof error.message === 'string' ? error.message : invalidForm() };
+	return { ...location, containerId: container.id, conflictUrl: error.conflictUrl, message: typeof error.message === 'string' ? error.message : invalidForm() };
 }
 
 function blockEditorForm() {

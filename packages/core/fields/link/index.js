@@ -3,6 +3,7 @@ import { __, sprintf } from '@wordpress/i18n';
 import { addFilter } from '@wordpress/hooks';
 
 import apiFetch from '../../utils/api-fetch';
+import { RemoveAction } from '../../components/icon-action';
 import './style.scss';
 
 const empty = { type: 'url', post_id: 0, url: '', label: '', new_tab: false };
@@ -156,7 +157,7 @@ export default function LinkField( { id, name, value, field, onChange } ) {
 					{ postId > 0 && (
 						<div className="cf-link-control__selected">
 							<strong>{ title }</strong>
-							<button type="button" className="button-link" onClick={ () => update( { post_id: 0, url: '' } ) }>{ __( 'Remove', 'carbon-fields-ui' ) }</button>
+							<RemoveAction onClick={ () => update( { post_id: 0, url: '' } ) } />
 						</div>
 					) }
 					<label htmlFor={ id + '-search' }>{ __( 'Search published content', 'carbon-fields-ui' ) }</label>

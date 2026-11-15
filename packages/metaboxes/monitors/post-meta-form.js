@@ -29,7 +29,9 @@ function packPostMeta( { formData } ) {
 		if ( container.type !== 'post_meta' || formData.get( nonceName ) !== 'cf1:' + nonce || formData.get( nonceName + '_mode' ) !== 'packed' ) {
 			continue;
 		}
-		if ( findLazyFieldError( container, fields ) ) {
+		// Wizards validate only the current step while moving forward; final saves
+		// still validate every required field on the server.
+		if ( ! container.settings.wizard && findLazyFieldError( container, fields ) ) {
 			continue;
 		}
 

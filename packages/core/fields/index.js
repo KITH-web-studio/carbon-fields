@@ -8,6 +8,12 @@ import { addFilter } from '@wordpress/hooks';
  * Internal dependencies.
  */
 import withFilters from '../hocs/with-filters';
+import BusinessHoursField from './structured/business-hours';
+import TableField from './structured/table';
+import TreeField from './structured/tree';
+import { ImageHotspots, ResponsiveImage } from './structured/images';
+import GeofenceField from './structured/geofence';
+import './structured/style.scss';
 import { registerFieldType } from '../registry/fields';
 import AssociationField from './association';
 import ButtonGroupField from './button-group';
@@ -57,6 +63,13 @@ addFilter( 'carbon-fields.register-field-type', 'carbon-fields/core', ( type, co
  */
 [
 	[ 'association', AssociationField ],
+	[ 'business_hours', BusinessHoursField ],
+	[ 'table', TableField ],
+	[ 'relationship', TableField ],
+	[ 'tree', TreeField ],
+	[ 'image_hotspots', ImageHotspots ],
+	[ 'responsive_image', ResponsiveImage ],
+	[ 'geofence', GeofenceField ],
 	[ 'button_group', ButtonGroupField ],
 	[ 'checkbox', CheckboxField ],
 	[ 'code', CodeField ],

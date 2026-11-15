@@ -28,6 +28,14 @@ class Theme_Options_Datastore extends Key_Value_Datastore {
 		return $this->language_prefix() . '#root:' . $hierarchy[0];
 	}
 
+	public function has_stored_value( Field $field ) {
+		if ( get_option( $this->root_marker( $field ), false ) ) {
+			return true;
+		}
+		$patterns = $this->key_toolset->get_storage_key_getter_patterns( $field->is_simple_root_field(), $this->get_full_hierarchy_for_field( $field ) );
+		return (bool) $this->query_storage_array( $patterns, $this->language_prefix() );
+	}
+
 	/**
 	 * Initialization tasks.
 	 */

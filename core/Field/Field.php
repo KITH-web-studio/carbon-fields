@@ -32,6 +32,11 @@ class Field implements Datastore_Holder_Interface {
 	 * @var callable|null
 	 */
 	protected $validation_callback;
+	protected $unique = false;
+	protected $server_required = false;
+	protected $normalizer;
+	protected $change_callback;
+	private $loading_value = false;
 
 	/**
 	 * Globally unique field identificator. Generated randomly
@@ -477,17 +482,26 @@ class Field implements Datastore_Holder_Interface {
 	 * Load value from datastore
 	 */
 	public function load() {
-		$this->set_value( $this->get_value_from_datastore() );
+		$this->loading_value = true;
+		try {
+			$this->set_value( $this->get_value_from_datastore() );
+		} finally {
+			$this->loading_value = false;
+		}
 	}
 
 	/**
 	 * Save value to storage
 	 */
 	public function save() {
+		if ( $this->has_value_rules() && ( ! $this->is_valid_form_value( $this->get_value() ) || \Carbon_Fields\Helper\Field_Rules::validate( $this, $this->get_value() ) ) ) {
+			return false;
+		}
 		$saved = $this->save_post_meta_changes( array( $this ) );
 		if ( null !== $saved ) {
 			return $saved;
 		}
+		$event_before = \Carbon_Fields\Helper\Field_Events::snapshot( $this );
 
 		$delete_on_save = apply_filters( 'carbon_fields_should_delete_field_value_on_save', true, $this );
 		if ( $delete_on_save ) {
@@ -498,6 +512,7 @@ class Field implements Datastore_Holder_Interface {
 		if ( $save ) {
 			$this->get_datastore()->save( apply_filters( 'carbon_fields_before_field_save', $this ) );
 		}
+		\Carbon_Fields\Helper\Field_Events::saved( $this, $event_before );
 	}
 
 	/**
@@ -682,6 +697,10 @@ class Field implements Datastore_Holder_Interface {
 	 * @return self  $this
 	 */
 	public function set_value( $value ) {
+		if ( ! $this->loading_value && $this->normalizer && is_string( $value ) ) {
+			$value = $this->normalize_value( $value );
+			if ( ! is_string( $value ) ) { throw new \UnexpectedValueException( 'A field normalizer must return a string.' ); }
+		}
 		$this->get_value_set()->set( $value );
 		return $this;
 	}
@@ -1018,6 +1037,56 @@ class Field implements Datastore_Holder_Interface {
 		return $this->has_validation_callback() ? call_user_func( $this->validation_callback, $value, $values, $this ) : true;
 	}
 
+	public function set_unique( $enabled = true ) {
+		$this->unique = (bool) $enabled;
+		return $this;
+	}
+
+	public function get_unique() {
+		return $this->unique;
+	}
+
+	public function set_normalizer( $normalizer ) {
+		if ( ! in_array( $normalizer, array( 'digits', 'upper', 'lower', 'trim' ), true ) && ! is_callable( $normalizer ) ) {
+			throw new \InvalidArgumentException( 'Use digits, upper, lower, trim or a normalization callback.' );
+		}
+		$this->normalizer = $normalizer;
+		return $this;
+	}
+
+	public function normalize_value( $value ) {
+		switch ( $this->normalizer ) {
+			case 'digits': return preg_replace( '/[^0-9]/', '', $value );
+			case 'upper': return function_exists( 'mb_strtoupper' ) ? mb_strtoupper( $value, 'UTF-8' ) : strtoupper( $value );
+			case 'lower': return function_exists( 'mb_strtolower' ) ? mb_strtolower( $value, 'UTF-8' ) : strtolower( $value );
+			case 'trim': return trim( $value );
+		}
+		return $this->normalizer ? call_user_func( $this->normalizer, $value, $this ) : $value;
+	}
+
+	public function on_change( callable $callback ) {
+		$this->change_callback = $callback;
+		return $this;
+	}
+
+	public function get_change_callback() {
+		return $this->change_callback;
+	}
+
+	public function has_value_rules() {
+		return $this->server_required || $this->unique || $this instanceof Structured_Field || $this instanceof Text_Field && $this->get_input_mask() !== '' ||
+			$this instanceof Select_Field && $this->has_remote_options();
+	}
+
+	public function set_server_required( $enabled = true ) {
+		$this->server_required = (bool) $enabled;
+		return $this;
+	}
+
+	public function is_server_required() {
+		return $this->server_required;
+	}
+
 	/**
 	 * HTML id attribute getter.
 	 * @return string
@@ -1104,6 +1173,7 @@ class Field implements Datastore_Holder_Interface {
 			'classes' => $this->get_classes(),
 			'conditional_logic' => $this->get_conditional_logic(),
 		);
+		$field_data['unique'] = $this->unique;
 
 		return $field_data;
 	}

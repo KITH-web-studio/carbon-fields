@@ -5,6 +5,7 @@ import produce from 'immer';
 import { withEffects } from 'refract-callbag';
 import { map, pipe } from 'callbag-basics';
 import { Component, createRef } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 import { withState, compose } from '@wordpress/compose';
 
 /**
@@ -203,7 +204,9 @@ class MediaGalleryField extends Component {
 														</span>
 														<button
 															type="button"
-															className="cf-media-gallery__item-remove dashicons-before dashicons-no-alt"
+													className="cf-media-gallery__item-remove dashicons-before dashicons-trash"
+													aria-label={ __( 'Remove', 'carbon-fields-ui' ) }
+													title={ __( 'Remove', 'carbon-fields-ui' ) }
 															onClick={ () => this.handleAttachmentRemove( index ) }
 														></button>
 													</div>

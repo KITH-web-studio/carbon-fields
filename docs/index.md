@@ -11,6 +11,9 @@
 | [Blocks and widgets](blocks-widgets.md) | Build a Gutenberg block and a classic sidebar widget. |
 | [Data, queries, and integrations](data-and-integrations.md) | Read or write values, filter WordPress queries, use REST, and extend the plugin. |
 | [Polylang](polylang.md) | Translate settings and share or copy fields across post translations. |
+| [WooCommerce product fields](woocommerce.md) | Add native Product data tabs, extend existing panels, and edit variation fields. |
+| [Structured fields and workflows](structured-fields.md) | Hours, tables, link data, trees, hotspots, responsive images, geofences, uniqueness, remote select, masks and steps. |
+| [Developer and media helpers](developer-api.md) | Atomic writes, complex row operations and queries, field sets, templates, change events and media output/validation. |
 | [KITH features and troubleshooting](kith-features.md) | Use large forms, media previews, revisions, and GitHub updates, and diagnose common issues. |
 
 See the [changelog](../CHANGELOG.md) for changes by version and the [upstream reference](https://docs.carbonfields.net/) for additional detail on the original Carbon Fields APIs.

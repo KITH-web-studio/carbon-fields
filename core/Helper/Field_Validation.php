@@ -15,6 +15,7 @@ use Carbon_Fields\Field\Number_With_Unit_Field;
 use Carbon_Fields\Field\Rich_Text_Field;
 use Carbon_Fields\Field\Scripts_Field;
 use Carbon_Fields\Field\Typography_Field;
+use Carbon_Fields\Field\Structured_Field;
 use Carbon_Fields\Value_Set\Value_Set;
 
 /**
@@ -23,7 +24,7 @@ use Carbon_Fields\Value_Set\Value_Set;
 class Field_Validation {
 	public static function has_rules( array $fields ) {
 		foreach ( $fields as $field ) {
-			if ( $field->has_validation_callback() || ( $field instanceof Complex_Field && self::has_rules( $field->get_fields() ) ) ) {
+			if ( $field->has_validation_callback() || $field->has_value_rules() || ( $field instanceof Complex_Field && self::has_rules( $field->get_fields() ) ) ) {
 				return true;
 			}
 		}
@@ -39,7 +40,7 @@ class Field_Validation {
 		foreach ( $fields as $field ) {
 			$name = $field->get_name();
 			if ( isset( $input[ $name ] ) && ! $field->is_valid_form_value( $input[ $name ] ) ) {
-				return new \WP_Error( 'carbon_fields_invalid_form', __( 'Check the form and try saving again.', 'carbon-fields' ) );
+				return new \WP_Error( 'carbon_fields_invalid_form', __( 'Check the form and try saving again.', 'carbon-fields' ), array( 'path' => array( $field->get_name() ) ) );
 			}
 			$field = clone $field;
 			$field->set_value_from_input( $input );
@@ -77,6 +78,13 @@ class Field_Validation {
 
 	private static function rest_value( Field $field, $value ) {
 		$invalid = new \WP_Error( 'carbon_fields_invalid_form', __( 'Check the form and try saving again.', 'carbon-fields' ), array( 'status' => 400 ) );
+		if ( $field instanceof Structured_Field ) {
+			$data = is_string( $value ) ? json_decode( $value, true ) : $value;
+			return true === $field->validate_data( $data ) ? $data : $invalid;
+		}
+		if ( $field instanceof \Carbon_Fields\Field\Select_Field && $field->has_remote_options() ) {
+			return $field->is_valid_form_value( $value ) ? $value : $invalid;
+		}
 		if ( $field instanceof Complex_Field ) {
 			if ( ! is_array( $value ) ) {
 				return $invalid;
@@ -192,6 +200,17 @@ class Field_Validation {
 				continue;
 			}
 			$location = array_merge( $path, array( $name ) );
+			if ( $field->has_value_rules() ) {
+				$value_error = Field_Rules::validate( $field, $field->get_value() );
+				if ( ! $value_error && ! $field instanceof Complex_Field && ! $field->is_valid_form_value( $field->get_value() ) ) {
+					$value_error = new \WP_Error( 'carbon_fields_invalid_value', __( 'Check this field and try again.', 'carbon-fields' ), array( 'status' => 422 ) );
+				}
+				if ( $value_error ) {
+					$data = (array) $value_error->get_error_data();
+					$value_error->add_data( array_merge( $data, array( 'path' => $location ) ) );
+					return $value_error;
+				}
+			}
 			if ( $field->has_validation_callback() ) {
 				$result = $field->validate_editor_value( $values[ $field->get_base_name() ], $values );
 				if ( true !== $result ) {
