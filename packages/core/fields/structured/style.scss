@@ -14,6 +14,18 @@
 	vertical-align: middle;
 }
 .cf-structured-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+.cf-date-range__controls {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+
+	input[type=text] {
+		width: 240px;
+		max-width: 100%;
+		min-width: 0;
+		margin: 0;
+	}
+}
 .cf-text-list__items {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);

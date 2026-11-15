@@ -89,7 +89,9 @@ final class Post_Meta_Batch {
 		$values = array();
 		if ( $field instanceof File_Field && 'id' === $field->value_type ) {
 			$values = array( $value );
-		} elseif ( $field instanceof Media_Gallery_Field || $field instanceof Responsive_Image_Field ) {
+		} elseif ( $field instanceof Media_Gallery_Field ) {
+			$values = array_map( static function( $item ) { return is_array( $item ) ? ( $item['id'] ?? 0 ) : $item; }, (array) $value );
+		} elseif ( $field instanceof Responsive_Image_Field ) {
 			$values = (array) $value;
 		} elseif ( $field instanceof Image_Hotspots_Field && is_array( $value ) ) {
 			$values = array( $value['image'] ?? null );

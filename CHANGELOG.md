@@ -2,6 +2,13 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.30
+
+- Add dependencies between post choices and sibling fields, with opt-in lookup by post meta.
+- Add per-item captions and links for media galleries and an opt-in media picker scope for the current post.
+- Add a calendar date range field and an inclusive PHP range check.
+- Fix horizontal dragging in media galleries so captions and links move and save with their images.
+
 ## 3.6.11.29
 
 - Source select options from shared theme-option rows using UUIDs.

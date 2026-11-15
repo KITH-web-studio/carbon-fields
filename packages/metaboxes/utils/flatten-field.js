@@ -67,5 +67,11 @@ export default function flattenFields( fields, containerId, accumulator, isLazy 
 			}
 		}
 	}
+	if ( flat.some( ( field ) => field.options_dependency ) ) {
+		const ids = new Map( flat.map( ( field ) => [ field.base_name, field.id ] ) );
+		for ( const field of flat ) {
+			field.optionsDependencyId = ids.get( field.options_dependency );
+		}
+	}
 	return flat.map( ( field ) => pick( field, [ 'id', 'type', 'name', 'base_name' ] ) );
 }

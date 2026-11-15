@@ -23,6 +23,7 @@ import CodeField from './code';
 import ColorField from './color';
 import ComplexField from './complex';
 import DateField from './date';
+import DateRangeField from './structured/date-range';
 import DateTimeField from './datetime';
 import FileField from './file';
 import HiddenField from './hidden';
@@ -78,6 +79,7 @@ addFilter( 'carbon-fields.register-field-type', 'carbon-fields/core', ( type, co
 	[ 'color', ColorField ],
 	[ 'complex', ComplexField ],
 	[ 'date', DateField ],
+	[ 'date_range', DateRangeField ],
 	[ 'date_time', DateTimeField ],
 	[ 'file', FileField ],
 	[ 'footer_scripts', TextareaField ],

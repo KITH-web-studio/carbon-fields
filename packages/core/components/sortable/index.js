@@ -4,16 +4,27 @@
 import produce from 'immer';
 import { Component, Children } from '@wordpress/element';
 
-function registerBatchedSortable( $ ) {
-	if ( $.cf && $.cf.batchedSortable ) {
+function registerCarbonSortable( $ ) {
+	if ( $.cf && $.cf.carbonSortable ) {
 		return;
 	}
 
-	// jQuery UI sorts and rebinds its tracked elements for each handle it adds.
-	// The tab list uses the items themselves as handles, so register them together.
-	$.widget( 'cf.batchedSortable', $.ui.sortable, {
+	$.widget( 'cf.carbonSortable', $.ui.sortable, {
 		widgetEventPrefix: 'sort',
+		options: {
+			batchHandles: false,
+			horizontalFlow: false
+		},
+		_isFloating( item ) {
+			// jQuery UI detects floats and inline items, but flex items are blockified.
+			return this.options.horizontalFlow || this._super( item );
+		},
 		_setHandleClassName() {
+			if ( ! this.options.batchHandles ) {
+				return this._super();
+			}
+
+			// The tab list uses the items themselves as handles, so register them together.
 			this._removeClass( this.element.find( '.ui-sortable-handle' ), 'ui-sortable-handle' );
 			this._addClass( $( this.items.map( ( { item } ) => item[ 0 ] ) ), 'ui-sortable-handle' );
 		}
@@ -22,7 +33,7 @@ function registerBatchedSortable( $ ) {
 
 class Sortable extends Component {
 	get plugin() {
-		return this.props.batchHandles ? 'batchedSortable' : 'sortable';
+		return this.props.batchHandles || this.props.horizontalFlow ? 'carbonSortable' : 'sortable';
 	}
 
 	/**
@@ -31,13 +42,15 @@ class Sortable extends Component {
 	 * @return {void}
 	 */
 	componentDidMount() {
-		const { options, forwardedRef, batchHandles } = this.props;
+		const { options, forwardedRef, batchHandles = false, horizontalFlow = false } = this.props;
 		const $ = window.jQuery;
-		if ( batchHandles ) {
-			registerBatchedSortable( $ );
+		if ( batchHandles || horizontalFlow ) {
+			registerCarbonSortable( $ );
 		}
 		$( forwardedRef.current )[ this.plugin ]( {
 			...options,
+			batchHandles,
+			horizontalFlow,
 			start: this.handleStart,
 			update: this.handleUpdate,
 			stop: this.handleStop

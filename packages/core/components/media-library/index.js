@@ -70,17 +70,23 @@ function handler( props ) {
 		switch ( effect.type ) {
 			case 'INIT':
 				const { onSelect, typeFilter } = props;
+				const postId = props.scope === 'post' && Number( document.querySelector( '#post_ID' )?.value ||
+					window.wp?.data?.select( 'core/editor' )?.getCurrentPostId?.() || 0 );
 
 				mediaBrowser = wp.media( {
 					title: props.title,
 					library: {
-						type: typeFilter
+						type: typeFilter,
+						...( postId > 0 && { uploadedTo: postId } )
 					},
 					button: {
 						text: props.buttonLabel
 					},
 					multiple: props.multiple
 				} );
+				if ( postId > 0 ) {
+					mediaBrowser.state( 'library' )?.set( 'filterable', false );
+				}
 
 				mediaBrowser.on( 'select', () => {
 					const file = mediaBrowser.state()

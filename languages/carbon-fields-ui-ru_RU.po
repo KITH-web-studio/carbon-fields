@@ -699,3 +699,18 @@ msgstr "Выбрать иконку"
 
 msgid "Remove icon"
 msgstr "Убрать иконку"
+
+msgid "Caption"
+msgstr "Подпись"
+
+msgid "Select a date range"
+msgstr "Выбрать период"
+
+msgid "Clear date range"
+msgstr "Очистить период"
+
+msgid "Move earlier"
+msgstr "Переместить раньше"
+
+msgid "Move later"
+msgstr "Переместить позже"

@@ -60,6 +60,65 @@ class DeveloperApiTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Lviv', carbon_render_complex( $this->id, $name, array( '_' => function( $row ) { return esc_html( $row['city'] ); } ) ) );
 	}
 
+	public function testPostChoicesSearchCodesAndValidateEachComplexRow() {
+		$region_key = '_' . $this->prefix . '_region';
+		$code_key = '_' . $this->prefix . '_code';
+		$north = self::factory()->post->create( array( 'post_title' => 'Same name', 'post_status' => 'publish' ) );
+		$south = self::factory()->post->create( array( 'post_title' => 'Same name', 'post_status' => 'publish' ) );
+		update_post_meta( $north, $region_key, 'north' );
+		update_post_meta( $north, $code_key, 'P-101' );
+		update_post_meta( $south, $region_key, 'south' );
+		update_post_meta( $south, $code_key, 'P-202' );
+		$association = Field::make( 'association', 'lead' )->set_options_dependency( 'region', $region_key )->set_option_search_fields( array( $code_key ) );
+		$relation = Field::make( 'relationship', 'staff' )->set_options_dependency( 'region', $region_key )->set_option_search_fields( array( $code_key ) );
+		$name = $this->prefix . '_teams';
+		$this->container->add_fields( array( Field::make( 'complex', $name )->add_fields( array(
+			Field::make( 'select', 'region' )->set_options( array( 'north' => 'North', 'south' => 'South' ) ),
+			$association,
+			$relation,
+		) ) ) );
+		$options = $association->get_options( array( 'term' => 'P-101', 'dependency' => array( 'north' ) ) );
+		$this->assertSame( array( $north ), array_column( $options['options'], 'id' ) );
+		$this->assertStringContainsString( 'P-101', $options['options'][0]['title'] );
+		$this->assertEmpty( $association->get_options( array( 'term' => 'P-101', 'dependency' => array( 'south' ) ) )['options'] );
+		$term = self::factory()->term->create( array( 'taxonomy' => 'category' ) );
+		$other_term = self::factory()->term->create( array( 'taxonomy' => 'category' ) );
+		wp_set_object_terms( $north, array( $term, $other_term ), 'category' );
+		$by_term = Field::make( 'association', 'category_lead' )->set_options_dependency( 'source', 'category', 'taxonomy' );
+		$term_options = $by_term->get_options( array( 'dependency' => array( (string) $term, (string) $other_term ) ) );
+		$this->assertSame( array( $north ), array_column( $term_options['options'], 'id' ) );
+		$this->assertTrue( $by_term->choices_match_source( array( array( 'id' => $north, 'type' => 'post', 'subtype' => 'post' ) ), array( $term ) ) );
+
+		$request = new WP_REST_Request( 'GET', '/carbon-fields/v1/field-options' );
+		foreach ( array( 'container_id' => $this->container->get_id(), 'field_name' => $name . '[0]:_/staff',
+			'object_id' => $this->id, 'term' => 'P-202', 'page' => 1, 'dependency' => '["south"]' ) as $key => $value ) {
+			$request->set_param( $key, $value );
+		}
+		$route = new \Carbon_Fields\REST_API\Field_Options();
+		$this->assertSame( array( (string) $south ), array_column( $route->get_options( $request )['options'], 'value' ) );
+		$request->set_param( 'dependency', '{"region":"south"}' );
+		$this->assertWPError( $route->get_options( $request ) );
+
+		$rows = array(
+			array( 'region' => 'north', 'lead' => array( 'post:post:' . $north ), 'staff' => array( array( 'id' => $north, 'data' => array() ) ) ),
+			array( 'region' => 'south', 'lead' => array( 'post:post:' . $south ), 'staff' => array( array( 'id' => $south, 'data' => array() ) ) ),
+		);
+		$this->assertTrue( carbon_update_fields( $this->id, array( $name => $rows ) ) );
+		$rows[0]['staff'][0]['id'] = $south;
+		$this->assertWPError( carbon_update_fields( $this->id, array( $name => $rows ) ) );
+		$this->assertSame( $north, (int) carbon_get_post_meta( $this->id, $name )[0]['staff'][0]['id'] );
+		$source_name = $this->prefix . '_source';
+		$lead_name = $this->prefix . '_lead';
+		$this->container->add_fields( array( Field::make( 'text', $source_name ),
+			Field::make( 'association', $lead_name )->set_options_dependency( $source_name, $region_key ) ) );
+		$this->assertTrue( carbon_update_fields( $this->id, array( $source_name => 'north', $lead_name => array( 'post:post:' . $north ) ) ) );
+		$this->assertWPError( carbon_update_fields( $this->id, array( $source_name => 'south' ) ) );
+		$this->assertSame( 'north', carbon_get_post_meta( $this->id, $source_name ) );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+		$request->set_param( 'dependency', '["south"]' );
+		$this->assertWPError( $route->get_options( $request ) );
+	}
+
 	public function testUniqueValuesAndCommittedEvents() {
 		$p = $this->prefix; $events = array();
 		$listener = function( $id, $name, $old, $new ) use ( &$events, $p ) { if ( $name === $p . '_title' ) { $events[] = array( $old, $new ); } };

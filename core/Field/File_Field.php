@@ -11,6 +11,7 @@ use Carbon_Fields\Helper\Helper;
  * where the file ID is saved in the database.
  */
 class File_Field extends Field {
+	use Media_Library_Scope;
 
 	// empty for all types. available types: audio, video, image and all WordPress-recognized mime types
 	public $field_type = '';
@@ -67,6 +68,7 @@ class File_Field extends Field {
 
 		$field_data = array_merge( $field_data, array(
 			'type_filter' => $this->field_type,
+			'media_library_scope' => $this->media_library_scope,
 			'value_type'  => $this->value_type,
 		) );
 

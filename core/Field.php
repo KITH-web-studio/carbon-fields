@@ -21,6 +21,7 @@ namespace Carbon_Fields;
  * @method static \Carbon_Fields\Field\Color_Field make_color( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Complex_Field make_complex( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Date_Field make_date( string $name, string $label = null )
+ * @method static \Carbon_Fields\Field\Date_Range_Field make_date_range( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Date_Time_Field make_date_time( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\File_Field make_file( string $name, string $label = null )
  * @method static \Carbon_Fields\Field\Footer_Scripts_Field make_footer_scripts( string $name, string $label = null )

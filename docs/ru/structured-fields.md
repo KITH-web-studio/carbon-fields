@@ -108,6 +108,66 @@ add_action( 'carbon_fields_register_fields', function () {
 
 В адаптивном изображении хранятся ID вложений. Порядок источников соответствует объявлению точек переключения: сначала более конкретные условия. `default` задаёт запасное изображение.
 
+## Зависимые поля связей
+
+`set_options_dependency()` ограничивает варианты поля `association` или `relationship` по значению соседнего поля. Источник и зависимое поле можно объявить в одном контейнере или одной строке комплекса. В примере выбранный филиал сравнивается с метаполем `_branch_code` у специалистов. Чтобы сравнивать выбранные ID терминов с таксономией, передайте `'taxonomy'` третьим аргументом.
+
+```php
+Field::make( 'complex', 'teams', 'Команды' )->add_fields( array(
+    Field::make( 'select', 'branch', 'Филиал' )->set_options( array(
+        'north' => 'Север',
+        'south' => 'Юг',
+    ) ),
+    Field::make( 'association', 'lead', 'Руководитель' )
+        ->set_types( array( array( 'type' => 'post', 'post_type' => 'specialist' ) ) )
+        ->set_options_dependency( 'branch', '_branch_code' )
+        ->set_option_search_fields( array( '_staff_code' ) ),
+    Field::make( 'relationship', 'staff', 'Специалисты' )->set_post_type( 'specialist' )
+        ->set_options_dependency( 'branch', '_branch_code' )
+        ->set_option_search_fields( array( '_staff_code' ) )
+        ->set_columns( array( Field::make( 'text', 'note', 'Примечание' ) ) ),
+) );
+```
+
+В `set_options_dependency()` и `set_option_search_fields()` указывайте ключи в метаданных записи. Значения полей, объявленных для поиска, отображаются рядом с названием. При смене источника список вариантов обновляется сразу. Если старая связь больше не подходит, удалите её или замените перед сохранением. Сервер проверяет сочетание значений. Для совместного обновления значений записи из PHP используйте `carbon_update_fields()`.
+
+## Подписи и ссылки галереи
+
+Включите детали галереи, чтобы редактировать подпись и ссылку прямо у миниатюры. Существующие изображения сохраняют свой порядок. При включении деталей функция чтения возвращает элементы с ключами `id`, `caption` и `link`. Обычная галерея возвращает список ID. Чтобы изменить порядок, перетащите карточку за имя файла внутри ряда или между рядами. Подпись и ссылка перемещаются вместе с изображением. Новый порядок сохраняется при обновлении записи.
+
+```php
+Field::make( 'media_gallery', 'tour_gallery', 'Галерея' )
+    ->set_type( 'image' )->set_item_details();
+
+Field::make( 'file', 'tour_document', 'Документ' )
+    ->set_media_library_scope( 'post' );
+```
+
+`set_media_library_scope( 'post' )` показывает в медиапикере поля файла, изображения или галереи вложения текущей записи. Значение по умолчанию `'all'` показывает всю доступную библиотеку.
+
+```php
+foreach ( carbon_get_post_meta( get_the_ID(), 'tour_gallery' ) as $item ) {
+    $image = carbon_image( $item['id'], 'large' );
+    echo '<figure>';
+    echo $item['link'] ? '<a href="' . esc_url( $item['link'] ) . '">' . $image . '</a>' : $image;
+    if ( '' !== $item['caption'] ) {
+        echo '<figcaption>' . esc_html( $item['caption'] ) . '</figcaption>';
+    }
+    echo '</figure>';
+}
+```
+
+## Период дат
+
+Поле `date_range` позволяет выбрать начало и конец в одном календаре. Даты хранятся в формате `YYYY-MM-DD`. Заполненное поле возвращает ключи `start` и `end`, пустое возвращает пустой массив. PHP-помощник включает обе границы периода.
+
+```php
+Field::make( 'date_range', 'event_dates', 'Даты события' );
+
+$dates = carbon_get_post_meta( get_the_ID(), 'event_dates' );
+$show_event = carbon_date_range_contains( $dates, wp_date( 'Y-m-d' ) );
+```
+
 ## Форматы возвращаемых данных
 
 ```php

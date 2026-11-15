@@ -3,6 +3,7 @@ import { __, sprintf } from '@wordpress/i18n';
 import { Cell, JsonInput, rowDefaults, moveRow } from './shared';
 import RemoteSelect from '../select/remote';
 import IconAction, { RemoveAction } from '../../components/icon-action';
+import { dependencyRequest } from '../../utils/post-choice-context';
 
 export default function TableField( props ) {
 	const { id, name, field, onChange } = props;
@@ -67,7 +68,8 @@ export default function TableField( props ) {
 				<button type="button" className="button" disabled={ ( page + 1 ) * 25 >= rows.length } onClick={ () => setPage( page + 1 ) }>{ __( 'Next', 'carbon-fields-ui' ) }</button>
 				{ ! relation && <button type="button" className="button" disabled={ rows.length >= field.max_rows } onClick={ () => add() }>{ __( 'Add row', 'carbon-fields-ui' ) }</button> }
 			</div>
-			{ relation && rows.length < field.max_rows && <RemoteSelect { ...props } id={ id + '-target' } name={ null } value="" onChoose={ add } /> }
+			{ relation && rows.length < field.max_rows && <RemoteSelect key={ dependencyRequest( field, props.optionsDependencyValue ) }
+				{ ...props } id={ id + '-target' } name={ null } value="" onChoose={ add } /> }
 			<JsonInput name={ name } value={ rows } />
 		</div>
 	);

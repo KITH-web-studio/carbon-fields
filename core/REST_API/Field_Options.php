@@ -6,6 +6,7 @@ use Carbon_Fields\Carbon_Fields;
 use Carbon_Fields\Field\Select_Field;
 use Carbon_Fields\Field\Relationship_Field;
 use Carbon_Fields\Field\Image_Hotspots_Field;
+use Carbon_Fields\Helper\Post_Choice_Query;
 
 final class Field_Options {
 	public function register_routes() {
@@ -20,24 +21,27 @@ final class Field_Options {
 				'term' => array( 'type' => 'string', 'default' => '', 'maxLength' => 200 ),
 				'page' => array( 'type' => 'integer', 'default' => 1, 'minimum' => 1, 'maximum' => 10000 ),
 				'ids' => array( 'type' => 'array', 'items' => array( 'type' => 'integer' ), 'maxItems' => 100 ),
+				'dependency' => array( 'type' => 'string', 'maxLength' => 22000 ),
 			),
 		) );
+	}
+
+	public static function can_edit_owner( $container_id, $id ) {
+		$repository = Carbon_Fields::resolve( 'container_repository' );
+		foreach ( $repository->get_containers() as $container ) {
+			if ( $container->get_id() === $container_id ) {
+				return 'theme_options' === $container->type ? $container->is_valid_attach_for_object( null ) :
+					Access::metadata( $container->type, $id, true ) && $container->is_valid_attach_for_object( $id );
+			}
+		}
+		return false;
 	}
 
 	public function get_options( $request ) {
 		$repository = Carbon_Fields::resolve( 'container_repository' );
 		$field = $repository->get_editor_field_in_container( $request['field_name'], $request['container_id'] );
-		$owner = null;
-		foreach ( $repository->get_containers() as $container ) {
-			if ( $container->get_id() === $request['container_id'] ) {
-				$owner = $container;
-				break;
-			}
-		}
 		$id = (int) $request['object_id'];
-		$allowed = $owner && ( 'theme_options' === $owner->type ? $owner->is_valid_attach_for_object( null ) :
-			Access::metadata( $owner->type, $id, true ) && $owner->is_valid_attach_for_object( $id ) );
-		if ( ! $field || ! $allowed ) {
+		if ( ! $field || ! self::can_edit_owner( $request['container_id'], $id ) ) {
 			return new \WP_Error( 'carbon_fields_forbidden_field', __( 'This field is not available.', 'carbon-fields' ), array( 'status' => 403 ) );
 		}
 		$field = clone $field;
@@ -50,15 +54,26 @@ final class Field_Options {
 		}
 		if ( $field instanceof Relationship_Field || $field instanceof Image_Hotspots_Field ) {
 			$types = $field instanceof Relationship_Field ? array( $field->get_post_type() ) : array_values( get_post_types( array( 'public' => true ) ) );
-			$query = new \WP_Query( array(
+			$args = array(
 				'post_type' => $types, 'post_status' => 'publish', 'has_password' => false, 'posts_per_page' => 30,
 				'paged' => $request['page'], 's' => $request['term'], 'orderby' => 'title', 'order' => 'ASC',
 				'post__in' => $request['ids'] ?: array(), 'suppress_filters' => false,
-			) );
+			);
+			$search_fields = array();
+			if ( $field instanceof Relationship_Field ) {
+				$values = Post_Choice_Query::request_values( $request['dependency'] );
+				if ( false === $values ) {
+					return new \WP_Error( 'carbon_fields_invalid_dependency', __( 'Invalid association request.', 'carbon-fields' ), array( 'status' => 400 ) );
+				}
+				$args = $field->post_choice_query_args( $args, $values );
+				$search_fields = $field->get_option_search_fields();
+			}
+			$query = Post_Choice_Query::query( $args, $search_fields );
 			$options = array();
 			foreach ( $query->posts as $post ) {
 				if ( Access::post( $post ) ) {
-					$options[] = array( 'value' => (string) $post->ID, 'label' => wp_strip_all_tags( $post->post_title ) );
+					$label = wp_strip_all_tags( $post->post_title );
+					$options[] = array( 'value' => (string) $post->ID, 'label' => $field instanceof Relationship_Field ? $field->post_choice_label( $label, $post->ID ) : $label );
 				}
 			}
 			return array( 'options' => $options, 'has_more' => $request['page'] < $query->max_num_pages );

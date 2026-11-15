@@ -430,3 +430,6 @@ msgid ""
 msgstr ""
 "Carbon Fields отримав неповну форму. Перезавантажте редактор і спробуйте ще "
 "раз."
+
+msgid "Review the selected items after changing the related field."
+msgstr "Перевірте вибрані елементи після зміни пов’язаного поля."

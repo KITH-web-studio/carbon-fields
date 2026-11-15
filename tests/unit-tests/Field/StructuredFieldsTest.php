@@ -24,6 +24,44 @@ class StructuredFieldsTest extends WP_UnitTestCase {
 		$this->assertFalse( $field->validate_data( $hours ) );
 	}
 
+	public function testDateRangePersistsDatesAndUsesInclusiveEndpoints() {
+		$field = Field::make( 'date_range', 'event_period' )->set_required();
+		$range = array( 'start' => '2028-02-29', 'end' => '2028-03-02' );
+		$store = new Post_Meta_Datastore();
+		$store->set_object_id( self::factory()->post->create() );
+		$field->set_datastore( $store );
+		$this->assertTrue( $field->set_value( $range )->save() );
+		$field->load();
+		$this->assertSame( $range, $field->get_formatted_value() );
+		$this->assertTrue( carbon_date_range_contains( $range, $range['start'] ) );
+		$this->assertTrue( carbon_date_range_contains( $range, $range['end'] ) );
+		$this->assertFalse( carbon_date_range_contains( $range, '2028-03-03' ) );
+		$this->assertFalse( $field->validate_data( array( 'start' => '2027-02-29', 'end' => $range['end'] ) ) );
+		$this->assertFalse( $field->validate_data( array( 'start' => $range['end'], 'end' => $range['start'] ) ) );
+		$this->assertFalse( $field->validate_data( array( 'start' => $range['start'], 'end' => '' ) ) );
+	}
+
+	public function testGalleryStoresDetailsOnEachOccurrenceAndPreservesLegacyIds() {
+		$field = Field::make( 'media_gallery', 'event_gallery' );
+		$id = self::factory()->attachment->create( array( 'post_mime_type' => 'image/png', 'file' => 'gallery.png' ) );
+		$store = new Post_Meta_Datastore();
+		$store->set_object_id( self::factory()->post->create() );
+		$field->set_datastore( $store );
+		$this->assertTrue( $field->set_value( array( (string) $id ) )->save() );
+		$field->set_item_details()->load();
+		$this->assertSame( array( array( 'id' => $id, 'caption' => '', 'link' => '' ) ), $field->get_formatted_value() );
+		$items = array(
+			array( 'id' => $id, 'caption' => 'Интерьер', 'link' => '/interior' ),
+			array( 'id' => $id, 'caption' => 'Зала', 'link' => 'https://example.org/hall' ),
+		);
+		$this->assertTrue( $field->set_value_from_input( array( $field->get_name() => wp_json_encode( $items ) ) )->save() );
+		$field->load();
+		$this->assertSame( $items, $field->get_formatted_value() );
+		$items[0]['link'] = 'javascript:alert(1)';
+		$this->assertFalse( $field->is_valid_form_value( wp_json_encode( $items ) ) );
+		$this->assertSame( array( $id, $id ), $field->set_item_details( false )->get_formatted_value() );
+	}
+
 	public function testTableRoundTripsAThousandRowsAndRejectsInvalidColumns() {
 		$field = Field::make( 'table', 'prices' )->set_columns( array(
 			Field::make( 'text', 'title' )->set_required(), Field::make( 'text', 'price' )->set_attribute( 'type', 'number' )->set_attribute( 'min', '0' ),

@@ -4,6 +4,7 @@ namespace Carbon_Fields\Field;
 
 use Carbon_Fields\Value_Set\Value_Set;
 use Carbon_Fields\Helper\Helper;
+use Carbon_Fields\REST_API\Access;
 
 /**
  * Set field class.
@@ -12,6 +13,69 @@ use Carbon_Fields\Helper\Helper;
  * their IDs in the Database.
  */
 class Media_Gallery_Field extends Field {
+	use Media_Library_Scope;
+
+	private $item_details = false;
+
+	public function set_item_details( $enabled = true ) {
+		$this->item_details = (bool) $enabled;
+		return $this;
+	}
+
+	public function has_value_rules() {
+		return $this->item_details || parent::has_value_rules();
+	}
+
+	public function set_value( $value ) {
+		if ( $this->item_details ) {
+			if ( is_string( $value ) && '[' === substr( $value, 0, 1 ) ) {
+				$value = json_decode( $value, true ) ?? $value;
+			}
+			if ( is_array( $value ) ) {
+				$value = array_map( function( $item ) {
+					if ( is_array( $item ) && array_keys( $item ) !== array( Value_Set::VALUE_PROPERTY ) ) {
+						return wp_json_encode( $this->item_details( $item ) ?? $item );
+					}
+					return $item;
+				}, $value );
+			}
+		}
+		return parent::set_value( $value );
+	}
+
+	private function item_details( $item ) {
+		if ( is_string( $item ) && '{' === substr( $item, 0, 1 ) ) {
+			$item = json_decode( $item, true );
+		} elseif ( is_int( $item ) || is_string( $item ) && ctype_digit( $item ) ) {
+			$item = array( 'id' => $item );
+		}
+		if ( ! is_array( $item ) || array_diff_key( $item, array( 'id' => true, 'caption' => true, 'link' => true ) ) ) {
+			return null;
+		}
+		$id = $item['id'] ?? 0;
+		$caption = $item['caption'] ?? '';
+		$link = $item['link'] ?? '';
+		if ( ( ! is_int( $id ) && ! is_string( $id ) ) || ! ctype_digit( (string) $id ) || (int) $id < 1 ||
+			! is_string( $caption ) || ! is_string( $link ) || strlen( $caption ) > 4000 || strlen( $link ) > 4000 ||
+			( '' !== $link && '' === Helper::sanitize_media_url( $link ) ) ) {
+			return null;
+		}
+		return array(
+			'id' => (int) $id,
+			'caption' => sanitize_text_field( $caption ),
+			'link' => '' !== $link ? Helper::sanitize_media_url( $link ) : '',
+		);
+	}
+
+	public function get_formatted_value() {
+		$values = $this->get_value();
+		if ( $this->item_details ) {
+			return array_values( array_filter( array_map( array( $this, 'item_details' ), $values ) ) );
+		}
+		return array_map( function( $item ) {
+			return is_string( $item ) && '{' === substr( $item, 0, 1 ) ? ( $this->item_details( $item )['id'] ?? 0 ) : $item;
+		}, $values );
+	}
 
 	/**
 	 * File type filter. Leave a blank string for any file type.
@@ -111,6 +175,9 @@ class Media_Gallery_Field extends Field {
 	 * @return self  $this
 	 */
 	public function set_value_from_input( $input ) {
+		if ( $this->item_details ) {
+			return $this->set_value( $input[ $this->name ] ?? array() );
+		}
 		if ( ! isset( $input[ $this->name ] ) ) {
 			$this->set_value( array() );
 		} else {
@@ -126,6 +193,25 @@ class Media_Gallery_Field extends Field {
 
 	/** @inheritDoc */
 	public function is_valid_form_value( $value ) {
+		if ( $this->item_details ) {
+			if ( is_string( $value ) && '[' === substr( $value, 0, 1 ) ) {
+				$value = json_decode( $value, true );
+			}
+			if ( ! is_array( $value ) || count( $value ) > 10000 || $value !== array_values( $value ) ) {
+				return false;
+			}
+			$seen = array();
+			foreach ( $value as $item ) {
+				$details = $this->item_details( $item );
+				$post = $details ? get_post( $details['id'] ) : null;
+				if ( ! $post || 'attachment' !== $post->post_type || ! Access::post( $post ) ||
+					( ! $this->duplicates_allowed && isset( $seen[ $post->ID ] ) ) ) {
+					return false;
+				}
+				$seen[ $post->ID ] = true;
+			}
+			return true;
+		}
 		if ( ! parent::is_valid_form_value( $value ) || ! is_array( $value ) ) {
 			return false;
 		}
@@ -145,10 +231,10 @@ class Media_Gallery_Field extends Field {
 	 * @return array
 	 */
 	protected function value_to_json() {
-		$value_set = $this->get_value();
+		$value_set = $this->get_formatted_value();
 
 		return array(
-			'value' => array_map( 'absint', $value_set ),
+			'value' => $this->item_details ? $value_set : array_map( 'absint', $value_set ),
 		);
 	}
 
@@ -166,6 +252,9 @@ class Media_Gallery_Field extends Field {
 			'type_filter'        => $this->file_type,
 			'can_edit_inline'    => $this->can_edit_inline,
 			'duplicates_allowed' => $this->get_duplicates_allowed(),
+			'media_library_scope' => $this->media_library_scope,
+			'item_details'       => $this->item_details,
+			'structured'         => $this->item_details,
 		) );
 
 		return $field_data;

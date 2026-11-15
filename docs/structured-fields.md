@@ -104,6 +104,66 @@ The tree supports drag and drop to another parent, sibling ordering and a keyboa
 
 Hotspot coordinates are percentages of the image, so resizing preserves their positions. Click the image or use Add marker, then edit its label, position and either a URL or a related post. URLs must use HTTP(S). Responsive images use attachment IDs; source order follows the declared breakpoints (most specific first), and `default` supplies the fallback image.
 
+## Dependent post choices
+
+Use `set_options_dependency()` on an `association` or `relationship` field to filter posts by a sibling field. The source and the choice field can be in the same container or the same complex row. The example matches the selected branch to the `_branch_code` post meta of each specialist. Use `'taxonomy'` as the third argument to match selected term IDs to a taxonomy.
+
+```php
+Field::make( 'complex', 'teams', 'Teams' )->add_fields( array(
+    Field::make( 'select', 'branch', 'Branch' )->set_options( array(
+        'north' => 'North',
+        'south' => 'South',
+    ) ),
+    Field::make( 'association', 'lead', 'Team lead' )
+        ->set_types( array( array( 'type' => 'post', 'post_type' => 'specialist' ) ) )
+        ->set_options_dependency( 'branch', '_branch_code' )
+        ->set_option_search_fields( array( '_staff_code' ) ),
+    Field::make( 'relationship', 'staff', 'Staff' )->set_post_type( 'specialist' )
+        ->set_options_dependency( 'branch', '_branch_code' )
+        ->set_option_search_fields( array( '_staff_code' ) )
+        ->set_columns( array( Field::make( 'text', 'note', 'Note' ) ) ),
+) );
+```
+
+Declare the actual post meta keys for `set_options_dependency()` and `set_option_search_fields()`. Declared search values appear alongside the title. Changing the source refreshes choices immediately. If an existing choice becomes incompatible, remove it or select a matching item before saving. The server checks the submitted pairs. Use `carbon_update_fields()` to save related post values together from PHP.
+
+## Gallery item details and media scope
+
+Enable details for a gallery to store a caption and link with each selected item. The gallery keeps its order and recognizes existing IDs. With details enabled, the getter returns rows with `id`, `caption` and `link`. The standard gallery returns its usual list of IDs. To reorder items horizontally or between rows, drag a card by its filename. Its caption and link move with it and are saved in the new order when you update the post.
+
+```php
+Field::make( 'media_gallery', 'tour_gallery', 'Tour gallery' )
+    ->set_type( 'image' )->set_item_details();
+
+Field::make( 'file', 'tour_document', 'Tour document' )
+    ->set_media_library_scope( 'post' );
+```
+
+Use `set_media_library_scope( 'post' )` on a file, image or gallery field in a post editor to show media attached to the current post. The default scope is `'all'`.
+
+```php
+foreach ( carbon_get_post_meta( get_the_ID(), 'tour_gallery' ) as $item ) {
+    $image = carbon_image( $item['id'], 'large' );
+    echo '<figure>';
+    echo $item['link'] ? '<a href="' . esc_url( $item['link'] ) . '">' . $image . '</a>' : $image;
+    if ( '' !== $item['caption'] ) {
+        echo '<figcaption>' . esc_html( $item['caption'] ) . '</figcaption>';
+    }
+    echo '</figure>';
+}
+```
+
+## Date ranges
+
+`date_range` uses one calendar to select a start and an end. It stores calendar dates in `YYYY-MM-DD` format. A selected period returns `start` and `end`, and an empty field returns an empty array. Both endpoints are included by the PHP helper.
+
+```php
+Field::make( 'date_range', 'event_dates', 'Event dates' );
+
+$dates = carbon_get_post_meta( get_the_ID(), 'event_dates' );
+$show_event = carbon_date_range_contains( $dates, wp_date( 'Y-m-d' ) );
+```
+
 ## Returned schemas
 
 ```php

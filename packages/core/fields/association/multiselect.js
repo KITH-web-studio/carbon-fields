@@ -45,7 +45,7 @@ export default function AssociationMultiselect( props ) {
 	}, [ missingKeys ] );
 
 	useEffect( () => {
-		if ( firstQuery.current ) {
+		if ( firstQuery.current && ! field.options_dependency ) {
 			firstQuery.current = false;
 			return;
 		}

@@ -6,6 +6,11 @@ use Carbon_Fields\Helper\Post_Meta_Batch;
 use Carbon_Fields\Helper\Theme_Option_Dictionary;
 use Carbon_Fields\Helper\Text_Template;
 
+/** Check whether a calendar date is inside an inclusive date_range field. */
+function carbon_date_range_contains( array $range, $date ) {
+	return \Carbon_Fields\Field\Date_Range_Field::contains( $range, $date );
+}
+
 /** @return array Formatted field values keyed by field name. */
 function carbon_get_post_meta_fields( $post_id, array $field_names, array $options = array() ) {
 	$posts = Post_Meta_Batch::read( array( $post_id ), $field_names, $options );

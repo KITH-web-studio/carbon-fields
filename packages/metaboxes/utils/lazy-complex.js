@@ -7,7 +7,7 @@ export const ComplexRevealContext = createContext( null );
 const supportedTypes = new Set( [
 	'checkbox', 'color', 'file', 'hidden', 'icon', 'image', 'media_gallery',
 	'multiselect', 'rich_text', 'select', 'set', 'text', 'textarea', 'text_list', 'text_template',
-	'business_hours', 'table', 'relationship', 'tree', 'image_hotspots', 'responsive_image', 'geofence'
+	'business_hours', 'table', 'relationship', 'tree', 'image_hotspots', 'responsive_image', 'geofence', 'date_range'
 ] );
 
 export const supportsPackedPostMeta = 'onformdata' in document.createElement( 'form' );

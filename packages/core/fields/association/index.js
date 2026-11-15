@@ -36,6 +36,7 @@ import SearchInput from '../../components/search-input';
 import Sortable from '../../components/sortable';
 import { associationRequest } from './request';
 import AssociationMultiselect from './multiselect';
+import { dependencyRequest } from '../../utils/post-choice-context';
 
 class AssociationField extends Component {
 	/**
@@ -73,6 +74,9 @@ class AssociationField extends Component {
 		if ( value.length ) {
 			fetchSelectedOptions();
 		}
+		if ( field.options_dependency ) {
+			this.props.fetchOptions( { type: 'replace', queryTerm: '', page: 1 } );
+		}
 
 		this.sourceList.current.addEventListener( 'scroll', this.handleSourceListScroll );
 	}
@@ -83,6 +87,7 @@ class AssociationField extends Component {
 	 * @return {void}
 	 */
 	componentWillUnmount() {
+		this.handleSearchChange.cancel();
 		this.sourceList.current.removeEventListener( 'scroll', this.handleSourceListScroll );
 	}
 
@@ -517,5 +522,5 @@ const AssociationColumns = compose(
 
 export default function Association( props ) {
 	const Edit = props.field.association_layout === 'multiselect' ? AssociationMultiselect : AssociationColumns;
-	return <Edit { ...props } />;
+	return <Edit key={ dependencyRequest( props.field, props.optionsDependencyValue ) } { ...props } />;
 }

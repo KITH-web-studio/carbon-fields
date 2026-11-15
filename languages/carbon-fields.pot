@@ -424,3 +424,6 @@ msgstr ""
 msgid ""
 "Carbon Fields received an incomplete form. Reload the editor and try again."
 msgstr ""
+
+msgid "Review the selected items after changing the related field."
+msgstr ""

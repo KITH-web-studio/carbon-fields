@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import apiFetch from '../../utils/api-fetch';
+import { dependencyRequest, editorObjectId } from '../../utils/post-choice-context';
 import SearchableSelect from './searchable';
 
 // Retain the chosen label when a lazy complex row is unmounted and restored.
@@ -18,7 +19,8 @@ export default function RemoteSelect( props ) {
 	const generation = useRef( 0 );
 	const search = useCallback( ( term ) => { setActivated( true ); setQuery( term ); setPage( 1 ); }, [] );
 	const hierarchy = hierarchyResolver ? hierarchyResolver() : field.base_name;
-	const objectId = Number( document.querySelector( '#post_ID, #tag_ID, input[name="user_id"]' )?.value || window.wp?.data?.select( 'core/editor' )?.getCurrentPostId?.() || 0 );
+	const objectId = editorObjectId();
+	const dependency = dependencyRequest( field, props.optionsDependencyValue );
 	useEffect( () => {
 		if ( ! activated ) { return; }
 		const current = ++generation.current;
@@ -26,7 +28,7 @@ export default function RemoteSelect( props ) {
 		setStatus( __( 'Loading...', 'carbon-fields-ui' ) );
 		const timer = setTimeout( () => {
 			apiFetch( window.wpApiSettings.root + 'carbon-fields/v1/field-options', 'get', {
-				container_id: containerId, field_name: hierarchy, object_id: objectId, term: query, page
+				container_id: containerId, field_name: hierarchy, object_id: objectId, term: query, page, ...( dependency && { dependency } )
 			} ).then( ( response ) => {
 				if ( generation.current !== current ) { return; }
 				setOptions( ( previous ) => page === 1 ? response.options : [ ...previous, ...response.options.filter( ( item ) => ! previous.some( ( old ) => old.value === item.value ) ) ] );
@@ -36,7 +38,7 @@ export default function RemoteSelect( props ) {
 			} ).catch( () => { if ( generation.current === current ) { setStatus( __( 'Could not load options. Try again.', 'carbon-fields-ui' ) ); } } );
 		}, 250 );
 		return () => { clearTimeout( timer ); generation.current++; };
-	}, [ activated, query, page, hierarchy, containerId, objectId ] );
+	}, [ activated, query, page, hierarchy, containerId, objectId, dependency ] );
 	const cacheKey = `${ containerId }/${ id }/${ value }`;
 	const selected = labels.find( ( item ) => item.value === String( value ) ) || field.options?.find( ( item ) => item.value === String( value ) ) || selectedLabels.get( cacheKey );
 	return <SearchableSelect id={ id } name={ name } label={ field.label } required={ field.required }

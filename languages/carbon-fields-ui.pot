@@ -103,3 +103,18 @@ msgstr ""
 
 msgid "Remove icon"
 msgstr ""
+
+msgid "Caption"
+msgstr ""
+
+msgid "Select a date range"
+msgstr ""
+
+msgid "Clear date range"
+msgstr ""
+
+msgid "Move earlier"
+msgstr ""
+
+msgid "Move later"
+msgstr ""

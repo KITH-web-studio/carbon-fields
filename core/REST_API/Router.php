@@ -421,9 +421,14 @@ class Router {
 			return $this->invalid_association_request();
 		}
 
+		$dependency = \Carbon_Fields\Helper\Post_Choice_Query::request_values( $request->get_param( 'dependency' ) );
+		if ( false === $dependency ) {
+			return $this->invalid_association_request();
+		}
 		return $field->get_options( array(
 			'page' => null === $page ? 1 : (int) $page,
 			'term' => null === $term ? '' : sanitize_text_field( $term ),
+			'dependency' => $dependency,
 		) );
 	}
 
@@ -486,6 +491,13 @@ class Router {
 		$field = $this->container_repository->get_editor_field_in_container( $field_id, $container_id );
 		if ( ! ( $field instanceof \Carbon_Fields\Field\Association_Field ) ) {
 			return new \WP_Error( 'carbon_fields_association_not_found', __( 'Association field not found.', 'carbon-fields' ), array( 'status' => 404 ) );
+		}
+		if ( $field->get_options_dependency() || $field->get_option_search_fields() ) {
+			$id = $request->get_param( 'object_id' ) ?? 0;
+			if ( ( ! is_string( $id ) && ! is_int( $id ) ) || ! ctype_digit( (string) $id ) ||
+				! Field_Options::can_edit_owner( $container_id, (int) $id ) ) {
+				return new \WP_Error( 'carbon_fields_forbidden_field', __( 'This field is not available.', 'carbon-fields' ), array( 'status' => 403 ) );
+			}
 		}
 
 		return $field;

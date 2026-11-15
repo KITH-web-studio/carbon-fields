@@ -13,6 +13,7 @@ use Carbon_Fields\Field\Link_Field;
 use Carbon_Fields\Field\Media_Gallery_Field;
 use Carbon_Fields\Field\Number_With_Unit_Field;
 use Carbon_Fields\Field\Rich_Text_Field;
+use Carbon_Fields\Field\Relationship_Field;
 use Carbon_Fields\Field\Scripts_Field;
 use Carbon_Fields\Field\Typography_Field;
 use Carbon_Fields\Field\Structured_Field;
@@ -24,11 +25,16 @@ use Carbon_Fields\Value_Set\Value_Set;
 class Field_Validation {
 	public static function has_rules( array $fields ) {
 		foreach ( $fields as $field ) {
-			if ( $field->has_validation_callback() || $field->has_value_rules() || ( $field instanceof Complex_Field && self::has_rules( $field->get_fields() ) ) ) {
+			if ( $field->has_validation_callback() || $field->has_value_rules() || self::dependency_source( $field ) ||
+				( $field instanceof Complex_Field && self::has_rules( $field->get_fields() ) ) ) {
 				return true;
 			}
 		}
 		return false;
+	}
+
+	private static function dependency_source( Field $field ) {
+		return ( $field instanceof Association_Field || $field instanceof Relationship_Field ) ? ( $field->get_options_dependency()['source'] ?? '' ) : '';
 	}
 
 	public static function validate( array $fields, array $input, array $sections = array() ) {
@@ -193,13 +199,22 @@ class Field_Validation {
 
 		foreach ( $fields as $field ) {
 			$name = $field->get_name();
-			if ( null !== $changed && ! isset( $changed[ $field->get_base_name() ] ) ) {
+			$dependency_source = self::dependency_source( $field );
+			$field_changed = null === $changed || isset( $changed[ $field->get_base_name() ] );
+			if ( ! $field_changed && ! isset( $changed[ $dependency_source ] ) ) {
 				continue;
 			}
 			if ( null === $changed && ( isset( $hidden[ $name ] ) || ! self::matches( $field->get_conditional_logic(), $sources ) ) ) {
 				continue;
 			}
 			$location = array_merge( $path, array( $name ) );
+			if ( $dependency_source && ! $field->choices_match_source( $values[ $field->get_base_name() ], $values[ $dependency_source ] ?? null ) ) {
+				return new \WP_Error( 'carbon_fields_invalid_dependency', __( 'Review the selected items after changing the related field.', 'carbon-fields' ),
+					array( 'path' => $location, 'status' => 422 ) );
+			}
+			if ( ! $field_changed ) {
+				continue;
+			}
 			if ( $field->has_value_rules() ) {
 				$value_error = Field_Rules::validate( $field, $field->get_value() );
 				if ( ! $value_error && ! $field instanceof Complex_Field && ! $field->is_valid_form_value( $field->get_value() ) ) {

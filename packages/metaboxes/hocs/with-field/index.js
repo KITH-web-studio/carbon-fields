@@ -39,6 +39,7 @@ export default createHigherOrderComponent( ( Component ) => {
 			name,
 			value,
 			optionsSourceValue,
+			optionsDependencyValue: field?.options_dependency ? getFieldById( field.optionsDependencyId )?.value : undefined,
 			templateValues: field?.templateSourceIds && Object.fromEntries( Object.entries( field.templateSourceIds )
 				.map( ( [ key, id ] ) => [ key, getFieldById( id )?.value ] ) )
 		};

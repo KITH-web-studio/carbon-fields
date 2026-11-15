@@ -5,6 +5,7 @@ namespace Carbon_Fields\Field;
 use Carbon_Fields\REST_API\Access;
 
 class Relationship_Field extends Table_Field {
+	use Post_Choice_Options;
 	protected $post_type = 'post';
 
 	protected function canonical_data( array $value ) {
@@ -47,12 +48,13 @@ class Relationship_Field extends Table_Field {
 	public function to_json( $load ) {
 		$data = parent::to_json( $load );
 		$data['post_type'] = $this->post_type;
+		$data['options_dependency'] = $this->get_options_dependency()['source'] ?? '';
 		$data['selected_posts'] = array();
 		$this->prime_posts( array_map( function( $row ) { return is_array( $row ) ? ( $row['id'] ?? 0 ) : 0; }, $data['value'] ) );
 		foreach ( $data['value'] as $row ) {
 			$post = get_post( $row['id'] ?? 0 );
 			if ( $post && Access::post( $post ) ) {
-				$data['selected_posts'][ $post->ID ] = wp_strip_all_tags( $post->post_title );
+				$data['selected_posts'][ $post->ID ] = $this->post_choice_label( wp_strip_all_tags( $post->post_title ), $post->ID );
 			}
 		}
 		return $data;

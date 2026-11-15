@@ -182,6 +182,9 @@ export function fields( state = {}, action ) {
 					if ( field.optionsSourceId ) {
 						field.optionsSourceId = clonedIds.get( field.optionsSourceId );
 					}
+					if ( field.optionsDependencyId ) {
+						field.optionsDependencyId = clonedIds.get( field.optionsDependencyId );
+					}
 					if ( field.dependentSelectIds ) {
 						field.dependentSelectIds = field.dependentSelectIds.map( ( id ) => clonedIds.get( id ) ).filter( Boolean );
 					}

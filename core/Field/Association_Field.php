@@ -5,6 +5,7 @@ namespace Carbon_Fields\Field;
 use Carbon_Fields\Value_Set\Value_Set;
 use Carbon_Fields\Exception\Incorrect_Syntax_Exception;
 use Carbon_Fields\Helper\Helper;
+use Carbon_Fields\Helper\Post_Choice_Query;
 use Carbon_Fields\Datastore\Post_Meta_Datastore;
 use WP_Query;
 use WP_Term_Query;
@@ -20,6 +21,7 @@ use WP_Comment_Query;
  *  - Comments
  */
 class Association_Field extends Field {
+	use Post_Choice_Options;
 	/**
 	 * WP_Toolset instance for WP data loading
 	 *
@@ -243,12 +245,18 @@ class Association_Field extends Field {
 		$sql_queries = array();
 
 		foreach ( $this->types as $type ) {
+			if ( $this->get_options_dependency() && ( 'post' !== $type['type'] || empty( $args['dependency'] ) ) ) {
+				continue;
+			}
 			if ( 'user' === $type['type'] && ! current_user_can( 'list_users' ) ) {
 				continue;
 			}
 			$type_args = array_merge( $type, array(
 				'term' => $args['term'],
 			) );
+			if ( 'post' === $type['type'] ) {
+				$type_args['dependency'] = $args['dependency'] ?? array();
+			}
 
 			$callback = "get_{$type['type']}_options_sql";
 
@@ -265,6 +273,7 @@ class Association_Field extends Field {
 		$per_page = max( 1, $this->get_items_per_page() );
 		$offset = ( $args['page'] - 1 ) * $per_page;
 		$options = array();
+		$seen = array();
 		$visible = 0;
 		$batch = max( 50, $per_page + 1 );
 
@@ -272,9 +281,11 @@ class Association_Field extends Field {
 		for ( $start = 0; ; $start += $batch ) {
 			$results = $wpdb->get_results( $sql_queries . " LIMIT {$batch} OFFSET {$start}" );
 			foreach ( (array) $results as $result ) {
-				if ( ! $this->can_read_option( (int) $result->ID, $result->type, $result->subtype ) ) {
+				$key = $result->type . ':' . $result->subtype . ':' . $result->ID;
+				if ( isset( $seen[ $key ] ) || ! $this->can_read_option( (int) $result->ID, $result->type, $result->subtype ) ) {
 					continue;
 				}
+				$seen[ $key ] = true;
 				$visible++;
 				if ( $visible > $offset + $per_page ) {
 					break 2;
@@ -475,6 +486,7 @@ class Association_Field extends Field {
 			'max'                => $this->get_max(),
 			'duplicates_allowed' => $this->duplicates_allowed,
 			'association_layout' => $this->association_layout,
+			'options_dependency' => $this->get_options_dependency()['source'] ?? '',
 		) );
 
 		return $field_data;
@@ -505,6 +517,7 @@ class Association_Field extends Field {
 		$type        = $args['type'];
 		$post_type   = $args['post_type'];
 		$search_term = $args['term'];
+		$dependency = $args['dependency'] ?? array();
 
 		unset( $args['type'], $args['post_type'], $args['term'] );
 
@@ -529,7 +542,7 @@ class Association_Field extends Field {
 		add_filter( 'posts_orderby_request', '__return_empty_string' );
 		add_filter( 'post_limits_request', '__return_empty_string' );
 
-		$posts_query = new WP_Query( $args );
+		$posts_query = Post_Choice_Query::query( $this->post_choice_query_args( $args, $dependency ), $this->get_option_search_fields() );
 
 		remove_filter( 'posts_fields_request', array( $this, 'get_post_options_sql_select_clause' ) );
 
@@ -783,7 +796,7 @@ class Association_Field extends Field {
 			$title = '(no title) - ID: ' . $id;
 		}
 
-		return $title;
+		return 'post' === $type ? $this->post_choice_label( $title, $id ) : $title;
 	}
 
 	/**
