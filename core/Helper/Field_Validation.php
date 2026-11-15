@@ -15,6 +15,7 @@ use Carbon_Fields\Field\Number_With_Unit_Field;
 use Carbon_Fields\Field\Rich_Text_Field;
 use Carbon_Fields\Field\Relationship_Field;
 use Carbon_Fields\Field\Scripts_Field;
+use Carbon_Fields\Field\Select_Field;
 use Carbon_Fields\Field\Typography_Field;
 use Carbon_Fields\Field\Structured_Field;
 use Carbon_Fields\Value_Set\Value_Set;
@@ -60,7 +61,7 @@ class Field_Validation {
 	 * REST values use the PHP API representation. Validate submitted fields
 	 * against the same scope, using stored values for omitted siblings.
 	 */
-	public static function validate_rest( array $fields, array $changes, array $sections = array() ) {
+	public static function validate_rest( array $fields, array $changes, array $sections = array(), $creating = false ) {
 		$prepared = array();
 		$submitted = array();
 		foreach ( $fields as $field ) {
@@ -69,6 +70,10 @@ class Field_Validation {
 			if ( array_key_exists( $name, $changes ) ) {
 				$value = self::rest_value( $field, $changes[ $name ] );
 				if ( is_wp_error( $value ) ) {
+					if ( $creating ) {
+						$data = (array) $value->get_error_data();
+						$value->add_data( $data + array( 'path' => array( $field->get_name() ) ) );
+					}
 					return $value;
 				}
 				$field->set_value( $value );
@@ -78,7 +83,8 @@ class Field_Validation {
 			}
 			$submitted[] = $field;
 		}
-		$error = self::validate_scope( $submitted, array(), array(), $sections, array_fill_keys( array_keys( $prepared ), true ) );
+		$changed = $creating ? null : array_fill_keys( array_keys( $prepared ), true );
+		$error = self::validate_scope( $submitted, array(), array(), $sections, $changed, $creating );
 		return $error ?: $prepared;
 	}
 
@@ -172,7 +178,7 @@ class Field_Validation {
 		return true;
 	}
 
-	private static function validate_scope( array $fields, array $path, array $ancestors, array $sections = array(), $changed = null ) {
+	private static function validate_scope( array $fields, array $path, array $ancestors, array $sections = array(), $changed = null, $creating = false ) {
 		$values = array();
 		foreach ( $fields as $field ) {
 			$values[ $field->get_base_name() ] = $field->get_formatted_value();
@@ -215,8 +221,12 @@ class Field_Validation {
 			if ( ! $field_changed ) {
 				continue;
 			}
-			if ( $field->has_value_rules() ) {
-				$value_error = Field_Rules::validate( $field, $field->get_value() );
+			if ( $creating && ! self::valid_creation_value( $field, $values ) ) {
+				return new \WP_Error( 'carbon_fields_invalid_value', __( 'Check this field and try again.', 'carbon-fields' ),
+					array( 'path' => $location, 'status' => 422 ) );
+			}
+			if ( $field->has_value_rules() || ( $creating && $field->is_required() ) ) {
+				$value_error = Field_Rules::validate( $field, $field->get_value(), $creating );
 				if ( ! $value_error && ! $field instanceof Complex_Field && ! $field->is_valid_form_value( $field->get_value() ) ) {
 					$value_error = new \WP_Error( 'carbon_fields_invalid_value', __( 'Check this field and try again.', 'carbon-fields' ), array( 'status' => 422 ) );
 				}
@@ -233,7 +243,7 @@ class Field_Validation {
 					return new \WP_Error( 'carbon_fields_validation_failed', $message, array( 'path' => $location, 'status' => 422 ) );
 				}
 			}
-			if ( $field instanceof Complex_Field && self::has_rules( $field->get_fields() ) ) {
+			if ( $field instanceof Complex_Field && ( $creating || self::has_rules( $field->get_fields() ) ) ) {
 				$parents = array_merge( array( $values ), $ancestors );
 				foreach ( $field->get_populated_groups() as $index => $row ) {
 					$children = array_filter( $row, function( $child ) {
@@ -242,7 +252,7 @@ class Field_Validation {
 					$child_changes = null === $changed ? null : array_fill_keys( array_map( function( $child ) {
 						return $child->get_base_name();
 					}, $children ), true );
-					$error = self::validate_scope( $children, array_merge( $location, array( $index ) ), $parents, array(), $child_changes );
+					$error = self::validate_scope( $children, array_merge( $location, array( $index ) ), $parents, array(), $child_changes, $creating );
 					if ( $error ) {
 						return $error;
 					}
@@ -250,6 +260,17 @@ class Field_Validation {
 			}
 		}
 		return null;
+	}
+
+	private static function valid_creation_value( Field $field, array $scope ) {
+		$value = $field->get_value();
+		if ( Post_Field_Query::is_numeric_field( $field ) ) {
+			return Field_Rules::valid_number( $field, $value );
+		}
+		if ( $field instanceof Select_Field && ! $field->has_remote_options() && is_scalar( $value ) && '' !== (string) $value ) {
+			return null !== $field->get_option_label( $value, $scope[ $field->get_options_source() ] ?? null );
+		}
+		return true;
 	}
 
 	private static function matches( array $logic, array $values ) {

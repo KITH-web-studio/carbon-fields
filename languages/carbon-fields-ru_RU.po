@@ -428,3 +428,33 @@ msgstr ""
 
 msgid "Review the selected items after changing the related field."
 msgstr "Проверьте выбранные элементы после изменения связанного поля."
+
+msgid "Check the post attributes."
+msgstr "Проверьте параметры записи."
+
+msgid "Check the post type and status."
+msgstr "Проверьте тип и статус записи."
+
+msgid "You cannot create this post."
+msgstr "У вас нет прав для создания этой записи."
+
+msgid "The post could not be created."
+msgstr "Не удалось создать запись."
+
+msgid "The post did not reach the requested status."
+msgstr "Не удалось установить указанный статус записи."
+
+msgid "Check the cache key, dependencies and expiration."
+msgstr "Проверьте ключ кеша, зависимости и срок действия."
+
+msgid "Facets require a native WordPress posts query."
+msgstr "Для расчёта вариантов нужен штатный запрос записей WordPress."
+
+msgid "This field filter or facet is not configured correctly."
+msgstr "Неверная настройка фильтра поля или расчёта вариантов."
+
+msgid "This filter value is invalid."
+msgstr "Недопустимое значение фильтра."
+
+msgid "The database could not calculate the requested facets."
+msgstr "Не удалось рассчитать варианты в базе данных."

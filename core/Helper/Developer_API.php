@@ -33,7 +33,7 @@ final class Developer_API {
 		return new \WP_Error( 'carbon_fields_storage_unsupported', 'Existence checks require standard metadata or a root theme option.' );
 	}
 
-	public static function update_fields( $post_id, array $changes, $container_id = '' ) {
+	public static function update_fields( $post_id, array $changes, $container_id = '', $creating = false ) {
 		if ( ! get_post( $post_id ) || ! current_user_can( 'edit_post', $post_id ) ) {
 			return new \WP_Error( 'carbon_fields_forbidden', __( 'You cannot edit this post.', 'carbon-fields' ), array( 'status' => 403 ) );
 		}
@@ -53,11 +53,19 @@ final class Developer_API {
 				}
 			}
 		}
-		$saved = Post_Meta_Transaction::batch( $lock_ids, function() use ( $post_id, $changes, $container_id, &$error ) {
+		$saved = Post_Meta_Transaction::batch( $lock_ids, function() use ( $post_id, $changes, $container_id, $creating, &$error ) {
 			Post_Meta_Datastore::invalidate_storage_cache();
 			wp_cache_delete( $post_id, 'post_meta' );
 			$repository = Carbon_Fields::resolve( 'container_repository' );
 			$groups = array();
+			if ( $creating ) {
+				foreach ( $repository->get_containers( 'post_meta' ) as $container ) {
+					$key = $container->get_id();
+					if ( ( ! $container_id || $container_id === $key ) && $container->is_valid_attach_for_object( $post_id ) ) {
+						$groups[ $key ] = array( 'container' => $container, 'changes' => array() );
+					}
+				}
+			}
 			foreach ( $changes as $name => $value ) {
 				$owner = null;
 				foreach ( $repository->get_containers( 'post_meta' ) as $container ) {
@@ -94,7 +102,7 @@ final class Developer_API {
 					}
 					$fields[] = $clone;
 				}
-				$group['fields'] = Field_Validation::validate_rest( $fields, $group['changes'] );
+				$group['fields'] = Field_Validation::validate_rest( $fields, $group['changes'], array(), $creating );
 				if ( is_wp_error( $group['fields'] ) ) {
 					$error = $group['fields'];
 					return false;

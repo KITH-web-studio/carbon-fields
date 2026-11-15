@@ -209,7 +209,7 @@ class Post_Meta_Datastore extends Meta_Datastore {
 					return false;
 				}
 				$before = null;
-				$emit = $root_field->get_change_callback() || has_action( 'carbon_fields_field_changed' );
+				$emit = \Carbon_Fields\Helper\Field_Events::observes( $event_field );
 				if ( $emit ) {
 					$event_field->load();
 					$before = $event_field->get_formatted_value();

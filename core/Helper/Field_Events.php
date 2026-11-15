@@ -5,8 +5,13 @@ namespace Carbon_Fields\Helper;
 final class Field_Events {
 	private static $frames = array();
 
+	public static function observes( $field ) {
+		return $field->get_change_callback() || has_action( 'carbon_fields_field_changed' ) ||
+			Fragment_Cache::watches( $field );
+	}
+
 	public static function snapshot( $field ) {
-		if ( $field->get_hierarchy() || ! $field->get_datastore() || ! ( $field->get_change_callback() || has_action( 'carbon_fields_field_changed' ) ) ) {
+		if ( $field->get_hierarchy() || ! $field->get_datastore() || ! self::observes( $field ) ) {
 			return null;
 		}
 		$before = clone $field;
@@ -44,6 +49,7 @@ final class Field_Events {
 			self::$frames[ $index ][] = array( $field, $id, $before, $after );
 			return;
 		}
+		Fragment_Cache::invalidate( $field, $id );
 		do_action( 'carbon_fields_field_changed', $id, $field->get_base_name(), $before, $after, $field );
 		$callback = $field->get_change_callback();
 		if ( $callback ) {

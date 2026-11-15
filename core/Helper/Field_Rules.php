@@ -31,9 +31,27 @@ final class Field_Rules {
 		self::$locks = array();
 	}
 
-	public static function validate( Field $field, $value ) {
+	public static function valid_number( Field $field, $value ) {
+		if ( '' === $value ) {
+			return true;
+		}
+		$min = $field->get_attribute( 'min' );
+		$max = $field->get_attribute( 'max' );
+		$step = $field->get_attribute( 'step' );
+		if ( ! is_scalar( $value ) || ! preg_match( '/^-?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$/D', (string) $value ) ||
+			! is_finite( (float) $value ) || ( is_numeric( $min ) && $value < $min ) || ( is_numeric( $max ) && $value > $max ) ) {
+			return false;
+		}
+		if ( ! is_numeric( $step ) || $step <= 0 ) {
+			return true;
+		}
+		$steps = ( (float) $value - (float) $min ) / (float) $step;
+		return is_finite( $steps ) && abs( $steps - round( $steps ) ) < 0.0000001;
+	}
+
+	public static function validate( Field $field, $value, $include_editor_required = false ) {
 		$formatted = $field->get_formatted_value();
-		if ( ( $field->is_server_required() || $field instanceof \Carbon_Fields\Field\Structured_Field && $field->is_required() ) &&
+		if ( ( $field->is_server_required() || ( $include_editor_required || $field instanceof \Carbon_Fields\Field\Structured_Field ) && $field->is_required() ) &&
 			( null === $formatted || '' === $formatted || false === $formatted || array() === $formatted ||
 				$field instanceof \Carbon_Fields\Field\Responsive_Image_Field && ! array_filter( $formatted ) ) ) {
 			return new \WP_Error( 'carbon_fields_required', __( 'This field is required.', 'carbon-fields' ), array( 'status' => 422 ) );

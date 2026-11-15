@@ -84,7 +84,11 @@ class Link_Field extends Field {
 
 	public function get_formatted_value() {
 		$value = $this->get_value();
-		$link = is_string( $value ) ? self::normalize( json_decode( $value, true ) ) : null;
+		return self::resolve( is_string( $value ) ? json_decode( $value, true ) : null );
+	}
+
+	public static function resolve( $value ) {
+		$link = self::normalize( $value );
 		$link = null === $link ? self::EMPTY_LINK : $link;
 		if ( 'post' === $link['type'] && $link['post_id'] ) {
 			$post = get_post( $link['post_id'] );

@@ -92,21 +92,11 @@ final class Post_Field_Query {
 			return null;
 		}
 
-		$fields = array();
-		foreach ( Carbon_Fields::resolve( 'container_repository' )->get_containers( 'post_meta' ) as $container ) {
-			if ( ( $container_id && $container_id !== $container->get_id() ) ||
-				! in_array( $post_type, $container->get_post_type_visibility(), true ) ) {
-				continue;
-			}
-			foreach ( $container->get_fields() as $field ) {
-				$fields[ $field->get_base_name() ][] = $field;
-			}
-		}
-
+		$fields = self::fields( $post_type, $container_id );
 		$filters = $order = $order_clauses = array();
 		foreach ( $where as $rule ) {
 			$name = $rule['field'] ?? null;
-			$field = is_string( $name ) ? self::scalar_field( $fields[ $name ] ?? array() ) : null;
+			$field = is_string( $name ) ? ( $fields[ $name ] ?? null ) : null;
 			if ( ! $field || ! is_array( $rule ) ) {
 				return null;
 			}
@@ -122,7 +112,7 @@ final class Post_Field_Query {
 		}
 
 		foreach ( $orderby as $name => $direction ) {
-			$field = self::scalar_field( $fields[ $name ] ?? array() );
+			$field = $fields[ $name ] ?? null;
 			if ( ! $field || ! is_string( $direction ) || ! in_array( strtoupper( $direction ), array( 'ASC', 'DESC' ), true ) ) {
 				return null;
 			}
@@ -138,6 +128,24 @@ final class Post_Field_Query {
 		return array( $filters, $order );
 	}
 
+	/** @internal Standard, unambiguous root fields for the requested post type. */
+	public static function fields( $post_type, $container_id = '' ) {
+		if ( ! is_string( $post_type ) || ! post_type_exists( $post_type ) || ! is_string( $container_id ) ) {
+			return array();
+		}
+		$definitions = array();
+		foreach ( Carbon_Fields::resolve( 'container_repository' )->get_containers( 'post_meta' ) as $container ) {
+			if ( ( $container_id && $container_id !== $container->get_id() ) ||
+				! in_array( $post_type, $container->get_post_type_visibility(), true ) ) {
+				continue;
+			}
+			foreach ( $container->get_fields() as $field ) {
+				$definitions[ $field->get_base_name() ][] = $field;
+			}
+		}
+		return array_filter( array_map( array( __CLASS__, 'scalar_field' ), $definitions ) );
+	}
+
 	private static function scalar_field( array $definitions ) {
 		if ( 1 !== count( $definitions ) ) {
 			return null;
@@ -149,12 +157,26 @@ final class Post_Field_Query {
 			in_array( $field->get_type(), array( 'text', 'textarea', 'checkbox', 'select', 'radio', 'button_group' ), true ) ? $field : null;
 	}
 
-	private static function storage_key( Field $field ) {
+	public static function storage_key( Field $field ) {
 		return Carbon_Fields::resolve( 'key_toolset' )->get_storage_key_with_index_wildcards( true, array( $field->get_base_name() ) );
 	}
 
 	private static function comparison_type( Field $field ) {
-		return 'text' === $field->get_type() && 'number' === $field->get_attribute( 'type' ) ? self::NUMBER_TYPE : 'CHAR';
+		return self::is_numeric_field( $field ) ? self::NUMBER_TYPE : 'CHAR';
+	}
+
+	public static function is_numeric_field( Field $field ) {
+		return 'text' === $field->get_type() && 'number' === $field->get_attribute( 'type' );
+	}
+
+	public static function is_number( $value ) {
+		return is_scalar( $value ) && preg_match( '/' . self::NUMBER_PATTERN . '/D', (string) $value );
+	}
+
+	/** @internal Use the same decimal format and validity check as the filtering clauses. */
+	public static function decimal_range_sql( $column ) {
+		$cast = "CAST({$column} AS " . self::NUMBER_TYPE . ')';
+		return array( "MIN({$cast}) AS minimum, MAX({$cast}) AS maximum", self::NUMBER_PATTERN );
 	}
 
 	private static function comparison( Field $field, array $rule ) {
@@ -176,7 +198,7 @@ final class Post_Field_Query {
 		}
 		$normalized = array();
 		foreach ( $values as $item ) {
-			if ( ! is_scalar( $item ) || ( self::NUMBER_TYPE === $clause['type'] && ! preg_match( '/' . self::NUMBER_PATTERN . '/D', (string) $item ) ) ) {
+			if ( ! is_scalar( $item ) || ( self::NUMBER_TYPE === $clause['type'] && ! self::is_number( $item ) ) ) {
 				return null;
 			}
 			$normalized[] = $field instanceof Checkbox_Field && is_bool( $item ) ? ( $item ? $field->get_option_value() : '' ) : (string) $item;

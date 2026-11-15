@@ -1,7 +1,11 @@
 <?php
 
 use Carbon_Fields\Helper\Developer_API;
+use Carbon_Fields\Helper\Fragment_Cache;
+use Carbon_Fields\Helper\Link_Markup;
 use Carbon_Fields\Helper\Media;
+use Carbon_Fields\Helper\Post_Creation;
+use Carbon_Fields\Helper\Post_Field_Filters;
 use Carbon_Fields\Helper\Post_Meta_Batch;
 use Carbon_Fields\Helper\Post_Select_Label;
 use Carbon_Fields\Helper\Theme_Option_Dictionary;
@@ -28,6 +32,16 @@ function carbon_get_post_select_label( $post_id, $name, $container_id = '' ) {
 	return Post_Select_Label::get( $post_id, $name, $container_id );
 }
 
+/** @return array|WP_Error Counts or numeric ranges across all matching posts. */
+function carbon_get_post_facets( array $query_args, array $facets ) {
+	return Post_Field_Filters::facets( $query_args, $facets );
+}
+
+/** @return array|WP_Error Validated where conditions and selected request values. */
+function carbon_parse_post_filters( $post_type, array $input, array $filters, $container_id = '' ) {
+	return Post_Field_Filters::parse( $post_type, $input, $filters, $container_id );
+}
+
 /** @return array|null The selected row of a shared theme option. */
 function carbon_get_theme_option_row( $name, $id, $container_id = '' ) {
 	return Theme_Option_Dictionary::get_row( $name, $id, $container_id );
@@ -46,6 +60,16 @@ function carbon_render_post_text_template( $post_id, $name, $container_id = '' )
 /** @return true|WP_Error */
 function carbon_update_fields( $post_id, array $changes, $container_id = '' ) {
 	return Developer_API::update_fields( $post_id, $changes, $container_id );
+}
+
+/** @return int|WP_Error Create a post with validated Carbon Fields data. */
+function carbon_insert_post( array $post, array $fields, $container_id = '' ) {
+	return Post_Creation::insert( $post, $fields, $container_id );
+}
+
+/** Cache a fragment until its expiration or a saved dependency changes. */
+function carbon_cache_fragment( $key, array $dependencies, callable $render, $ttl = HOUR_IN_SECONDS ) {
+	return Fragment_Cache::remember( $key, $dependencies, $render, $ttl );
 }
 
 /** @return true|WP_Error */
@@ -104,6 +128,11 @@ function carbon_media( $value, $size = 'full' ) {
 /** @return string Escaped image markup or an empty string. */
 function carbon_image( $value, $size = 'large', array $attributes = array() ) {
 	return Media::image( $value, $size, $attributes );
+}
+
+/** @return string Escaped link markup or an empty string. */
+function carbon_link( $value, array $attributes = array() ) {
+	return Link_Markup::render( $value, $attributes );
 }
 
 /** @return string Escaped picture markup; sources must include a default entry. */

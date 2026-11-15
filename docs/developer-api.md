@@ -6,6 +6,8 @@ See the [verification record](developer-verification.md) for exercised scenarios
 
 All helpers are available after Carbon Fields boots. Register definitions before calling field helpers. Examples assume `use Carbon_Fields\Field;` and `use Carbon_Fields\Container;`.
 
+See [catalog filters, post creation and cached templates](developer-recipes.md) for complete examples of the URL parser, facet counts, post creation, fragment caching and link markup.
+
 ## Shared dictionaries for select fields
 
 Use a shared theme option with stable row IDs when editors need to maintain a list of branches, services or other choices. The select stores the row's UUID. The label follows the row when it is renamed or moved.

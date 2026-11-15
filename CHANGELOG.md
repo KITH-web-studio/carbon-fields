@@ -2,6 +2,14 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.32
+
+- Calculate catalog facet counts and decimal ranges across matching posts.
+- Parse declared URL filters into validated `WP_Query` conditions.
+- Create posts with validated Carbon Fields values and apply the final status after the fields save.
+- Cache template fragments and invalidate them when watched post fields or theme options change.
+- Render escaped links with current permalinks and safe new-tab attributes. Add English and Russian PHP recipes for all five APIs.
+
 ## 3.6.11.31
 
 - Filter and sort posts in `WP_Query` by declared field names. Numeric comparisons preserve decimal precision and distinguish a stored zero from a blank value.

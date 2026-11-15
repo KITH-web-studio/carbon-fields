@@ -290,21 +290,7 @@ final class Post_List_Editor {
 			$limit = $field->get_attribute( 'maxLength' );
 			return ! is_numeric( $limit ) || $limit < 0 || preg_match_all( '/./us', $value ) <= $limit;
 		}
-		if ( '' === $value ) {
-			return true;
-		}
-		$min = $field->get_attribute( 'min' );
-		$max = $field->get_attribute( 'max' );
-		$step = $field->get_attribute( 'step' );
-		if ( ! preg_match( '/^-?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$/D', $value ) ||
-			! is_finite( (float) $value ) || ( is_numeric( $min ) && $value < $min ) || ( is_numeric( $max ) && $value > $max ) ) {
-			return false;
-		}
-		if ( ! is_numeric( $step ) || $step <= 0 ) {
-			return true;
-		}
-		$steps = ( (float) $value - (float) $min ) / (float) $step;
-		return is_finite( $steps ) && abs( $steps - round( $steps ) ) < 0.0000001;
+		return \Carbon_Fields\Helper\Field_Rules::valid_number( $field, $value );
 	}
 
 	private function save_changes( $post_id, array $groups ) {

@@ -427,3 +427,33 @@ msgstr ""
 
 msgid "Review the selected items after changing the related field."
 msgstr ""
+
+msgid "Check the post attributes."
+msgstr ""
+
+msgid "Check the post type and status."
+msgstr ""
+
+msgid "You cannot create this post."
+msgstr ""
+
+msgid "The post could not be created."
+msgstr ""
+
+msgid "The post did not reach the requested status."
+msgstr ""
+
+msgid "Check the cache key, dependencies and expiration."
+msgstr ""
+
+msgid "Facets require a native WordPress posts query."
+msgstr ""
+
+msgid "This field filter or facet is not configured correctly."
+msgstr ""
+
+msgid "This filter value is invalid."
+msgstr ""
+
+msgid "The database could not calculate the requested facets."
+msgstr ""
