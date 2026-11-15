@@ -25,6 +25,7 @@ import Field from '../field';
 import { ComplexRevealContext, findLazyFieldError, supportsPackedPostMeta } from '../../utils/lazy-complex';
 import isGutenberg from '../../utils/is-gutenberg';
 import SettingsPanel from './settings-panel';
+import MetaboxFieldActions from './field-actions';
 import { validate as validateServerFields } from '../../monitors/field-validation';
 
 class Container extends Component {
@@ -143,6 +144,7 @@ class Container extends Component {
 			<ComplexRevealContext.Provider key={ field.id } value={ reveal }>
 				<Field id={ field.id }>
 					<FieldEdit id={ field.id } containerId={ this.props.id } />
+					<MetaboxFieldActions container={ container } anchor={ field.base_name } />
 				</Field>
 			</ComplexRevealContext.Provider>
 		);

@@ -2,6 +2,11 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.27
+
+- Add PHP-declared editor actions with a preview in the post editor and WooCommerce Product data.
+- Add opt-in persistent complex row IDs and allow PHP row updates and removals by UUID.
+
 ## 3.6.11.26
 
 - Add native WooCommerce Product data tabs/panels with configurable priority, variation fields and permission-aware saving.

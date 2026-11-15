@@ -23,12 +23,12 @@ function carbon_append_row( $post_id, $name, array $row, $container_id = '' ) {
 	return Developer_API::row( 'append', $post_id, $name, null, $row, $container_id );
 }
 
-/** @return true|WP_Error Row indexes start at zero. */
+/** @return true|WP_Error Pass a zero-based index or a saved UUID when row IDs are enabled. */
 function carbon_update_row( $post_id, $name, $index, array $changes, $container_id = '' ) {
 	return Developer_API::row( 'update', $post_id, $name, $index, $changes, $container_id );
 }
 
-/** @return true|WP_Error Row indexes start at zero. */
+/** @return true|WP_Error Pass a zero-based index or a saved UUID when row IDs are enabled. */
 function carbon_remove_row( $post_id, $name, $index, $container_id = '' ) {
 	return Developer_API::row( 'remove', $post_id, $name, $index, array(), $container_id );
 }

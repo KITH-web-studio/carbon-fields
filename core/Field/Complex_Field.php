@@ -14,6 +14,7 @@ use Carbon_Fields\Exception\Incorrect_Syntax_Exception;
  */
 class Complex_Field extends Field {
 	private $internal_values = false;
+	private $row_ids = false;
 
 	public function load() {
 		$this->set_internal_value( $this->get_value_from_datastore() );
@@ -39,6 +40,53 @@ class Complex_Field extends Field {
 	const LAYOUT_TABBED_VERTICAL = 'tabbed-vertical';
 
 	const TYPE_PROPERTY = '_type';
+	const ROW_ID_PROPERTY = '_row_id';
+
+	/**
+	 * Enable stable identifiers for rows in this field.
+	 */
+	public function set_row_ids() {
+		if ( $this->row_ids ) {
+			return $this;
+		}
+		foreach ( $this->get_fields() as $field ) {
+			if ( static::ROW_ID_PROPERTY === $field->get_base_name() ) {
+				throw new \InvalidArgumentException( '_row_id is reserved when complex row IDs are enabled.' );
+			}
+		}
+		$this->row_ids = true;
+		foreach ( $this->groups as $group ) {
+			$group->add_fields( array( new Complex_Row_Id_Field() ) );
+		}
+		$this->update_child_hierarchy();
+		if ( $this->get_datastore() ) {
+			$this->update_child_datastore( $this->get_datastore(), true );
+		}
+		return $this;
+	}
+
+	public function has_row_ids() {
+		return $this->row_ids;
+	}
+
+	private function ensure_row_ids() {
+		if ( ! $this->row_ids ) {
+			return;
+		}
+		$seen = array();
+		foreach ( $this->value_tree as &$row ) {
+			$id = $row[ static::ROW_ID_PROPERTY ] ?? '';
+			$id = is_array( $id ) ? ( $id[0][ Value_Set::VALUE_PROPERTY ] ?? '' ) : $id;
+			if ( ! is_string( $id ) || ! wp_is_uuid( $id, 4 ) || isset( $seen[ strtolower( $id ) ] ) ) {
+				$id = wp_generate_uuid4();
+			}
+			$seen[ strtolower( $id ) ] = true;
+			$row[ static::ROW_ID_PROPERTY ] = $this->internal_values
+				? array( array( Value_Set::VALUE_PROPERTY => $id ) )
+				: $id;
+		}
+		unset( $row );
+	}
 
 	/**
 	 * Default field value
@@ -244,6 +292,9 @@ class Complex_Field extends Field {
 		}
 
 		$reserved_names = array( Value_Set::VALUE_PROPERTY, static::TYPE_PROPERTY );
+		if ( $this->row_ids ) {
+			$reserved_names[] = static::ROW_ID_PROPERTY;
+		}
 		foreach ( $fields as $field ) {
 			/** @var Field $field */
 			if ( in_array( $field->get_base_name(), $reserved_names ) ) {
@@ -252,6 +303,9 @@ class Complex_Field extends Field {
 			}
 		}
 
+		if ( $this->row_ids ) {
+			$fields[] = new Complex_Row_Id_Field();
+		}
 		$group = new Group_Field( $name, $label, $fields );
 		$this->groups[ $group->get_name() ] = $group;
 
@@ -501,6 +555,7 @@ class Complex_Field extends Field {
 		if ( null !== $saved ) {
 			return $saved;
 		}
+		$this->ensure_row_ids();
 		$event_before = \Carbon_Fields\Helper\Field_Events::snapshot( $this );
 
 		// Only delete root field values as nested field values should be deleted in a cascading manner by the datastore
@@ -533,6 +588,7 @@ class Complex_Field extends Field {
 	 * @return \Generator
 	 */
 	protected function get_storage_fields() {
+		$this->ensure_row_ids();
 		yield $this;
 
 		$groups = $this->get_prefilled_groups( $this->get_value(), $this->get_value_tree() );

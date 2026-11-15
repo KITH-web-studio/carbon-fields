@@ -119,20 +119,51 @@ final class Developer_API {
 		if ( ! $field instanceof Complex_Field ) {
 			return new \WP_Error( 'carbon_fields_complex_required', 'Row operations require a complex field.' );
 		}
-		return self::update_fields( $post_id, array( $name => function( $rows ) use ( $operation, $index, $value ) {
+		return self::update_fields( $post_id, array( $name => function( $rows ) use ( $field, $operation, $index, $value ) {
 			if ( 'append' === $operation ) {
-				$rows[] = $value;
-			} elseif ( is_int( $index ) && isset( $rows[ $index ] ) ) {
-				if ( 'remove' === $operation ) {
-					array_splice( $rows, $index, 1 );
-				} else {
-					$rows[ $index ] = array_replace( $rows[ $index ], $value );
+				$rows[] = self::new_complex_row( $field, $value );
+				return array_values( $rows );
+			}
+			if ( $field->has_row_ids() && is_string( $index ) && wp_is_uuid( $index, 4 ) ) {
+				$id = $index;
+				$index = null;
+				foreach ( $rows as $position => $row ) {
+					if ( 0 === strcasecmp( $row[ Complex_Field::ROW_ID_PROPERTY ] ?? '', $id ) ) {
+						$index = $position;
+						break;
+					}
 				}
-			} else {
+			}
+			if ( ! is_int( $index ) || ! isset( $rows[ $index ] ) ) {
 				return new \WP_Error( 'carbon_fields_row_not_found', 'Complex row does not exist.' );
+			}
+			if ( 'remove' === $operation ) {
+				array_splice( $rows, $index, 1 );
+			} else {
+				if ( $field->has_row_ids() ) {
+					unset( $value[ Complex_Field::ROW_ID_PROPERTY ] );
+				}
+				$rows[ $index ] = array_replace( $rows[ $index ], $value );
 			}
 			return array_values( $rows );
 		} ), $container_id );
+	}
+
+	private static function new_complex_row( Complex_Field $field, array $row ) {
+		if ( $field->has_row_ids() ) {
+			unset( $row[ Complex_Field::ROW_ID_PROPERTY ] );
+		}
+		$type = $row[ Complex_Field::TYPE_PROPERTY ] ?? $row['value'] ?? \Carbon_Fields\Field\Group_Field::DEFAULT_GROUP_NAME;
+		$group = is_string( $type ) ? $field->get_group_by_name( $type ) : null;
+		foreach ( $group ? $group->get_fields() : array() as $child ) {
+			$name = $child->get_base_name();
+			if ( $child instanceof Complex_Field && isset( $row[ $name ] ) && is_array( $row[ $name ] ) ) {
+				$row[ $name ] = array_map( function( $nested ) use ( $child ) {
+					return is_array( $nested ) ? self::new_complex_row( $child, $nested ) : $nested;
+				}, $row[ $name ] );
+			}
+		}
+		return $row;
 	}
 
 	public static function register_field_set( $name, callable $factory ) {

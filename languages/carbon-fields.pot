@@ -405,3 +405,12 @@ msgstr ""
 
 msgid "This field is not available."
 msgstr ""
+
+msgid "This field action is not available."
+msgstr ""
+
+msgid "Could not generate changes. Try again."
+msgstr ""
+
+msgid "The field action received or returned invalid values."
+msgstr ""

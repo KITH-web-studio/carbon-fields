@@ -39,7 +39,42 @@ These helpers update field metadata; they do not call `wp_update_post()` or crea
 
 `carbon_has_value($id, $name, $type = 'post_meta', $container_id = '')` returns a boolean for standard root metadata and root theme options. Stored false, empty string and zero count as present. A missing registration returns false; an unsupported nested/custom storage request returns `WP_Error`. It checks existence, not editor permissions or whether a value is nonempty. Theme options check the active language's own value, not a fallback from another language.
 
+## Editor field actions
+
+Use `add_field_action()` on a post meta container to add a button beside the first input field. In WooCommerce Product data, the button appears below the container's fields. The callback receives the current editor values for the declared inputs and the `WP_Post` being edited.
+
+```php
+use Carbon_Fields\Container;
+use Carbon_Fields\Field;
+
+add_action( 'carbon_fields_register_fields', function () {
+    Container::make( 'post_meta', 'Supplier details' )
+        ->set_woocommerce_product_tab( 'supplier_details' )
+        ->add_fields( array(
+            Field::make( 'text', 'supplier_sku', 'Supplier SKU' ),
+            Field::make( 'text', 'supplier_title', 'Supplier title' ),
+            Field::make( 'text', 'package_length', 'Length (cm)' )->set_attribute( 'type', 'number' ),
+        ) )
+        ->add_field_action(
+            'load_supplier',
+            'Fill from SKU',
+            array( 'supplier_sku' ),
+            array( 'supplier_title', 'package_length' ),
+            function ( $inputs, WP_Post $post ) {
+                $catalog = array( 'A-42' => array( 'supplier_title' => 'Box', 'package_length' => '42' ) );
+                return $catalog[ $inputs['supplier_sku'] ] ?? new WP_Error( 'sku_missing', 'SKU was not found.' );
+            }
+        );
+} );
+```
+
+The editor can review the proposed values and choose whether to apply them to the form. The normal WordPress save runs the container's validators. The callback should only read or calculate data and return proposals or a `WP_Error` with an editor-facing message.
+
+List inputs and outputs by their field base names. An empty input list places the button beside the first output. Supported fields are top-level text (including numbers), textarea and select without remote or dependent options, using standard post metadata. Use actions in the post editor or classic WooCommerce Product data panels for the product. An optional last argument adds a WordPress capability check. The request also checks permission to edit the post and the container's conditions.
+
 ## Complex rows and queries
+
+When `set_row_ids()` is enabled, pass the `_row_id` from a saved row to `carbon_update_row()` or `carbon_remove_row()` in place of its index. ID lookup takes place inside the post's write transaction. See [stable row IDs](complex-fields.md#stable-row-ids).
 
 ```php
 carbon_append_row( $post_id, 'offers', array(

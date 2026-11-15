@@ -42,6 +42,23 @@ add_action( 'carbon_fields_register_fields', function () {
 
 Layouts are `grid`, `tabbed-horizontal`, and `tabbed-vertical`. `set_min()` and `set_max()` control how many rows an editor can save. Use `set_collapsed()` to start rows collapsed in layouts that support it, and `set_duplicate_groups_allowed( false )` to remove the duplicate action.
 
+## Stable row IDs
+
+Call `set_row_ids()` on each complex field that needs persistent row identity. This works in standard metadata and theme options containers. Enable it separately on nested complexes that need their own IDs.
+
+```php
+Field::make( 'complex', 'sections', 'Sections' )
+    ->set_row_ids()
+    ->add_fields( array( Field::make( 'text', 'heading', 'Heading' ) ) );
+
+$rows = carbon_get_post_meta( $post_id, 'sections' );
+if ( ! empty( $rows[0]['_row_id'] ) ) {
+    carbon_update_row( $post_id, 'sections', $rows[0]['_row_id'], array( 'heading' => 'New heading' ) );
+}
+```
+
+Each row gets a UUID in `_row_id` on its first save with the option enabled. Reordering and undoing an unsaved deletion retain the ID. Duplicated rows and their copied nested rows receive new IDs. Preserve `_row_id` when rebuilding a saved row in PHP or REST. The row helpers also continue to accept a zero-based index. For links to rows use the post and field together with the row ID, since copying an entire post or synchronizing translations can copy the stored IDs.
+
 ## Tabs inside a row
 
 Call `set_group_tabs()` after `add_fields()` to organize that row type. Use tab labels as keys and list the field names from `Field::make()` in each tab. Unassigned fields appear above the tabs. Row types without this setting show their fields together. The setting applies to all three layouts and preserves the saved row structure.

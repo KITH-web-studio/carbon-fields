@@ -409,3 +409,12 @@ msgstr "Цей тип файлу не дозволений."
 
 msgid "This field is not available."
 msgstr "Це поле недоступне."
+
+msgid "This field action is not available."
+msgstr "Ця дія недоступна."
+
+msgid "Could not generate changes. Try again."
+msgstr "Не вдалося підготувати зміни. Спробуйте ще раз."
+
+msgid "The field action received or returned invalid values."
+msgstr "Дія отримала або повернула неприпустимі значення."

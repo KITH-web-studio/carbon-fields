@@ -43,6 +43,7 @@ class Loader {
 		include_once( \Carbon_Fields\DIR . '/core/developer-functions.php' );
 		add_filter( 'posts_where', array( \Carbon_Fields\Helper\Complex_Row_Query::class, 'where' ), 10, 2 );
 		add_action( 'rest_api_init', array( new \Carbon_Fields\REST_API\Field_Options(), 'register_routes' ) );
+		add_action( 'rest_api_init', array( new \Carbon_Fields\Admin\Field_Actions(), 'register_routes' ) );
 
 		add_action( 'after_setup_theme', array( $this, 'load_textdomain' ), 9999 );
 		add_action( 'init', array( $this, 'trigger_fields_register' ), 0 );
@@ -262,6 +263,7 @@ class Loader {
 				'businessTimezones' => \Carbon_Fields\Field\Business_Hours_Field::editor_timezones(),
 				'validationPostRoute' => isset( $GLOBALS['post'] ) && function_exists( 'rest_get_route_for_post' ) ? rest_get_route_for_post( $GLOBALS['post'] ) : '',
 				'linkLanguage' => \Carbon_Fields\Integration\Polylang::current_language(),
+				'fieldActionUrl' => rest_url( 'carbon-fields/v1/field-action' ),
 				'wp_version' => $wp_version,
 			)
 		) ) );

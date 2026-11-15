@@ -45,6 +45,31 @@ class Post_Meta_Container extends Container {
 	protected $admin_columns = array();
 
 	private $woocommerce_placement;
+	private $field_actions = array();
+
+	/**
+	 * Add an editor button whose callback proposes values for fields in this container.
+	 */
+	public function add_field_action( $id, $label, array $inputs, array $outputs, callable $callback, $capability = '' ) {
+		if ( ! is_string( $id ) || ! Helper::is_valid_entity_id( $id ) || isset( $this->field_actions[ $id ] ) ||
+			! is_string( $label ) || '' === trim( $label ) || ! $outputs || ! is_string( $capability ) ) {
+			throw new \InvalidArgumentException( 'A field action requires a unique ID, a label and at least one output field.' );
+		}
+		foreach ( array_merge( $inputs, $outputs ) as $name ) {
+			if ( ! is_string( $name ) || ! Helper::is_valid_entity_id( $name ) ) {
+				throw new \InvalidArgumentException( 'Field actions reference fields by their base names.' );
+			}
+		}
+		$this->field_actions[ $id ] = array(
+			'id' => $id, 'label' => $label, 'inputs' => array_values( array_unique( $inputs ) ),
+			'outputs' => array_values( array_unique( $outputs ) ), 'callback' => $callback, 'capability' => $capability,
+		);
+		return $this;
+	}
+
+	public function get_field_actions() {
+		return $this->field_actions;
+	}
 
 	/**
 	 * List of default container settings
@@ -239,6 +264,11 @@ class Post_Meta_Container extends Container {
 
 	public function to_json( $load ) {
 		$data = parent::to_json( $load );
+		if ( $this->field_actions && ! $this->woocommerce_placement ) {
+			$post_id = $this->post_id ?: ( $GLOBALS['post']->ID ?? 0 );
+			$data['field_actions'] = \Carbon_Fields\Admin\Field_Actions::describe( $this, $post_id );
+			$data['field_actions_post_id'] = (int) $post_id;
+		}
 		if ( ! empty( $data['settings']['server_validation'] ) ) {
 			$post_id = get_the_ID();
 			$data['settings']['validation_nonce'] = wp_create_nonce( $this->get_id() . ':validate:' . $post_id );

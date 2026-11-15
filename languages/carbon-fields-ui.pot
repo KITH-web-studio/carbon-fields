@@ -36,3 +36,39 @@ msgstr ""
 #: packages/core/fields/structured/geofence.js:63
 msgid "Vertex %d"
 msgstr ""
+
+msgid "The action fields are unavailable."
+msgstr ""
+
+msgid "Could not generate changes. Try again."
+msgstr ""
+
+msgid "No changes to apply."
+msgstr ""
+
+msgid "The form changed. Generate a new preview."
+msgstr ""
+
+msgid "Changes applied to the form. Save the post to keep them."
+msgstr ""
+
+msgid "Generating preview…"
+msgstr ""
+
+msgid "Proposed changes"
+msgstr ""
+
+msgid "Field"
+msgstr ""
+
+msgid "Current value"
+msgstr ""
+
+msgid "Proposed value"
+msgstr ""
+
+msgid "Apply changes"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""

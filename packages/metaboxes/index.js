@@ -12,6 +12,7 @@ import './fields';
 import initializeMonitors from './monitors';
 import initializeContainers from './containers';
 import isGutenberg from './utils/is-gutenberg';
+import { initializeWooFieldActions } from './components/container/field-actions';
 
 /**
  * Public API.
@@ -35,5 +36,6 @@ const context = isGutenberg() ? 'gutenberg' : 'classic';
  */
 addAction( 'carbon-fields.init', 'carbon-fields/metaboxes', () => {
 	initializeContainers( context );
+	initializeWooFieldActions();
 	initializeMonitors( context );
 } );

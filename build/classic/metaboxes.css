@@ -932,3 +932,67 @@
 .cf-container__tabs--tabbed-vertical .cf-container__tabs-list .cf-container__tabs-item + .cf-container__tabs-item {
   border-top: 0;
 }
+/* ==========================================================================
+   Colors
+   ========================================================================== */
+/* ==========================================================================
+   WordPress Colors - https://make.wordpress.org/design/handbook/design-guide/foundations/colors/
+   ========================================================================== */
+/* ==========================================================================
+   Gutenberg Colors - https://github.com/WordPress/gutenberg/blob/master/assets/stylesheets/_colors.scss
+   ========================================================================== */
+/* ==========================================================================
+   Fonts
+   ========================================================================== */
+/* ==========================================================================
+   Variables
+   ========================================================================== */
+/* ==========================================================================
+   WordPress Variables
+   ========================================================================== */
+/* ==========================================================================
+   Gutenberg Variables - https://github.com/WordPress/gutenberg/blob/master/assets/stylesheets/_variables.scss
+   ========================================================================== */
+/* ==========================================================================
+   WP Admin CSS Custom Properties - https://github.com/WordPress/wordpress-develop/blob/trunk/src/wp-admin/css/common.css
+   ========================================================================== */
+/* ==========================================================================
+   Mixins
+   ========================================================================== */
+.cf-field-action {
+  margin-top: 8px;
+}
+
+.cf-woo-field-actions {
+  margin: 12px;
+}
+
+.cf-field-action__preview {
+  margin-top: 8px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+[dir="ltr"] .cf-field-action__preview caption {
+  text-align: left;
+}
+[dir="rtl"] .cf-field-action__preview caption {
+  text-align: right;
+}
+.cf-field-action__preview caption {
+  font-weight: 600;
+  padding-bottom: 4px;
+}
+.cf-field-action__preview th,
+.cf-field-action__preview td {
+  word-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.cf-field-action__controls {
+  display: flex;
+  flex-wrap: wrap;
+  grid-gap: 8px;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}

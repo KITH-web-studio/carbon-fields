@@ -250,6 +250,11 @@ final class WooCommerce_Product_Data {
 					woocommerce_wp_text_input( $args );
 			}
 		}
+		$actions = $variation ? array() : \Carbon_Fields\Admin\Field_Actions::describe( $container, $product_id );
+		if ( $actions ) {
+			printf( '<div class="cf-woo-field-actions" data-cf-woo-field-actions="%s" data-field-prefix="%s" data-post-id="%d" data-container-id="%s"></div>',
+				esc_attr( wp_json_encode( $actions ) ), esc_attr( $prefix ), $product_id, esc_attr( $container->get_id() ) );
+		}
 		printf( '<input type="hidden" name="%s[complete]" value="1"></div>', esc_attr( $prefix ) );
 	}
 

@@ -1,0 +1,33 @@
+.cf-field-action {
+	margin-top: 8px;
+}
+
+.cf-woo-field-actions {
+	margin: 12px;
+}
+
+.cf-field-action__preview {
+	margin-top: 8px;
+	max-width: 100%;
+	overflow-x: auto;
+
+	caption {
+		font-weight: 600;
+		padding-bottom: 4px;
+		text-align: start;
+	}
+
+	th,
+	td {
+		overflow-wrap: anywhere;
+		white-space: pre-wrap;
+	}
+}
+
+.cf-field-action__controls {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin-top: 8px;
+}

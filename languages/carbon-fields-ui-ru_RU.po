@@ -635,3 +635,36 @@ msgstr "Вершина %d"
 
 msgid "Map tiles are unavailable. You can still edit the outline or enter coordinates."
 msgstr "Подложка недоступна. Можно редактировать контур и вводить координаты."
+
+msgid "The action fields are unavailable."
+msgstr "Поля для этого действия недоступны."
+
+msgid "Could not generate changes. Try again."
+msgstr "Не удалось подготовить изменения. Попробуйте ещё раз."
+
+msgid "No changes to apply."
+msgstr "Изменений нет."
+
+msgid "The form changed. Generate a new preview."
+msgstr "Форма изменилась. Подготовьте новый предпросмотр."
+
+msgid "Changes applied to the form. Save the post to keep them."
+msgstr "Изменения внесены в форму. Сохраните запись, чтобы их применить."
+
+msgid "Generating preview…"
+msgstr "Подготовка предпросмотра…"
+
+msgid "Proposed changes"
+msgstr "Предлагаемые изменения"
+
+msgid "Field"
+msgstr "Поле"
+
+msgid "Current value"
+msgstr "Текущее значение"
+
+msgid "Proposed value"
+msgstr "Предлагаемое значение"
+
+msgid "Apply changes"
+msgstr "Применить изменения"

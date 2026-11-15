@@ -65,6 +65,9 @@ function cloneField( originId, cloneId, fields, accumulator, clonedIds ) {
 	field.id = cloneId;
 	clonedIds.set( originId, cloneId );
 
+	if ( field.complex_row_id ) {
+		field.value = '';
+	}
 	if ( field.type === 'complex' ) {
 		field.value.forEach( ( group ) => {
 			group.id = uniqueId();

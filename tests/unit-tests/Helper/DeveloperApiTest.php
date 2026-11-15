@@ -82,6 +82,102 @@ class DeveloperApiTest extends WP_UnitTestCase {
 		$this->assertSame( 'a_phone', $a[0]->get_base_name() ); $this->assertSame( 'b_phone', $b[0]->get_base_name() ); $this->assertNotSame( $a[0], $b[0] );
 	}
 
+	public function testComplexRowIdsSurviveReorderingAndCopiesReceiveNewIds() {
+		$name = $this->prefix . '_stable_rows';
+		$children = Field::make( 'complex', 'children' )->set_row_ids()
+			->add_fields( array( Field::make( 'text', 'title' ) ) );
+		$field = Field::make( 'complex', $name )->add_fields( array( Field::make( 'text', 'title' ), $children ) );
+		$this->container->add_fields( array( $field ) );
+		$first = array( 'title' => 'First', 'children' => array( array( 'title' => 'Nested' ) ) );
+		$second = array( 'title' => 'Second', 'children' => array() );
+		$this->assertTrue( carbon_update_fields( $this->id, array( $name => array( $first, $second ) ) ) );
+		$this->assertArrayNotHasKey( '_row_id', carbon_get_post_meta( $this->id, $name )[0] );
+
+		$field->set_row_ids();
+		$definition = $field->to_json( false )['groups'][0]['fields'];
+		$this->assertSame( 'hidden', end( $definition )['type'] );
+		$legacy = carbon_get_post_meta( $this->id, $name );
+		$this->assertEmpty( $legacy[0]['_row_id'] );
+		$this->assertTrue( carbon_update_fields( $this->id, array( $name => $legacy ) ) );
+		$rows = carbon_get_post_meta( $this->id, $name );
+		$id = $rows[0]['_row_id'];
+		$child_id = $rows[0]['children'][0]['_row_id'];
+		$this->assertTrue( wp_is_uuid( $id, 4 ) );
+		$this->assertTrue( wp_is_uuid( $child_id, 4 ) );
+		$this->assertTrue( carbon_update_fields( $this->id, array( $name => array_reverse( $rows ) ) ) );
+		$this->assertTrue( carbon_update_row( $this->id, $name, $id, array( 'title' => 'Edited', '_row_id' => wp_generate_uuid4() ) ) );
+		$this->assertTrue( carbon_append_row( $this->id, $name, $rows[0] ) );
+		$rows = carbon_get_post_meta( $this->id, $name );
+		$this->assertSame( 'Edited', $rows[1]['title'] );
+		$this->assertSame( $id, $rows[1]['_row_id'] );
+		$this->assertSame( $child_id, $rows[1]['children'][0]['_row_id'] );
+		$this->assertTrue( wp_is_uuid( $rows[2]['_row_id'], 4 ) );
+		$this->assertTrue( wp_is_uuid( $rows[2]['children'][0]['_row_id'], 4 ) );
+		$this->assertNotSame( $id, $rows[2]['_row_id'] );
+		$this->assertNotSame( $child_id, $rows[2]['children'][0]['_row_id'] );
+		$this->assertTrue( carbon_remove_row( $this->id, $name, $id ) );
+		$this->assertWPError( carbon_remove_row( $this->id, $name, $id ) );
+		$this->assertSame( array( 'Second', 'First' ), array_column( carbon_get_post_meta( $this->id, $name ), 'title' ) );
+	}
+
+	public function testFieldActionPreviewsOnlyExplicitFieldsAndRequiresEditorPermission() {
+		$input = $this->prefix . '_title';
+		$output = $this->prefix . '_valid';
+		$calls = 0;
+		$this->container->add_field_action( 'supplier', 'Fill from supplier', array( $input ), array( $output ),
+			function( $values, $post ) use ( $input, $output, &$calls ) {
+				++$calls;
+				if ( 'bad-output' === $values[ $input ] ) {
+					return array( 'another_field' => 'value' );
+				}
+				return array( $output => $values[ $input ] . '-' . $post->ID );
+			}, 'manage_options' );
+		$this->assertTrue( carbon_update_fields( $this->id, array( $input => 'saved', $output => 'original' ) ) );
+
+		$server = rest_get_server();
+		if ( ! did_action( 'rest_api_init' ) ) { do_action( 'rest_api_init', $server ); }
+		( new \Carbon_Fields\Admin\Field_Actions() )->register_routes();
+		$request = new WP_REST_Request( 'POST', '/carbon-fields/v1/field-action' );
+		$request->set_param( 'container_id', $this->container->get_id() );
+		$request->set_param( 'action_id', 'supplier' );
+		$request->set_param( 'post_id', $this->id );
+		$request->set_param( 'inputs', array( $input => 'unsaved' ) );
+		$response = $server->dispatch( $request );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array( $output => 'unsaved-' . $this->id ), (array) $response->get_data()['changes'] );
+		$this->assertSame( 'original', carbon_get_post_meta( $this->id, $output ) );
+		$request->set_param( 'inputs', array( $input => 'unsaved', 'unexpected' => 'value' ) );
+		$this->assertSame( 422, $server->dispatch( $request )->get_status() );
+		$request->set_param( 'inputs', array( $input => 'bad-output' ) );
+		$this->assertSame( 422, $server->dispatch( $request )->get_status() );
+		$request->set_param( 'inputs', array( $input => 'unsaved' ) );
+		$request->set_param( 'action_id', 'forged' );
+		$this->assertSame( 403, $server->dispatch( $request )->get_status() );
+		$request->set_param( 'action_id', 'supplier' );
+		foreach ( array( 'editor', 'subscriber' ) as $role ) {
+			wp_set_current_user( self::factory()->user->create( array( 'role' => $role ) ) );
+			$this->assertSame( 403, $server->dispatch( $request )->get_status() );
+		}
+		wp_set_current_user( 0 );
+		$this->assertSame( 401, $server->dispatch( $request )->get_status() );
+		$this->assertSame( 2, $calls );
+	}
+
+	public function testStableRowIdsAreSavedWithThemeOptions() {
+		$name = $this->prefix . '_option_rows';
+		$container = Container::make( 'theme_options', 'Options ' . $this->prefix )
+			->add_fields( array( Field::make( 'complex', $name )->set_row_ids()
+				->add_fields( array( Field::make( 'text', 'title' ) ) ),
+			) );
+		$id = $container->get_id();
+		carbon_set_theme_option( $name, array( array( 'title' => 'One' ) ), $id );
+		$rows = carbon_get_theme_option( $name, $id );
+		$this->assertTrue( wp_is_uuid( $rows[0]['_row_id'], 4 ) );
+		$rows[0]['title'] = 'Edited';
+		carbon_set_theme_option( $name, $rows, $id );
+		$this->assertSame( $rows, carbon_get_theme_option( $name, $id ) );
+	}
+
 	public function testBatchRollsBackEarlierWritesAfterDatabaseFailure() {
 		global $wpdb;
 		$p = $this->prefix;
