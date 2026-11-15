@@ -87,6 +87,49 @@ foreach ( $catalog_query->posts as $product ) {
 - Standard post metadata for a single ID is fetched together, including the legacy value lookup, and large lists of posts are fetched in chunks. Subsequent reads reuse the request cache.
 - `preload_media` defaults to `false`. Enable it when rendering local attachments saved by ID in selected image, file, gallery, responsive image or image hotspot fields, including in nested rows. It primes the WordPress attachment and metadata caches, including video posters. Values keep the same shape with either setting.
 
+## Filter and sort posts by field
+
+Pass `carbon_fields` to `WP_Query` with a single `post_type`. Use the names from the PHP declarations. For this example, declare `price` with `Field::make( 'text', 'price' )->set_attribute( 'type', 'number' )->set_attribute( 'step', '0.01' )` and `status` as a select with an `active` key.
+
+```php
+$services = new WP_Query( array(
+    'post_type' => 'service',
+    'posts_per_page' => 20,
+    'paged' => max( 1, (int) get_query_var( 'paged' ) ),
+    'carbon_fields' => array(
+        'where' => array(
+            array( 'field' => 'status', 'value' => 'active' ),
+            array( 'field' => 'price', 'compare' => '<=', 'value' => '1500.50' ),
+        ),
+        'orderby' => array( 'price' => 'ASC' ),
+    ),
+) );
+```
+
+The `where` conditions are combined with AND and apply alongside native WordPress query arguments. Omit `compare` for equality. Numeric text fields are compared and sorted as decimals with up to 10 fractional digits. A saved `0` is included. Missing, blank and nonnumeric prices are skipped when comparing numbers or sorting by price. A PHP default participates once saved. Use `EXISTS` or `NOT EXISTS` to check whether a value is stored.
+
+This API accepts root `text`, `textarea`, `checkbox`, `select`, `radio` and `button_group` fields using standard post metadata. Use `container_id` inside `carbon_fields` if multiple matching containers declare the same field name. An unknown, ambiguous or unsupported field yields no matches. To match several values in the same complex row, use `carbon_match_complex_row()`.
+
+## Get a select label
+
+`carbon_get_post_select_label( $post_id, $name, $container_id = '' )` returns the current label for the selected key. It supports declared options, dependent choices, shared dictionaries and remote options. For remote options it resolves the saved key directly through the field's resolver.
+
+```php
+$label = carbon_get_post_select_label( $post_id, 'delivery_method' );
+echo esc_html( $label ?? '' );
+```
+
+Use a zero-based row index to read a select in a complex. The [dependent city select](fields.md#dependent-select-lists) uses an unnamed group. For named groups, add the group name after the row index.
+
+```php
+$first_city = carbon_get_post_select_label( $post_id, 'offices[0]/city' );
+$second_city = carbon_get_post_select_label( $post_id, 'offices[1]/city' );
+
+$warehouse_city = carbon_get_post_select_label( $post_id, 'offices[0]:warehouse/city' );
+```
+
+The source field is read from the same row as the dependent select. The helper returns `null` for a missing row, an empty selection or a key that no longer has a label in those options. Escape the label for the output context, as shown above.
+
 ## Validated atomic post updates
 
 ```php

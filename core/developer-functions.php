@@ -3,6 +3,7 @@
 use Carbon_Fields\Helper\Developer_API;
 use Carbon_Fields\Helper\Media;
 use Carbon_Fields\Helper\Post_Meta_Batch;
+use Carbon_Fields\Helper\Post_Select_Label;
 use Carbon_Fields\Helper\Theme_Option_Dictionary;
 use Carbon_Fields\Helper\Text_Template;
 
@@ -20,6 +21,11 @@ function carbon_get_post_meta_fields( $post_id, array $field_names, array $optio
 /** @return array Formatted field values keyed by post ID and field name. */
 function carbon_get_post_meta_batch( array $post_ids, array $field_names, array $options = array() ) {
 	return Post_Meta_Batch::read( $post_ids, $field_names, $options );
+}
+
+/** @return string|null The selected label for a root or indexed complex field path. */
+function carbon_get_post_select_label( $post_id, $name, $container_id = '' ) {
+	return Post_Select_Label::get( $post_id, $name, $container_id );
 }
 
 /** @return array|null The selected row of a shared theme option. */

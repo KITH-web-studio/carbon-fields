@@ -60,6 +60,112 @@ class DeveloperApiTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Lviv', carbon_render_complex( $this->id, $name, array( '_' => function( $row ) { return esc_html( $row['city'] ); } ) ) );
 	}
 
+	public function testPostFieldQueryFiltersAndSortsStoredPricesAsDecimals() {
+		$price = $this->prefix . '_price';
+		$status = $this->prefix . '_status';
+		$this->container->add_fields( array(
+			Field::make( 'text', $price )->set_attribute( 'type', 'number' )->set_default_value( '1' ),
+			Field::make( 'select', $status )->set_options( array( 'active' => 'Active', 'inactive' => 'Inactive' ) ),
+		) );
+		add_action( 'pre_get_posts', array( \Carbon_Fields\Helper\Post_Field_Query::class, 'apply' ), 20 );
+		add_filter( 'get_meta_sql', array( \Carbon_Fields\Helper\Post_Field_Query::class, 'filter_decimal_sql' ), 20, 6 );
+		try {
+			$posts = array();
+			foreach ( array( 'ten' => '10', 'high' => '1.75', 'low' => '1.25', 'free' => '0', 'empty' => '', 'missing' => null, 'inactive' => '0', 'invalid' => 'unavailable' ) as $key => $value ) {
+				$id = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+				$posts[ $key ] = $id;
+				carbon_set_post_meta( $id, $status, 'inactive' === $key ? 'inactive' : 'active' );
+				if ( null !== $value ) {
+					carbon_set_post_meta( $id, $price, $value );
+				}
+				update_post_meta( $id, '_developer_query_available', 'inactive' === $key ? 'no' : 'yes' );
+			}
+			$args = array(
+				'post_type' => 'post',
+				'fields' => 'ids',
+				'post__in' => array_values( $posts ),
+				'posts_per_page' => 2,
+				'meta_query' => array( array( 'key' => '_developer_query_available', 'value' => 'yes' ) ),
+				'carbon_fields' => array(
+					'where' => array( array( 'field' => $status, 'value' => 'active' ), array( 'field' => $price, 'compare' => '<=', 'value' => '1.50' ) ),
+					'orderby' => array( $price => 'ASC' ),
+				),
+			);
+			$query = new WP_Query( $args );
+			$this->assertSame( array( $posts['free'], $posts['low'] ), $query->posts );
+			$this->assertEquals( 2, $query->found_posts );
+			$args['carbon_fields']['where'][1]['value'] = 0;
+			$this->assertSame( array( $posts['free'] ), ( new WP_Query( $args ) )->posts );
+			$args['carbon_fields']['where'][1]['compare'] = '=';
+			$args['carbon_fields']['where'][1]['value'] = '1.25';
+			$this->assertSame( array( $posts['low'] ), ( new WP_Query( $args ) )->posts );
+			$args['carbon_fields']['where'][1]['compare'] = 'BETWEEN';
+			$args['carbon_fields']['where'][1]['value'] = array( '1.20', '1.80' );
+			$this->assertSame( array( $posts['low'], $posts['high'] ), ( new WP_Query( $args ) )->posts );
+			unset( $args['carbon_fields']['where'][1] );
+			$args['posts_per_page'] = -1;
+			$this->assertSame( array( $posts['free'], $posts['low'], $posts['high'], $posts['ten'] ), ( new WP_Query( $args ) )->posts );
+			$args['carbon_fields']['orderby'][ $price ] = 'DESC';
+			$this->assertSame( array( $posts['ten'], $posts['high'], $posts['low'], $posts['free'] ), ( new WP_Query( $args ) )->posts );
+			carbon_set_post_meta( $posts['low'], $price, '1234567890.0000000001' );
+			carbon_set_post_meta( $posts['high'], $price, '1234567890.0000000002' );
+			$args['carbon_fields']['where'][] = array( 'field' => $price, 'compare' => '=', 'value' => '1234567890.0000000001' );
+			$this->assertSame( array( $posts['low'] ), ( new WP_Query( $args ) )->posts );
+			$args['carbon_fields']['where'][0]['field'] = 'unregistered';
+			$args['p'] = $posts['free'];
+			$this->assertSame( array(), ( new WP_Query( $args ) )->posts );
+		} finally {
+			remove_action( 'pre_get_posts', array( \Carbon_Fields\Helper\Post_Field_Query::class, 'apply' ), 20 );
+			remove_filter( 'get_meta_sql', array( \Carbon_Fields\Helper\Post_Field_Query::class, 'filter_decimal_sql' ), 20 );
+		}
+	}
+
+	public function testSelectLabelsUseTheSourceFromTheRequestedNestedRow() {
+		$name = $this->prefix . '_offices';
+		$plain = $this->prefix . '_plain_choice';
+		$remote = $this->prefix . '_remote_choice';
+		$remote_available = true;
+		$this->container->add_fields( array(
+			Field::make( 'select', $plain )->set_options( array( '0' => 'Zero', 'pickup' => 'Pickup' ) ),
+			Field::make( 'select', $remote )->set_remote_options( static function() { return array(); }, function( $value, $context ) use ( &$remote_available ) {
+				return $remote_available && 'agent' === $value && $this->id === $context['object_id'] ? 'Agent' : false;
+			} ),
+			Field::make( 'complex', $name )->add_fields( array(
+				Field::make( 'complex', 'locations' )->add_fields( 'office', array(
+					Field::make( 'select', 'region' )->set_options( array( 'north' => 'North', 'south' => 'South' ) ),
+					Field::make( 'select', 'city' )->set_dependent_options( 'region', array(
+						'north' => array( 'central' => 'North Central', 'old' => 'Old' ),
+						'south' => array( 'central' => 'South Central' ),
+					) ),
+				) )->add_fields( 'warehouse', array(
+					Field::make( 'select', 'city' )->set_options( array( 'central' => 'Warehouse' ) )->set_default_value( 'central' ),
+				) ),
+			) ),
+		) );
+		carbon_set_post_meta( $this->id, $plain, '0' );
+		carbon_set_post_meta( $this->id, $remote, 'agent' );
+		$this->assertSame( 'Zero', carbon_get_post_select_label( $this->id, $plain ) );
+		$this->assertSame( 'Agent', carbon_get_post_select_label( $this->id, $remote ) );
+		$remote_available = false;
+		$this->assertNull( carbon_get_post_select_label( $this->id, $remote ) );
+		$this->assertSame( '0', (string) carbon_get_post_meta( $this->id, $plain ) );
+		$rows = array( array( 'locations' => array(
+			array( '_type' => 'office', 'region' => 'north', 'city' => 'central' ),
+			array( '_type' => 'office', 'region' => 'south', 'city' => 'central' ),
+		) ) );
+		$this->assertTrue( carbon_update_fields( $this->id, array( $name => $rows ) ) );
+		$first = $name . '[0]/locations[0]:office/city';
+		$second = $name . '[0]/locations[1]:office/city';
+		$this->assertSame( 'North Central', carbon_get_post_select_label( $this->id, $first ) );
+		$this->assertSame( 'South Central', carbon_get_post_select_label( $this->id, $second, $this->container->get_id() ) );
+		$this->assertNull( carbon_get_post_select_label( $this->id, $name . '[0]/locations[1]:warehouse/city' ) );
+		$this->assertNull( carbon_get_post_select_label( $this->id, $name . '[0]/locations[9]:office/city' ) );
+		$rows[0]['locations'][1]['city'] = 'old';
+		carbon_set_post_meta( $this->id, $name, $rows );
+		$this->assertNull( carbon_get_post_select_label( $this->id, $second ) );
+		$this->assertSame( 'North Central', carbon_get_post_select_label( $this->id, $first ) );
+	}
+
 	public function testPostChoicesSearchCodesAndValidateEachComplexRow() {
 		$region_key = '_' . $this->prefix . '_region';
 		$code_key = '_' . $this->prefix . '_code';
@@ -255,6 +361,7 @@ class DeveloperApiTest extends WP_UnitTestCase {
 		$this->container->add_fields( array( $select ) );
 		$this->assertSame( array( array( 'value' => $uuid, 'label' => 'Kyiv' ) ), $select->search_options( 'kyiv', 1 )['options'] );
 		$this->assertTrue( carbon_update_fields( $this->id, array( $select->get_base_name() => $uuid ) ) );
+		$this->assertSame( 'Kyiv', carbon_get_post_select_label( $this->id, $select->get_base_name() ) );
 		$rows[0]['title'] = 'New Kyiv';
 		$rows[0]['_disabled'] = true;
 		carbon_set_theme_option( $name, array_reverse( $rows ), $container_id );
@@ -262,6 +369,7 @@ class DeveloperApiTest extends WP_UnitTestCase {
 		$this->assertSame( 'Partner Street', carbon_get_theme_option_row( $name, $uuid, $container_id )['address'] );
 		$this->assertSame( array(), $select->search_options( 'kyiv', 1 )['options'] );
 		$this->assertStringContainsString( 'New Kyiv', $select->resolve_option( $uuid ) );
+		$this->assertStringContainsString( 'New Kyiv', carbon_get_post_select_label( $this->id, $select->get_base_name() ) );
 		$this->assertTrue( $select->is_valid_form_value( $uuid ) );
 		$this->assertFalse( $select->is_valid_form_value( wp_generate_uuid4() ) );
 	}

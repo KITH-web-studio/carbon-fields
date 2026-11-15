@@ -2,6 +2,11 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.31
+
+- Filter and sort posts in `WP_Query` by declared field names. Numeric comparisons preserve decimal precision and distinguish a stored zero from a blank value.
+- Resolve the selected label of a `select` from PHP, including dependent choices in complex rows.
+
 ## 3.6.11.30
 
 - Add dependencies between post choices and sibling fields, with opt-in lookup by post meta.

@@ -59,6 +59,21 @@ class Select_Field extends Predefined_Options_Field {
 		return $this->remote_resolve ? call_user_func( $this->remote_resolve, $value, $this->remote_context() ) : false;
 	}
 
+	/** Return the current label for an exact option key and its optional source value. */
+	public function get_option_label( $value, $source_value = null ) {
+		if ( ! is_scalar( $value ) || '' === (string) $value ) {
+			return null;
+		}
+		$value = (string) $value;
+		if ( $this->has_remote_options() ) {
+			$label = $this->resolve_option( $value );
+			return is_string( $label ) || is_numeric( $label ) ? (string) $label : null;
+		}
+		$options = '' !== $this->options_source ? $this->get_options_for_source( $source_value ) : $this->get_options();
+		$label = $options[ $value ] ?? null;
+		return is_scalar( $label ) ? (string) $label : null;
+	}
+
 	public function is_valid_form_value( $value ) {
 		$label = $this->has_remote_options() && is_string( $value ) && '' !== $value ? $this->resolve_option( $value ) : '';
 		return parent::is_valid_form_value( $value ) && ( ! $this->has_remote_options() || '' === $value || is_string( $label ) || is_numeric( $label ) );
@@ -111,6 +126,10 @@ class Select_Field extends Predefined_Options_Field {
 		return $this->options_source;
 	}
 
+	private function get_options_for_source( $source ) {
+		return is_scalar( $source ) ? ( $this->dependent_options[ (string) $source ] ?? array() ) : array();
+	}
+
 	/**
 	 * {@inheritDoc}
 	 */
@@ -123,7 +142,7 @@ class Select_Field extends Predefined_Options_Field {
 			$source_name = $prefix === '' || strpos( $this->options_source, $prefix ) === 0 ? $this->options_source : $prefix . $this->options_source;
 			$source = $input[ $source_name ] ?? '';
 			$value = $input[ $this->get_name() ] ?? '';
-			$options = is_scalar( $source ) ? ( $this->dependent_options[ stripslashes( (string) $source ) ] ?? array() ) : array();
+			$options = $this->get_options_for_source( is_scalar( $source ) ? stripslashes( (string) $source ) : null );
 			$valid = is_scalar( $value ) ? Helper::get_valid_options( array( stripslashes( (string) $value ) ), array_keys( $options ) ) : array();
 			return $this->set_value( $valid[0] ?? '' );
 		}

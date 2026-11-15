@@ -499,6 +499,15 @@ class Complex_Field extends Field {
 		return $this->get_prefilled_groups( $this->get_value(), $this->get_value_tree() );
 	}
 
+	/** Populate just the requested row with its configured fields. */
+	public function get_populated_group( $index ) {
+		$groups = $this->get_value();
+		$tree = $this->get_value_tree();
+		return isset( $tree[ $index ] )
+			? ( $this->get_prefilled_groups( $groups, array( $index => $tree[ $index ] ) )[ $index ] ?? array() )
+			: array();
+	}
+
 	/**
 	 * Load the field value from an input array based on its name.
 	 *
