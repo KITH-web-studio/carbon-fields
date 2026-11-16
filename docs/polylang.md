@@ -110,6 +110,10 @@ The editor compares the submitted value with the value the tab opened with or la
 
 The post field must use the standard Carbon Fields post-meta datastore and apply to the participating posts. The current WordPress user must be able to edit those posts. Shared writes use a transaction across the source and target posts. This requires InnoDB for the WordPress posts and post meta tables, a MySQLi connection, and compatible metadata write hooks. If a synchronized write fails, the shared field write rolls back across translations.
 
+## Language codes in association fields
+
+With Polylang active, association fields prefix the names of posts and terms that have an assigned language with its code, for example, `[EN] Specialist`. The prefix appears in the list, search results, and selected items. It is available with either ID synchronization setting.
+
 ## Synchronize localized links
 
 Enable `set_translate_linked_ids()` on an `association` or `relationship` to use the Polylang IDs of linked posts or terms. At the root, add `set_translation( 'sync' )` to propagate later selection changes. The default `copy_once` maps IDs during the initial copy of a translation. Shared post types, shared taxonomies and other association types use their existing ID.

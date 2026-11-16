@@ -233,8 +233,12 @@ final class Inline_Posts {
 			( $field->get_options_dependency() && ! $field->choices_match_source( array( $choice ), $dependency ) ) ) {
 			return self::error( __( 'The related record does not match this field.', 'carbon-fields' ) );
 		}
+		$title = wp_strip_all_tags( $post->post_title );
+		if ( $field instanceof Association_Field ) {
+			$title = Polylang::prefix_item_language( $title, $id, 'post' );
+		}
 		return $choice + array(
-			'title' => wp_strip_all_tags( $post->post_title ),
+			'title' => $title,
 			'label' => wp_strip_all_tags( get_post_type_object( $type )->labels->singular_name ),
 		);
 	}

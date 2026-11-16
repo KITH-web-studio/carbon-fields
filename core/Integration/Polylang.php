@@ -39,6 +39,17 @@ final class Polylang {
 		return is_string( $language ) && ( '' === $language || 'all' === $language || in_array( $language, self::languages(), true ) );
 	}
 
+	public static function prefix_item_language( $title, $id, $type ) {
+		$language = '';
+		if ( 'post' === $type && function_exists( 'pll_get_post_language' ) ) {
+			$language = pll_get_post_language( $id, 'slug' );
+		} elseif ( 'term' === $type && function_exists( 'pll_get_term_language' ) ) {
+			$language = pll_get_term_language( $id, 'slug' );
+		}
+
+		return $language ? '[' . strtoupper( $language ) . '] ' . $title : $title;
+	}
+
 	public static function current_language() {
 		if ( ! self::active() ) {
 			return '';

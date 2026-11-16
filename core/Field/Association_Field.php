@@ -6,6 +6,7 @@ use Carbon_Fields\Value_Set\Value_Set;
 use Carbon_Fields\Exception\Incorrect_Syntax_Exception;
 use Carbon_Fields\Helper\Helper;
 use Carbon_Fields\Helper\Post_Choice_Query;
+use Carbon_Fields\Integration\Polylang;
 use Carbon_Fields\Datastore\Post_Meta_Datastore;
 use WP_Query;
 use WP_Term_Query;
@@ -811,7 +812,11 @@ class Association_Field extends Field {
 			$title = '(no title) - ID: ' . $id;
 		}
 
-		return 'post' === $type ? $this->post_choice_label( $title, $id ) : $title;
+		if ( 'post' === $type ) {
+			$title = $this->post_choice_label( $title, $id );
+		}
+
+		return Polylang::prefix_item_language( $title, $id, $type );
 	}
 
 	/**

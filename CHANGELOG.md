@@ -2,6 +2,10 @@
 
 [Русский](CHANGELOG.ru.md)
 
+## 3.6.11.36
+
+- Show the Polylang language code before post and term labels in association fields, including search results and selected items.
+
 ## 3.6.11.35
 
 - Create and select related posts or their Polylang translations directly in association and relationship fields.
